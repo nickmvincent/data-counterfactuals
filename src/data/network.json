@@ -1,0 +1,30 @@
+{
+  "projectName": "data-counterfactuals",
+  "projectTitle": "Data Counterfactuals",
+  "links": {
+    "website": "https://datacounterfactuals.org",
+    "github": "https://github.com/nickmvincent/data-counterfactuals"
+  },
+  "relatedProjects": [
+    {
+      "name": "shared-references",
+      "title": "Shared References",
+      "website": "https://shared-references.pages.dev"
+    }
+  ],
+  "discussions": [
+    {
+      "provider": "github",
+      "url": "https://github.com/nickmvincent/data-counterfactuals/discussions",
+      "label": "GitHub Discussions",
+      "description": "Threaded conversations with markdown support, reactions, and notifications."
+    },
+    {
+      "provider": "whitewind",
+      "url": "https://whtwnd.com/nickmvincent.bsky.social/mjlnzg8d",
+      "label": "WhiteWind",
+      "description": "Long-form posts on the ATProto/Bluesky network."
+    }
+  ],
+  "generatedAt": "2026-03-11T00:00:00.000Z"
+}

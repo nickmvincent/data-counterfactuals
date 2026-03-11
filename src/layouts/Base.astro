@@ -1,0 +1,148 @@
+---
+import NetworkFooter from "../../helpers/astro/NetworkFooter.astro";
+import networkData from "../data/network.json";
+
+interface Props {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+}
+
+const {
+  title = "Data Counterfactuals",
+  description = "An interactive framework for understanding how changes to training data affect AI model behavior. Explore data valuation, influence functions, scaling laws, and collective action.",
+  ogImage = "/favicon.svg"
+} = Astro.props;
+
+const siteUrl = "https://datacounterfactuals.org";
+const fullTitle = title === "Data Counterfactuals" ? title : `${title} | Data Counterfactuals`;
+const networkLinks = [
+  ...(networkData.relatedProjects ?? [])
+    .filter((project) => Boolean(project.website))
+    .map((project) => ({
+      href: project.website!,
+      label: project.title || project.name
+    })),
+  ...(networkData.links?.github ? [{ href: networkData.links.github, label: "GitHub" }] : [])
+];
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+
+    <!-- Open Graph / Social -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={siteUrl} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={`${siteUrl}${ogImage}`} />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={`${siteUrl}${ogImage}`} />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://esm.sh" />
+  </head>
+  <body>
+    <slot />
+    <NetworkFooter links={networkLinks} />
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --bg: #0b1020;
+    --bg-soft: #0e152b;
+    --fg: #e9eef8;
+    --muted: #9fb5c8;
+    --card: #0f182f;
+    --border: #1f2b45;
+    --ring-thick: #33d6ff;
+    --ring-thin: #ffce6a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: radial-gradient(circle at 20% 20%, #101a34, #0b1020 45%),
+                radial-gradient(circle at 80% 10%, #12203c, transparent 50%),
+                var(--bg);
+    color: var(--fg);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  }
+  a { color: var(--ring-thick); }
+
+  .top-nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    backdrop-filter: blur(14px);
+    background: rgba(11, 12, 16, 0.82);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .brand {
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .nav-links { display: flex; gap: 10px; flex-wrap: wrap; }
+  .nav-links a {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--fg);
+    font-size: 12px;
+    background: #111320;
+  }
+  .nav-links a:hover { border-color: var(--ring-thick); }
+  .nav-links a[aria-current="page"] {
+    background: rgba(51, 214, 255, 0.15);
+    border-color: var(--ring-thick);
+  }
+
+  .network-footer {
+    margin-top: 4rem;
+    padding: 2rem 1.5rem;
+    border-top: 1px solid var(--border);
+    background: var(--card);
+    text-align: center;
+    font-size: 0.875rem;
+  }
+  .network-footer-content {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .network-label {
+    color: var(--muted);
+    margin-right: 0.5rem;
+  }
+  .network-links {
+    display: inline;
+  }
+  .network-links a {
+    color: var(--ring-thick);
+    text-decoration: none;
+    margin: 0 0.5rem;
+  }
+  .network-links a:hover {
+    text-decoration: underline;
+  }
+</style>

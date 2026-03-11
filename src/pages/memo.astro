@@ -1,0 +1,63 @@
+---
+import Layout from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import { marked } from "marked";
+import { loadMemos } from "../lib/content-loader";
+import networkData from "../data/network.json";
+
+const memos = await loadMemos();
+const memo = memos.find((m)=> m.slug === "data-counterfactuals") ?? memos[0];
+const memoMeta = memo ? { title: memo.title, summary: memo.summary } : { title: "Exploring Data Counterfactuals" };
+const memoHtml = marked.parse(memo?.body ?? "");
+const githubUrl = networkData.links?.github;
+---
+
+<Layout
+  title={memoMeta.title}
+  description={memoMeta.summary || "A unifying framework connecting data valuation, scaling laws, data poisoning, and collective action through the lens of data counterfactuals."}
+>
+
+<style is:global>
+  .memo-wrap { max-width:800px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  .memo-header { margin-bottom:2rem; }
+  .memo-header h1 { font-size:1.75rem; margin:0 0 0.75rem; }
+  .memo-header .lede { color:var(--muted); font-size:1.1rem; line-height:1.6; margin:0; }
+
+  .memo-content { line-height:1.7; }
+  .memo-content h2 { font-size:1.25rem; margin:2rem 0 1rem; color:var(--fg); border-bottom:1px solid var(--border); padding-bottom:0.5rem; }
+  .memo-content h3 { font-size:1.1rem; margin:1.5rem 0 0.75rem; color:var(--fg); }
+  .memo-content p { color:var(--muted); margin:0 0 1rem; }
+  .memo-content ul, .memo-content ol { color:var(--muted); padding-left:1.5rem; margin:0 0 1rem; }
+  .memo-content li { margin-bottom:0.5rem; }
+  .memo-content strong { color:var(--fg); }
+  .memo-content code { background:#0b0f1d; border:1px solid var(--border); padding:2px 5px; border-radius:6px; font-size:0.9em; }
+  .memo-content blockquote { border-left:3px solid var(--border); margin:1rem 0; padding-left:1rem; color:var(--muted); font-style:italic; }
+
+  .contribute-cta { margin-top:3rem; padding-top:2rem; border-top:1px solid var(--border); }
+  .contribute-cta p { color:var(--muted); font-size:14px; margin-bottom:12px; }
+  .cta-links { display:flex; gap:10px; flex-wrap:wrap; }
+  .btn { border:1px solid var(--border); background:#141827; color:var(--fg); padding:8px 14px; border-radius:10px; cursor:pointer; font-size:13px; text-decoration:none; display:inline-block; }
+  .btn:hover { border-color:var(--ring-thick); }
+  .btn.ghost { background:transparent; }
+</style>
+
+<Nav />
+
+<main class="memo-wrap">
+  <header class="memo-header">
+    <h1>{memoMeta.title}</h1>
+    {memoMeta.summary && <p class="lede">{memoMeta.summary}</p>}
+  </header>
+
+  <article class="memo-content" set:html={memoHtml}></article>
+
+  <div class="contribute-cta">
+    <p>Questions, feedback, or suggestions? Join the discussion or contribute directly.</p>
+    <div class="cta-links">
+      <a href="/about#discussion" class="btn">About & Feedback</a>
+      <a href={githubUrl || "#"} target="_blank" rel="noopener" class="btn ghost">View on GitHub</a>
+    </div>
+  </div>
+</main>
+
+</Layout>

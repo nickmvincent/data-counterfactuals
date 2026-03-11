@@ -1,0 +1,39 @@
+---
+interface NetworkLink {
+  href: string;
+  label: string;
+}
+
+interface Props {
+  links: NetworkLink[];
+  label?: string;
+  footerClass?: string;
+  contentClass?: string;
+  labelClass?: string;
+  linksClass?: string;
+  linkClass?: string;
+}
+
+const {
+  links,
+  label = 'Related Projects:',
+  footerClass = 'network-footer',
+  contentClass = 'network-footer-content',
+  labelClass = 'network-label',
+  linksClass = 'network-links',
+  linkClass,
+}: Props = Astro.props;
+---
+
+<footer class={footerClass}>
+  <div class={contentClass}>
+    <span class={labelClass}>{label}</span>
+    <nav class={linksClass}>
+      {links.map((link) => (
+        <a class={linkClass} href={link.href}>
+          {link.label}
+        </a>
+      ))}
+    </nav>
+  </div>
+</footer>

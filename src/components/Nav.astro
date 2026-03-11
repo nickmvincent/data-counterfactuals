@@ -1,0 +1,34 @@
+---
+const { pathname } = Astro.url;
+
+const links = [
+  { href: "/", label: "Intro" },
+  { href: "/memo", label: "Memo" },
+  { href: "/grid", label: "Grid" },
+  { href: "/advanced.html", label: "3D Board", external: true },
+  { href: "/collections", label: "Paper Collections" },
+  { href: "/glossary", label: "Glossary" },
+  { href: "/about", label: "About & Feedback" },
+];
+
+function isActive(href: string): boolean {
+  if (href === "/") return pathname === "/";
+  return pathname.startsWith(href);
+}
+---
+
+<nav class="top-nav">
+  <span class="brand">Data Counterfactuals</span>
+  <div class="nav-links">
+    {links.map(link => (
+      <a
+        href={link.href}
+        aria-current={isActive(link.href) ? "page" : undefined}
+        target={link.external ? "_blank" : undefined}
+        rel={link.external ? "noreferrer noopener" : undefined}
+      >
+        {link.label}
+      </a>
+    ))}
+  </div>
+</nav>

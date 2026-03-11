@@ -1,0 +1,131 @@
+---
+import Layout from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+
+const terms = [
+  {
+    term: "Data counterfactual",
+    definition: "A \"what if\" question about training data. What would happen to model performance if we trained on different data? The grid visualization shows all possible counterfactuals: each row is a possible training set, each column is an evaluation point.",
+  },
+  {
+    term: "Influence function",
+    definition: "A technique for estimating how much a single training example affects a model's predictions, without retraining. Approximates what would happen if you removed or upweighted that point.",
+  },
+  {
+    term: "Data Shapley",
+    definition: "A method for assigning value to each training point based on its average marginal contribution across all possible subsets. Borrowed from cooperative game theory. Computationally expensive but theoretically principled.",
+  },
+  {
+    term: "Leave-one-out",
+    definition: "The simplest data counterfactual: compare performance with and without a single data point. In the grid, this means comparing two rows that differ by exactly one point.",
+  },
+  {
+    term: "Coreset",
+    definition: "A small subset of training data that approximates training on the full dataset. The goal is to find a much smaller row in the grid that lands in roughly the same performance region.",
+  },
+  {
+    term: "Data poisoning",
+    definition: "Deliberately corrupting training data to cause targeted model failures. Expands the grid dramatically—every possible perturbation creates new rows with potentially different outcomes.",
+  },
+  {
+    term: "Backdoor attack",
+    definition: "A type of data poisoning where a trigger pattern (e.g., a small patch in an image) causes the model to misclassify inputs containing that trigger, while behaving normally otherwise.",
+  },
+  {
+    term: "Data strike",
+    definition: "Coordinated withholding of data by creators to reduce model performance and exert leverage over AI operators. A strategic move to a less favorable row in the grid.",
+  },
+  {
+    term: "Data leverage",
+    definition: "The power that data creators have over AI systems by virtue of controlling training data. Leverage depends on how much performance drops when data is withheld or degraded.",
+  },
+  {
+    term: "Scaling law",
+    definition: "An empirical relationship describing how model performance changes with data size (or parameters, or compute). In grid terms, a regression over average performance across rows grouped by size.",
+  },
+  {
+    term: "Differential privacy",
+    definition: "A mathematical framework for limiting how much any single data point can affect model outputs. Constrains how far the model can move in the grid when one point changes.",
+  },
+  {
+    term: "Memorization",
+    definition: "When a model stores training data verbatim rather than learning general patterns. Can enable extraction attacks where adversaries recover private training examples from model outputs.",
+  },
+  {
+    term: "Machine unlearning",
+    definition: "Efficiently updating a model as if a data point was never in the training set—moving from one row to another without full retraining. Motivated by privacy regulations like GDPR.",
+  },
+  {
+    term: "Active learning",
+    definition: "Choosing which data points to label next, given a limited labeling budget. Navigation within the grid: deciding which rows become available for training.",
+  },
+  {
+    term: "Data augmentation",
+    definition: "Creating synthetic variations of training data (rotations, crops, noise, etc.). Effectively generates new rows in the grid. Mixup, Cutout, and CutMix are common techniques.",
+  },
+  {
+    term: "Curriculum learning",
+    definition: "Training on examples in a meaningful order, typically from easy to hard. Changes how you traverse the grid over time, not just which row you end up on.",
+  },
+  {
+    term: "Membership inference",
+    definition: "Determining whether a specific example was in a model's training set. Exploits the fact that models behave differently on data they've seen before.",
+  },
+  {
+    term: "Training set",
+    definition: "The data used to train a model. In the grid, each row represents a possible training set. Changing the training set moves you to a different row.",
+  },
+  {
+    term: "Evaluation set",
+    definition: "Data used to measure model performance. In the grid, each column represents a possible evaluation point or set. The cell value is performance when trained on that row, evaluated on that column.",
+  },
+];
+---
+
+<Layout
+  title="Glossary"
+  description="Key terms and concepts in data counterfactuals: influence functions, Shapley values, data poisoning, scaling laws, and more."
+>
+
+<style is:global>
+  .glossary-wrap { max-width:800px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  .glossary-header { margin-bottom:2rem; }
+  .glossary-header h1 { font-size:1.75rem; margin:0 0 0.75rem; }
+  .glossary-header .lede { color:var(--muted); font-size:1rem; line-height:1.6; margin:0; }
+
+  .glossary-list { list-style:none; padding:0; margin:0; }
+  .glossary-item { border-bottom:1px solid var(--border); padding:1.25rem 0; }
+  .glossary-item:last-child { border-bottom:none; }
+  .glossary-term { font-weight:700; font-size:1.1rem; margin:0 0 0.5rem; color:var(--fg); }
+  .glossary-def { color:var(--muted); line-height:1.6; margin:0; }
+
+  .glossary-nav { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1.5rem; padding-bottom:1rem; border-bottom:1px solid var(--border); }
+  .glossary-nav a { padding:4px 10px; border:1px solid var(--border); border-radius:6px; text-decoration:none; color:var(--muted); font-size:12px; background:#0f1323; }
+  .glossary-nav a:hover { border-color:var(--ring-thick); color:var(--fg); }
+</style>
+
+<Nav />
+
+<main class="glossary-wrap">
+  <header class="glossary-header">
+    <h1>Glossary</h1>
+    <p class="lede">Key terms used throughout the site. Definitions connect to the grid metaphor where relevant.</p>
+  </header>
+
+  <nav class="glossary-nav">
+    {terms.map((t) => (
+      <a href={`#${t.term.toLowerCase().replace(/\s+/g, '-')}`}>{t.term}</a>
+    ))}
+  </nav>
+
+  <ul class="glossary-list">
+    {terms.map((t) => (
+      <li class="glossary-item" id={t.term.toLowerCase().replace(/\s+/g, '-')}>
+        <h2 class="glossary-term">{t.term}</h2>
+        <p class="glossary-def">{t.definition}</p>
+      </li>
+    ))}
+  </ul>
+</main>
+
+</Layout>

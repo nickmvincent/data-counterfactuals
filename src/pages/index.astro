@@ -1,0 +1,185 @@
+---
+import Layout from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import MiniGrid from "../components/MiniGrid.jsx";
+---
+
+<Layout
+  title="What is a Data Counterfactual?"
+  description="A simple framework for understanding how changes to training data affect AI model behavior. Learn about data valuation, influence functions, and collective action."
+>
+
+<style is:global>
+  :root{
+    --ring-thin:#ffce6a;
+  }
+
+  .intro-wrap { max-width:720px; margin:0 auto; padding:3rem 1.5rem 5rem; }
+  .intro-hero { text-align:center; margin-bottom:4rem; padding-top:1.5rem; }
+  .intro-hero h1 { font-size:2.25rem; margin:0 0 1rem; font-weight:700; line-height:1.3; }
+  .intro-hero .lede { color:var(--muted); font-size:1.15rem; line-height:1.7; max-width:540px; margin:0 auto; }
+
+  .intro-section { margin-bottom:4rem; }
+  .intro-section h2 { font-size:1.5rem; margin:0 0 1.25rem; color:var(--fg); border-bottom:1px solid var(--border); padding-bottom:0.75rem; font-weight:600; }
+  .intro-section p { color:var(--muted); line-height:1.75; margin:0 0 1.25rem; }
+  .intro-section p strong { color:var(--fg); }
+
+  .demo-block { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; margin:2rem 0; }
+  .demo-block .demo-title { font-size:0.8rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin-bottom:1rem; }
+
+  .mini-grid-wrap { display:flex; flex-direction:column; align-items:center; gap:1rem; }
+  .mini-grid { gap:3px; }
+  .mini-corner { width:54px; height:36px; }
+  .mini-col-label { height:36px; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--muted); background:var(--card); border-radius:4px 4px 0 0; }
+  .mini-col-label.active { color:var(--fg); background:#1a2440; }
+  .mini-row-label { width:54px; height:40px; display:flex; align-items:center; justify-content:flex-end; padding-right:10px; font-size:12px; color:var(--muted); background:var(--card); border-radius:4px 0 0 4px; }
+  .mini-row-label.active { color:var(--fg); background:#1a2440; }
+  .mini-cell { width:54px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative; border-radius:4px; transition:transform 0.15s ease, box-shadow 0.15s ease; }
+  .mini-cell:hover { transform:scale(1.1); z-index:2; box-shadow:0 4px 12px rgba(0,0,0,0.3); }
+  .mini-cell.ring-highlight { outline:2px solid var(--ring-thin); outline-offset:-2px; }
+  .mini-cell.ring-compare { outline:2px solid var(--ring-thick); outline-offset:-2px; }
+  .mini-cell.selected { outline:2px solid #fff; outline-offset:-2px; }
+  .mini-val { font-size:11px; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,0.5); }
+  .mini-caption { font-size:13px; color:var(--muted); text-align:center; max-width:320px; line-height:1.5; }
+  .mini-tooltip { font-size:12px; color:var(--muted); background:#0c1020; border:1px solid var(--border); padding:8px 12px; border-radius:8px; margin-top:0.75rem; }
+
+  .cta-block { text-align:center; margin-top:2.5rem; }
+  .cta-btn { display:inline-block; padding:14px 28px; background:var(--ring-thick); color:#0b1020; font-weight:600; text-decoration:none; border-radius:10px; transition:transform 0.15s, box-shadow 0.15s; }
+  .cta-btn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(51,214,255,0.3); }
+
+  .concept-list { list-style:none; padding:0; margin:1.5rem 0; }
+  .concept-list li { padding:0.75rem 0; border-bottom:1px solid var(--border); color:var(--muted); line-height:1.6; }
+  .concept-list li:last-child { border-bottom:none; }
+  .concept-list strong { color:var(--fg); }
+</style>
+
+<Nav />
+
+<main class="intro-wrap">
+  <header class="intro-hero">
+    <h1>What is a Data Counterfactual?</h1>
+    <p class="lede">A proposed framework for understanding how changes to training data affect model behavior.</p>
+  </header>
+
+  <section class="intro-section">
+    <h2>The Core Question</h2>
+    <p>
+      Machine learning models learn from data. But what happens if we <strong>change the data</strong>?
+      What if we remove a data point? Add noise? Use a different subset?
+    </p>
+    <p>
+      A <strong>data counterfactual</strong> is a "what if" question about training data:
+      <em>"What would the model's performance be if we trained on different data?"</em>
+    </p>
+    <p>
+      This simple question connects many different research areas: data valuation, influence functions,
+      data poisoning, scaling laws, and algorithmic collective action. While these fields have their own
+      established terminology, we propose "data counterfactuals" as a unifying lens for understanding
+      how they relate.
+    </p>
+  </section>
+
+  <section class="intro-section">
+    <h2>The Grid Metaphor</h2>
+    <p>
+      Imagine a giant matrix. Each <strong>row</strong> represents a possible training set.
+      Each <strong>column</strong> represents a possible evaluation set.
+      Each <strong>cell</strong> contains the model's performance when trained on that row's data
+      and evaluated on that column's data.
+    </p>
+    <div class="demo-block">
+      <div class="demo-title">A tiny example with 4 data points: A, B, C, D</div>
+      <MiniGrid
+        client:load
+        rows={["AB", "ABC", "ABCD", "ACD"]}
+        cols={["A", "B", "C", "D"]}
+        values={[
+          [0.85, 0.72, 0.45, 0.38],
+          [0.88, 0.80, 0.75, 0.52],
+          [0.92, 0.88, 0.85, 0.82],
+          [0.78, 0.55, 0.82, 0.80],
+        ]}
+        caption="Rows = training sets, Columns = evaluation points, Cells = performance scores"
+      />
+    </div>
+    <p>
+      This grid contains <strong>all possible data counterfactuals</strong>. Every question about
+      how data affects performance is answered somewhere in this grid.
+    </p>
+  </section>
+
+  <section class="intro-section">
+    <h2>Leave-One-Out</h2>
+    <p>
+      The simplest counterfactual: <strong>what if we removed one data point?</strong>
+    </p>
+    <p>
+      Compare two rows in the grid—one that includes a point, and one that doesn't.
+      The difference tells you how much that point matters.
+    </p>
+    <div class="demo-block">
+      <div class="demo-title">Comparing ABCD vs ACD (leaving out B)</div>
+      <MiniGrid
+        client:load
+        rows={["ABCD", "ACD"]}
+        cols={["A", "B", "C", "D"]}
+        values={[
+          [0.92, 0.88, 0.85, 0.82],
+          [0.78, 0.55, 0.82, 0.80],
+        ]}
+        highlightRow={0}
+        compareRow={1}
+        caption="Gold row = with B, Cyan row = without B. Notice how removing B hurts performance on B."
+      />
+    </div>
+    <p>
+      This is the foundation of <strong>influence functions</strong> and <strong>data attribution</strong>—measuring
+      how much each data point contributes to the model.
+    </p>
+  </section>
+
+  <section class="intro-section">
+    <h2>From Points to Patterns</h2>
+    <p>
+      Once you understand leave-one-out, you can extend the idea:
+    </p>
+    <ul class="concept-list">
+      <li><strong>Group effects:</strong> What if we remove multiple points together? (Data strikes)</li>
+      <li><strong>Shapley values:</strong> Average a point's contribution across all possible subsets</li>
+      <li><strong>Scaling laws:</strong> Average performance across all training sets of size k</li>
+      <li><strong>Data poisoning:</strong> What if we corrupt points instead of removing them?</li>
+      <li><strong>Data selection:</strong> Which subset gives the best performance?</li>
+    </ul>
+    <p>
+      All of these are just different ways of <strong>navigating the same grid</strong>—asking different
+      counterfactual questions and aggregating the answers differently.
+    </p>
+  </section>
+
+  <section class="intro-section">
+    <h2>Why It Matters</h2>
+    <p>
+      Data counterfactuals help answer practical questions:
+    </p>
+    <ul class="concept-list">
+      <li><strong>Data valuation:</strong> How much is my data worth to this model?</li>
+      <li><strong>Debugging:</strong> Which training examples cause this prediction?</li>
+      <li><strong>Security:</strong> How vulnerable is this model to data poisoning?</li>
+      <li><strong>Fairness:</strong> How would performance change for different groups?</li>
+      <li><strong>Collective action:</strong> What leverage do data creators have?</li>
+    </ul>
+  </section>
+
+  <section class="intro-section">
+    <h2>Explore Further</h2>
+    <p>
+      The interactive Grid explorer lets you manipulate a toy dataset and see counterfactual effects in real time.
+      Try different tutorials, change the focus set, and watch how the grid responds.
+    </p>
+    <div class="cta-block">
+      <a href="/grid" class="cta-btn">Open the Grid Explorer</a>
+    </div>
+  </section>
+</main>
+
+</Layout>

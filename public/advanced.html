@@ -1,0 +1,840 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Counterfactuals Tactical Board – Live Classifier Prototype</title>
+    <style>
+      :root{
+        --bg:#03060d; --fg:#f5fbff; --muted:#9ba8c3; --card:#070b18; --border:#11192c;
+        --accent:#00e5ff; --accent-warm:#ffd166; --accent-hot:#ff6b6b;
+      }
+      * { box-sizing:border-box }
+      body { margin:0; background:var(--bg); color:var(--fg); font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial }
+      a { color:var(--accent); }
+      .wrap { max-width:1300px; margin:0 auto; padding:20px; }
+      header { display:flex; flex-wrap:wrap; align-items:flex-start; gap:16px; justify-content:space-between; }
+      h1 { margin:0; font-size:30px }
+      .lede { color:var(--muted); max-width:65ch; line-height:1.5 }
+      .pill { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:#0c1326; border:1px solid #16213a; font-size:13px }
+      .layout { display:grid; grid-template-columns:320px 1fr; gap:16px; margin-top:18px; }
+      .board-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; }
+      @media (max-width:1020px){ .layout { grid-template-columns:1fr; } }
+      .card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.35); margin-bottom:14px }
+      h2 { margin:0 0 8px; font-size:20px }
+      h3 { margin:0 0 6px; font-size:16px }
+      p { line-height:1.5; margin:6px 0 }
+      .ctrl-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px }
+      .btn { border:1px solid var(--border); background:#0e152b; color:var(--fg); border-radius:12px; padding:6px 12px; cursor:pointer; font-size:13px; transition:background .15s ease }
+      .btn:hover:not(:disabled) { background:#151d38 }
+      .btn[aria-pressed="true"] { outline:2px solid var(--accent); outline-offset:1px; background:#111b3a }
+      .btn:disabled { opacity:0.45; cursor:not-allowed }
+      .metrics-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; margin-top:10px }
+      .metric-pill { padding:10px; border:1px solid #16213a; border-radius:12px; background:#090f1f; }
+      .metric-pill span { display:block; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em }
+      .metric-pill strong { font-size:18px }
+      table.confusion { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px }
+      table.confusion th, table.confusion td { border:1px solid #15203a; padding:6px; text-align:center }
+      .scene-shell { border:1px solid #11192c; border-radius:18px; overflow:hidden; background:#04070f; min-height:420px }
+      .scene-shell canvas { width:100%; height:100%; display:block }
+      .labels-row { display:flex; flex-wrap:wrap; gap:8px; font-size:12px; color:var(--muted); margin-top:10px }
+      .labels-row strong { color:var(--fg) }
+      .scatter-card { margin-top:14px; }
+      .scatter-card canvas { width:100%; border:1px solid #121a2f; border-radius:14px; background:#050912 }
+      .scatter-title { font-size:13px; color:var(--muted); margin-bottom:4px }
+      .legend { font-size:12px; color:var(--muted); display:flex; gap:12px; flex-wrap:wrap; margin-top:6px }
+      .legend span { display:inline-flex; align-items:center; gap:4px }
+      .legend i { width:10px; height:10px; border-radius:50%; display:inline-block }
+      .log { font-size:13px; color:var(--muted); margin-top:8px; line-height:1.5 }
+      .row-badges { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px }
+      .row-badge { border:1px solid var(--border); border-radius:12px; padding:8px 10px; font-size:13px; display:flex; flex-direction:column; gap:2px; background:#080f21; min-width:140px }
+      .row-badge.revealed { border-color:#1d6bff; background:#071429; }
+      .row-badge header { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+      .row-badge button { font-size:11px; padding:4px 8px; border-radius:8px }
+      .operator-log { font-size:13px; color:var(--muted); max-height:140px; overflow:auto; margin-top:10px; padding-left:18px }
+      .board-note { font-size:12px; color:var(--muted); margin-top:6px }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module">
+      import { h, render } from "https://esm.sh/preact@10.24.2";
+      import { useState, useMemo, useRef, useEffect, useCallback } from "https://esm.sh/preact@10.24.2/hooks";
+      import htm from "https://esm.sh/htm@3.1.1";
+      import * as THREE from "https://esm.sh/three@0.164.1";
+      import { OrbitControls } from "https://esm.sh/three@0.164.1/examples/jsm/controls/OrbitControls.js";
+      const html = htm.bind(h);
+
+      // --- Synthetic data model ----------------------------------------------------
+      const groupConfigs = [
+        { id:"A", label:0, center:[-1.6,-0.3], spread:0.42, seed:11, tagline:"Wide, slow signals" },
+        { id:"B", label:1, center:[1.1,0.45], spread:0.48, seed:22, tagline:"Fast telemetry" },
+        { id:"C", label:0, center:[-0.4,1.25], spread:0.36, seed:33, tagline:"Satellite uplinks" },
+        { id:"D", label:1, center:[1.05,-1.1], spread:0.55, seed:44, tagline:"Edge devices" }
+      ];
+      const defaultTaglines = Object.fromEntries(groupConfigs.map(g=> [g.id, g.tagline]));
+      const explanationSets = [
+        { id:"default", label:"Sensor fleet (default)", taglines: defaultTaglines },
+        { id:"llm-pretrain", label:"LLM pretraining slices", taglines:{
+          A:"Open web encyclopedias and FAQs",
+          B:"Code-heavy forums + docs",
+          C:"Newswire and policy briefs",
+          D:"Fiction + longform narrative"
+        }},
+        { id:"robotics", label:"Robotics curriculum", taglines:{
+          A:"Tabletop manipulation demos",
+          B:"Outdoor drone footage",
+          C:"Industrial arm telemetry",
+          D:"Simulated dexterity tasks"
+        }}
+      ];
+      const scenarioConfigs = [
+        {
+          id:"alpha",
+          label:"Eval α",
+          description:"Baseline mixture – same distribution as training.",
+          groups:["A","B","C","D"],
+          seed:201,
+          noise:0.1,
+          flip:0.02,
+          transform:(x,y)=> [x, y]
+        },
+        {
+          id:"beta",
+          label:"Eval β",
+          description:"Sensor drift stretches X and introduces mild label noise.",
+          groups:["A","B","D"],
+          seed:202,
+          noise:0.16,
+          flip:0.07,
+          transform:(x,y)=> [x*0.85 + 0.35, y*1.2 - 0.15]
+        },
+        {
+          id:"gamma",
+          label:"Eval γ",
+          description:"Northern skies: mostly C & D with a +Y shift.",
+          groups:["C","D"],
+          seed:203,
+          noise:0.12,
+          flip:0.04,
+          transform:(x,y)=> [x*0.95 - 0.15, y + 0.8]
+        },
+        {
+          id:"delta",
+          label:"Eval δ",
+          description:"Adversarial sweep bending trajectories and flipping more labels.",
+          groups:["A","B","C","D"],
+          seed:204,
+          noise:0.18,
+          flip:0.12,
+          transform:(x,y)=> [x + 0.45*Math.sin(y), y - 0.3*Math.cos(x)]
+        }
+      ];
+
+      function mulberry32(a){
+        return function(){
+          let t = a += 0x6d2b79f5;
+          t = Math.imul(t ^ t >>> 15, t | 1);
+          t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+          return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        };
+      }
+      function normal(rng){
+        let u=0, v=0;
+        while(u===0) u=rng();
+        while(v===0) v=rng();
+        return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
+      }
+      const GROUP_SIZE = 42;
+      function generateGroup(cfg, seedBump=0){
+        const rng = mulberry32(cfg.seed + seedBump);
+        const out=[];
+        for(let i=0;i<GROUP_SIZE;i++){
+          const x = cfg.center[0] + normal(rng)*cfg.spread;
+          const y = cfg.center[1] + normal(rng)*cfg.spread;
+          out.push({ x, y, label: cfg.label, group: cfg.id });
+        }
+        return out;
+      }
+      function makeScenarioDataset(config, groupData, seedBump=0){
+        const rng = mulberry32(config.seed + seedBump*3);
+        const arr=[];
+        for(const gid of config.groups){
+          const src = groupData.get(gid) || [];
+          for(const pt of src){
+            let [nx, ny] = config.transform(pt.x, pt.y, rng);
+            nx += normal(rng)*config.noise;
+            ny += normal(rng)*config.noise;
+            let label = pt.label;
+            if(config.flip && rng()<config.flip) label = label ? 0 : 1;
+            arr.push({ x:nx, y:ny, label, source:gid });
+          }
+        }
+        return arr;
+      }
+      function allSubsets(ids){
+        const out=[]; const n=ids.length;
+        for(let mask=1; mask<(1<<n); mask++){
+          const picks=[];
+          for(let i=0;i<n;i++) if(mask & (1<<i)) picks.push(ids[i]);
+          out.push(picks);
+        }
+        return out.sort((a,b)=> a.length===b.length ? a.join("").localeCompare(b.join("")) : a.length - b.length);
+      }
+      const subsetDefs = allSubsets(groupConfigs.map(g=>g.id)).map(groups=>({
+        id: groups.join(""),
+        label: groups.join(" + "),
+        groups
+      }));
+
+      function logisticTrain(samples, steps=420, lr=0.12){
+        if(!samples.length) return [0,0,0];
+        let w0=0, w1=0, w2=0;
+        for(let iter=0; iter<steps; iter++){
+          let g0=0, g1=0, g2=0;
+          for(const s of samples){
+            const z = w0 + w1*s.x + w2*s.y;
+            const p = 1/(1+Math.exp(-z));
+            const err = p - s.label;
+            g0 += err;
+            g1 += err*s.x;
+            g2 += err*s.y;
+          }
+          const scale = lr / samples.length;
+          w0 -= scale * g0;
+          w1 -= scale * g1;
+          w2 -= scale * g2;
+        }
+        return [w0,w1,w2];
+      }
+      const logisticProb = (w, s)=> 1/(1+Math.exp(-(w[0] + w[1]*s.x + w[2]*s.y)));
+      function evaluate(samples, weights){
+        if(!samples.length) return { accuracy:0, precision:0, recall:0, f1:0, counts:{tp:0,fp:0,tn:0,fn:0} };
+        let correct=0, tp=0, tn=0, fp=0, fn=0;
+        for(const s of samples){
+          const prob = logisticProb(weights, s);
+          const pred = prob>=0.5 ? 1 : 0;
+          if(pred===s.label) correct++;
+          if(pred===1 && s.label===1) tp++;
+          else if(pred===1 && s.label===0) fp++;
+          else if(pred===0 && s.label===0) tn++;
+          else fn++;
+        }
+        const accuracy = correct / samples.length;
+        const precision = tp+fp? tp/(tp+fp) : 0;
+        const recall = tp+fn? tp/(tp+fn) : 0;
+        const f1 = (precision+recall)? 2*precision*recall/(precision+recall) : 0;
+        return { accuracy, precision, recall, f1, counts:{tp,fp,tn,fn} };
+      }
+      function buildModelRun(seedBump=0){
+        const groupData = new Map(groupConfigs.map(cfg=> [cfg.id, generateGroup(cfg, seedBump)]));
+        const scenarioDataMap = new Map(scenarioConfigs.map(cfg=> [cfg.id, makeScenarioDataset(cfg, groupData, seedBump)]));
+        const trainDataCache = new Map(subsetDefs.map(def=> [def.id, def.groups.flatMap(gid=> groupData.get(gid) || [])]));
+        const resultMatrix = subsetDefs.map(def=>{
+          const weights = logisticTrain(trainDataCache.get(def.id));
+          return scenarioConfigs.map(cfg=>{
+            const stats = evaluate(scenarioDataMap.get(cfg.id), weights);
+            return { weights:[...weights], stats };
+          });
+        });
+        return { groupData, scenarioDataMap, trainDataCache, resultMatrix };
+      }
+
+      // --- Components --------------------------------------------------------------
+      const valueColor = (v)=>{
+        const t = Math.max(0, Math.min(1, v || 0));
+        const color = new THREE.Color();
+        color.setHSL(0.55 - 0.5*t, 0.65 + 0.2*t, 0.32 + 0.25*t);
+        return color;
+      };
+      const ACCENT_WARM = "#ffd166";
+      const COLOR_CLASS0 = "#5dd4ff";
+      const COLOR_CLASS1 = "#ff6b6b";
+      function makeLabelSprite(text, color="#f5fbff"){
+        const canvas = document.createElement("canvas");
+        canvas.width = 512;
+        canvas.height = 128;
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = "rgba(5,9,16,0)";
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = color;
+        ctx.font = "48px 'Inter', 'Segoe UI', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, canvas.width/2, canvas.height/2);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = 4;
+        const material = new THREE.SpriteMaterial({ map: texture, transparent:true });
+        const sprite = new THREE.Sprite(material);
+        const scale = 0.01;
+        sprite.scale.set(canvas.width*scale, canvas.height*scale, 1);
+        sprite.userData.isLabel = true;
+        return sprite;
+      }
+
+      const BarGrid = ({ matrix, rows=[], cols=[], selectedRow, selectedCol, onSelect, mode="real", revealedRows=[], canRevealRow, onRevealRow })=>{
+        const mountRef = useRef(null);
+        const stateRef = useRef(null);
+        const interactionsRef = useRef({ onSelect, mode, revealedRows, canRevealRow, onRevealRow });
+        useEffect(()=>{
+          interactionsRef.current = { onSelect, mode, revealedRows, canRevealRow, onRevealRow };
+        }, [onSelect, mode, revealedRows, canRevealRow, onRevealRow]);
+
+        useEffect(()=>{
+          if(!mountRef.current) return;
+          const width = mountRef.current.clientWidth || 600;
+          const height = Math.max(420, mountRef.current.clientHeight || 480);
+          const scene = new THREE.Scene();
+          scene.background = new THREE.Color(0x050910);
+          const camera = new THREE.PerspectiveCamera(48, width/height, 0.1, 100);
+          const renderer = new THREE.WebGLRenderer({ antialias:true });
+          renderer.setPixelRatio(window.devicePixelRatio||1);
+          renderer.setSize(width, height);
+          mountRef.current.appendChild(renderer.domElement);
+          const controls = new OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true; controls.dampingFactor = 0.08; controls.maxPolarAngle = Math.PI/2.05; controls.minDistance = 4;
+          const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+          const dir = new THREE.DirectionalLight(0xffffff, 0.8); dir.position.set(6,9,4);
+          scene.add(ambient); scene.add(dir);
+          const gridHelper = new THREE.GridHelper(14, 14, 0x1d2b45, 0x10172b);
+          scene.add(gridHelper);
+          const raycaster = new THREE.Raycaster();
+          const pointer = new THREE.Vector2();
+          const animate = ()=>{
+            if(!stateRef.current) return;
+            controls.update();
+            renderer.render(scene, camera);
+            stateRef.current.frame = requestAnimationFrame(animate);
+          };
+
+          const handleResize = ()=>{
+            if(!mountRef.current) return;
+            const w = mountRef.current.clientWidth || width;
+            const h = Math.max(380, mountRef.current.clientHeight || height);
+            renderer.setSize(w,h);
+            camera.aspect = w/h;
+            camera.updateProjectionMatrix();
+          };
+          window.addEventListener("resize", handleResize);
+
+          const handlePointer = (event)=>{
+            if(event.target !== renderer.domElement || !stateRef.current) return;
+            const rect = renderer.domElement.getBoundingClientRect();
+            pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(pointer, camera);
+            const group = stateRef.current.group;
+            if(!group) return;
+            const barGroup = group.children[0];
+            if(!barGroup) return;
+            const intersects = raycaster.intersectObjects(barGroup.children, false);
+            if(intersects.length){
+              const { rowIdx, colIdx } = intersects[0].object.userData || {};
+              const { mode, revealedRows, canRevealRow, onRevealRow, onSelect } = interactionsRef.current;
+              if(typeof rowIdx === "number" && typeof colIdx === "number"){
+                if(mode==="operator" && !(revealedRows||[]).includes(rowIdx)){
+                  if(canRevealRow?.(rowIdx)) onRevealRow?.(rowIdx);
+                  return;
+                }
+                onSelect?.(rowIdx, colIdx);
+              }
+            }
+          };
+          renderer.domElement.addEventListener("pointerdown", handlePointer);
+
+          stateRef.current = { scene, camera, renderer, controls, raycaster, pointer, group:null, handleResize, handlePointer };
+          animate();
+
+          return ()=>{
+            const ref = stateRef.current;
+            if(ref?.frame) cancelAnimationFrame(ref.frame);
+            window.removeEventListener("resize", handleResize);
+            renderer.domElement.removeEventListener("pointerdown", handlePointer);
+            renderer.dispose();
+            controls.dispose();
+            scene.clear();
+            stateRef.current = null;
+          };
+        }, []);
+
+        useEffect(()=>{
+          if(!stateRef.current) return;
+          const { scene, group } = stateRef.current;
+          if(group){
+            scene.remove(group);
+            group.traverse(obj=>{
+              if(obj.geometry) obj.geometry.dispose();
+              if(obj.material){
+                if(obj.material.map) obj.material.map.dispose();
+                obj.material.dispose();
+              }
+            });
+          }
+          const rowsN = matrix.length;
+          const colsN = matrix[0]?.length || 0;
+          const tile=0.9, gap=0.28;
+          const newGroup = new THREE.Group();
+          const isOperator = mode==="operator";
+          for(let r=0;r<rowsN;r++){
+            for(let c=0;c<colsN;c++){
+              const val = matrix[r][c];
+              const revealed = !isOperator || revealedRows.includes(r);
+              const afford = isOperator && !revealed && (canRevealRow?.(r));
+              const height = revealed ? 0.12 + (val||0)*1.4 : (afford?0.12:0.06);
+              const geometry = new THREE.BoxGeometry(tile, height, tile);
+              let color = valueColor(val);
+              if(isOperator){
+                if(!revealed){
+                  color = new THREE.Color(afford ? ACCENT_WARM : "#242b3f");
+                } else {
+                  color = valueColor(val);
+                }
+              }
+              const material = new THREE.MeshStandardMaterial({ color, emissive:0x050910, roughness:0.4, metalness:0.1 });
+              if(r===selectedRow && c===selectedCol && (!isOperator || revealed)){
+                material.emissive = new THREE.Color(0x00e5ff);
+                material.emissiveIntensity = 0.6;
+              }
+              const mesh = new THREE.Mesh(geometry, material);
+              mesh.position.set((c-(colsN-1)/2)*(tile+gap), height/2, (r-(rowsN-1)/2)*(tile+gap));
+              mesh.userData = { rowIdx:r, colIdx:c };
+              newGroup.add(mesh);
+            }
+          }
+          const labelsGroup = new THREE.Group();
+          const xMin = -(colsN-1)/2*(tile+gap);
+          const xMax = (colsN-1)/2*(tile+gap);
+          const zMin = -(rowsN-1)/2*(tile+gap);
+          const zMax = (rowsN-1)/2*(tile+gap);
+          (rows||[]).forEach((row,rIdx)=>{
+            const sprite = makeLabelSprite(row?.label || row?.id || `Row ${rIdx+1}`);
+            sprite.position.set(xMin - (tile+0.8), 0.1, (rIdx-(rowsN-1)/2)*(tile+gap));
+            labelsGroup.add(sprite);
+          });
+          (cols||[]).forEach((col,cIdx)=>{
+            const sprite = makeLabelSprite(col?.label || col?.id || `Col ${cIdx+1}`);
+            sprite.position.set((cIdx-(colsN-1)/2)*(tile+gap), 0.1, zMax + (tile+0.9));
+            labelsGroup.add(sprite);
+          });
+          const container = new THREE.Group();
+          container.add(newGroup);
+          container.add(labelsGroup);
+          scene.add(container);
+          stateRef.current.group = container;
+          const span = Math.max(rowsN, colsN);
+          const dist = 4 + span*0.55;
+          stateRef.current.camera.position.set(dist, dist*0.7, dist);
+          stateRef.current.controls.target.set(0,0,0);
+        }, [matrix, selectedRow, selectedCol, mode, revealedRows, rows, cols, canRevealRow]);
+
+        return html`<div class="scene-shell" ref=${mountRef}></div>`;
+      };
+
+      const ScatterPlot = ({ title, data, weights=null, showDecision=false })=>{
+        const canvasRef = useRef(null);
+        useEffect(()=>{
+          const canvas = canvasRef.current;
+          if(!canvas) return;
+          const ctx = canvas.getContext("2d");
+          const width = canvas.clientWidth || canvas.width;
+          const height = canvas.clientHeight || canvas.height;
+          canvas.width = width;
+          canvas.height = height;
+          ctx.clearRect(0,0,width,height);
+          if(!data || !data.length){
+            ctx.fillStyle = "#fff";
+            ctx.fillText("No data", width/2 - 20, height/2);
+            return;
+          }
+          let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+          for(const d of data){
+            if(d.x<minX) minX=d.x;
+            if(d.x>maxX) maxX=d.x;
+            if(d.y<minY) minY=d.y;
+            if(d.y>maxY) maxY=d.y;
+          }
+          const pad=24;
+          const sx=(x)=> pad + (x-minX)/(Math.max(1e-6,maxX-minX))*(width-2*pad);
+          const sy=(y)=> height - pad - (y-minY)/(Math.max(1e-6,maxY-minY))*(height-2*pad);
+
+          ctx.strokeStyle = "#18223b";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(pad-6, pad-6, width-2*(pad-6), height-2*(pad-6));
+
+          if(showDecision && weights){
+            const [b,w1,w2] = weights;
+            ctx.strokeStyle = "rgba(255,255,255,0.8)";
+            ctx.setLineDash([6,4]);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            if(Math.abs(w2) > 1e-4){
+              const y1 = -(b + w1*minX)/w2;
+              const y2 = -(b + w1*maxX)/w2;
+              ctx.moveTo(sx(minX), sy(y1));
+              ctx.lineTo(sx(maxX), sy(y2));
+            } else if(Math.abs(w1) > 1e-4){
+              const xCut = -(b)/w1;
+              ctx.moveTo(sx(xCut), sy(minY));
+              ctx.lineTo(sx(xCut), sy(maxY));
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+
+          for(const d of data){
+            const color = d.label ? COLOR_CLASS1 : COLOR_CLASS0;
+            ctx.fillStyle = color;
+            const size = 5;
+            ctx.beginPath();
+            ctx.arc(sx(d.x), sy(d.y), size, 0, Math.PI*2);
+            ctx.fill();
+            if(d.pred !== undefined && d.pred !== d.label){
+              ctx.strokeStyle = ACCENT_WARM;
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+          }
+        }, [data, weights, showDecision]);
+
+        return html`
+          <div class="scatter-card">
+            <div class="scatter-title">${title}</div>
+            <canvas ref=${canvasRef} width="360" height="300"></canvas>
+          </div>
+        `;
+      };
+
+
+      function formatPct(v){ return (v*100).toFixed(1) + "%"; }
+
+      const puzzleMarkdown = `
+## Drift Hunter
+metric: recall
+row: AB
+col: beta
+budget: 48
+revealed: A,B
+text: Sensor drift threatens precision; find a robust coalition and keep recall above 0.8 without overspending.
+
+## Adversarial Sweep
+metric: precision
+row: AC
+col: delta
+budget: 55
+revealed: C
+text: The adversarial eval flips labels—hunt for a training mix that keeps false positives low.
+
+## Eval Whisperer
+metric: accuracy
+row: ABCD
+col: gamma
+budget: 60
+revealed: A,B,C
+text: You inherit a big roster; spend remaining budget to uncover hidden combos that hit 90%+ accuracy on Eval γ.
+      `;
+      function parsePuzzles(md){
+        return md.split(/^##\s+/m).map(block=> block.trim()).filter(Boolean).map(section=>{
+          const lines = section.split("\n").map(l=> l.trim()).filter(Boolean);
+          const title = lines.shift();
+          const data = { title, text: "", metric:null, row:null, col:null, budget:null, revealed:[] };
+          const extraText=[];
+          for(const ln of lines){
+            const m = ln.match(/^([a-zA-Z]+):\s*(.+)$/);
+            if(m){
+              const key = m[1].toLowerCase();
+              const val = m[2].trim();
+              if(key==="metric") data.metric = val.toLowerCase();
+              else if(key==="row") data.row = val.replace(/\s+/g,"");
+              else if(key==="col") data.col = val.toLowerCase();
+              else if(key==="budget") data.budget = parseFloat(val);
+              else if(key==="revealed") data.revealed = val.split(/[,\s]+/).filter(Boolean);
+              else if(key==="text") extraText.push(val);
+            } else {
+              extraText.push(ln);
+            }
+          }
+          data.text = extraText.join(" ");
+          return data;
+        });
+      }
+      const puzzles = parsePuzzles(puzzleMarkdown);
+
+      function App(){
+        const BASE_BUDGET = 60;
+        const [metric,setMetric] = useState("accuracy");
+        const [rowIdx,setRowIdx] = useState(0);
+        const [colIdx,setColIdx] = useState(0);
+        const [revealedRows,setRevealedRows] = useState([]);
+        const [budget,setBudget] = useState(BASE_BUDGET);
+        const [topUp,setTopUp] = useState(20);
+        const [modelSeed,setModelSeed] = useState(0);
+        const [toyExplanation,setToyExplanation] = useState("default");
+        const activeExplanation = explanationSets.find(e=> e.id===toyExplanation) || explanationSets[0];
+        const taglines = activeExplanation.taglines;
+        const subsetList = useMemo(()=> subsetDefs.map(def=> ({
+          ...def,
+          blurb: def.groups.map(id=> taglines[id] || defaultTaglines[id] || "").filter(Boolean).join(" · ")
+        })), [taglines]);
+        const modelRun = useMemo(()=> buildModelRun(modelSeed), [modelSeed]);
+        const { resultMatrix, trainDataCache, scenarioDataMap } = modelRun;
+        const [operatorLog,setOperatorLog] = useState([`Operator budget initialized at ${BASE_BUDGET} credits.`]);
+        const REVEAL_COST = 8;
+        const appendOperatorLog = useCallback((msg)=> setOperatorLog(prev=> [msg, ...prev].slice(0,6)), []);
+        const handleSelect = useCallback((r,c)=>{ setRowIdx(r); setColIdx(c); }, []);
+        const canRevealRow = useCallback((idx)=> budget>=REVEAL_COST && !revealedRows.includes(idx), [budget, revealedRows]);
+        const revealedRef = useRef(revealedRows);
+        useEffect(()=>{ revealedRef.current = revealedRows; }, [revealedRows]);
+        const handleRevealRow = useCallback((idx)=>{
+          setBudget(prevBudget=>{
+            if(prevBudget < REVEAL_COST) return prevBudget;
+            if(revealedRef.current.includes(idx)) return prevBudget;
+            setRevealedRows(prev=> [...prev, idx].sort((a,b)=>a-b));
+            appendOperatorLog(`Valued roster ${subsetList[idx].label} (−${REVEAL_COST})`);
+            return prevBudget - REVEAL_COST;
+          });
+        }, [appendOperatorLog, subsetList]);
+        const resetOperator = useCallback(()=>{
+          setBudget(BASE_BUDGET);
+          setRevealedRows([]);
+          appendOperatorLog("Operator board reset to initial state.");
+        }, [appendOperatorLog]);
+        const rerollData = ()=>{
+          const newSeed = Math.floor(Math.random()*1_000_000);
+          setModelSeed(newSeed);
+          setBudget(BASE_BUDGET);
+          setRevealedRows([]);
+          setOperatorLog([`Rerolled training data with seed ${newSeed} (budget reset to ${BASE_BUDGET}).`]);
+        };
+        const addBudget = ()=>{
+          const amt = Math.max(0, Math.round(+topUp || 0));
+          if(!amt) return;
+          setBudget(b=> b + amt);
+          appendOperatorLog(`Added ${amt} credits to operator budget.`);
+        };
+        const [puzzleId,setPuzzleId] = useState(puzzles[0]?.title || "");
+        const activePuzzle = useMemo(()=> puzzles.find(p=> p.title===puzzleId), [puzzleId]);
+        const applyPuzzle = ()=>{
+          if(!activePuzzle) return;
+          if(activePuzzle.metric) setMetric(activePuzzle.metric);
+          const rowMatch = subsetList.findIndex(r=> r.id.toLowerCase() === (activePuzzle.row||"").toLowerCase());
+          if(rowMatch>=0) setRowIdx(rowMatch);
+          const colMatch = scenarioConfigs.findIndex(cfg=> cfg.id.toLowerCase() === (activePuzzle.col||"").toLowerCase());
+          if(colMatch>=0) setColIdx(colMatch);
+          const cleanBudget = Number.isFinite(activePuzzle.budget)? Math.max(0, Math.round(activePuzzle.budget)) : BASE_BUDGET;
+          setBudget(cleanBudget);
+          const revealedIdxs = (activePuzzle.revealed||[]).map(code=> subsetList.findIndex(r=> r.id.toLowerCase()===code.toLowerCase())).filter(idx=> idx>=0);
+          setRevealedRows(revealedIdxs);
+          setOperatorLog(prev=> [`Loaded puzzle “${activePuzzle.title}” (budget ${cleanBudget}, ${revealedIdxs.length} revealed).`, ...prev].slice(0,6));
+        };
+
+        const metricMatrix = useMemo(()=> resultMatrix.map(row=> row.map(cell=> cell.stats[metric] || 0)), [metric, resultMatrix]);
+        const selectedRow = subsetList[rowIdx];
+        const selectedScenario = scenarioConfigs[colIdx];
+        const selectedCell = resultMatrix[rowIdx][colIdx];
+        const metricValue = selectedCell?.stats?.[metric] ?? 0;
+        const trainData = useMemo(()=> trainDataCache.get(selectedRow.id) || [], [rowIdx, trainDataCache, selectedRow.id]);
+        const evalPoints = useMemo(()=> {
+          const evalData = scenarioDataMap.get(selectedScenario.id) || [];
+          const weights = selectedCell.weights;
+          return evalData.map(pt=>{
+            const prob = logisticProb(weights, pt);
+            const pred = prob>=0.5?1:0;
+            return { ...pt, pred, prob };
+          });
+        }, [rowIdx, colIdx, scenarioDataMap, selectedScenario.id, selectedCell.weights]);
+
+        return html`
+          <div class="wrap">
+            <header>
+              <div>
+                <h1>Live Counterfactual Board</h1>
+                <p class="lede">Advanced prototype: every tile now runs a real logistic-regression classifier on synthetic data. Pick a training roster (rows) against evaluation worlds (columns), then inspect the actual scatter plots, confusion matrix, and a 3D accuracy board powered by Three.js.</p>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+                <div class="pill">${subsetList.length} train combos × ${scenarioConfigs.length} eval worlds</div>
+                <div class="pill">Data seed: <strong>${modelSeed}</strong></div>
+              </div>
+            </header>
+
+            <div class="layout">
+              <div>
+                <div class="card">
+                  <h2>Board setup</h2>
+                  <p>Swap the toy explanations for A/B/C/D, regenerate synthetic data, and remind yourself how the 3D bars are scaled.</p>
+                  <div class="ctrl-row">
+                    <select style="flex:1;padding:8px;border-radius:10px;background:#0b1225;color:var(--fg);border:1px solid #14203a" value=${toyExplanation} onChange=${e=>setToyExplanation(e.target.value)}>
+                      ${explanationSets.map(set=> html`<option value=${set.id}>${set.label}</option>`)}
+                    </select>
+                    <button class="btn" onClick=${rerollData}>Re-roll training data</button>
+                  </div>
+                  <div class="ctrl-row">
+                    <button class="btn ghost" onClick=${resetOperator}>Reset operator state</button>
+                  </div>
+                  <p class="log">Bar height = 0.12 + (metric value × 1.4). Operator view hides unrevealed rows at height 0.06; affordable but unrevealed rows sit at 0.12 and glow amber. Revealed tiles match the real grid.</p>
+                </div>
+
+                <div class="card">
+                  <h2>Metric focus</h2>
+                  <p>Switch the board to emphasize different classifier stats. Selection also updates the glowing tile.</p>
+                  <div class="ctrl-row">
+                    ${["accuracy","precision","recall","f1"].map(name=> html`
+                      <button class="btn" aria-pressed=${metric===name} onClick=${()=>setMetric(name)}>${name}</button>
+                    `)}
+                  </div>
+                  <p class="log" style="margin-top:10px">Selected tile reports <strong>${formatPct(metricValue)}</strong> ${metric}.</p>
+                </div>
+
+                <div class="card">
+                  <h2>Selection</h2>
+                  <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">Training roster</label>
+                  <select style="width:100%;padding:8px;border-radius:10px;background:#0b1225;color:var(--fg);border:1px solid #14203a" value=${rowIdx} onChange=${e=>setRowIdx(+e.target.value)}>
+                    ${subsetList.map((row,idx)=> html`<option value=${idx}>${idx+1}. ${row.label}</option>`)}
+                  </select>
+                  <label style="display:block;font-size:12px;color:var(--muted);margin:12px 0 4px">Evaluation world</label>
+                  <select style="width:100%;padding:8px;border-radius:10px;background:#0b1225;color:var(--fg);border:1px solid #14203a" value=${colIdx} onChange=${e=>setColIdx(+e.target.value)}>
+                    ${scenarioConfigs.map((cfg,idx)=> html`<option value=${idx}>${cfg.label} – ${cfg.description}</option>`)}
+                  </select>
+                </div>
+
+                <div class="card">
+                  <h2>Scenario puzzles</h2>
+                  <p>These presets live in a tiny markdown manifest. Loading one sets the metric, focus tile, budget, and which rows are already revealed.</p>
+                  <div class="ctrl-row">
+                    <select style="flex:1;padding:8px;border-radius:10px;background:#0b1225;color:var(--fg);border:1px solid #14203a" value=${puzzleId} onChange=${e=>setPuzzleId(e.target.value)}>
+                      ${puzzles.map(p=> html`<option value=${p.title}>${p.title}</option>`)}
+                    </select>
+                    <button class="btn" onClick=${applyPuzzle}>Load puzzle</button>
+                  </div>
+                  ${activePuzzle && html`
+                    <p class="log"><strong>Focus</strong>: metric ${activePuzzle.metric || "accuracy"}, row ${activePuzzle.row || "?"}, column ${activePuzzle.col || "?"}. Budget = ${activePuzzle.budget || "default"}; pre-revealed: ${(activePuzzle.revealed||[]).join(", ") || "none"}.</p>
+                    <p class="log">${activePuzzle.text}</p>
+                  `}
+                </div>
+
+                <div class="card">
+                  <h2>Classifier stats</h2>
+                  <p><strong>${selectedRow.label}</strong> vs <strong>${selectedScenario.label}</strong></p>
+                  <div class="metrics-grid">
+                    ${["accuracy","precision","recall","f1"].map(key=> html`
+                      <div class="metric-pill">
+                        <span>${key}</span>
+                        <strong>${formatPct(selectedCell.stats[key])}</strong>
+                      </div>
+                    `)}
+                  </div>
+                  <table class="confusion">
+                    <thead>
+                      <tr><th></th><th>Pred 0</th><th>Pred 1</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><th>True 0</th><td>${selectedCell.stats.counts.tn}</td><td>${selectedCell.stats.counts.fp}</td></tr>
+                      <tr><th>True 1</th><td>${selectedCell.stats.counts.fn}</td><td>${selectedCell.stats.counts.tp}</td></tr>
+                    </tbody>
+                  </table>
+                  <p class="log">Weights ≈ [${selectedCell.weights.map(w=> w.toFixed(2)).join(", ")}], ${trainData.length} training pts · ${evalPoints.length} eval pts.</p>
+                </div>
+
+                <div class="card">
+                  <h2>Data views</h2>
+                  <p><strong>${selectedRow.label}</strong> training clouds</p>
+                  <${ScatterPlot} title="Training distribution" data=${trainData} />
+                  <p style="margin-top:12px"><strong>${selectedScenario.label}</strong> evaluation scatter</p>
+                  <${ScatterPlot} title="Eval scatter & decision boundary" data=${evalPoints} weights=${selectedCell.weights} showDecision=${true} />
+                  <div class="legend">
+                    <span><i style="background:${COLOR_CLASS0}"></i>Class 0</span>
+                    <span><i style="background:${COLOR_CLASS1}"></i>Class 1</span>
+                    <span><i style="background:${ACCENT_WARM}"></i>Misclassified outline</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="board-grid">
+                  <div class="card">
+                    <h2>Real world grid</h2>
+                    <p>True classifier stats across every training coalition (rows) and eval world (columns). Click any cube to focus the detailed stats + scatterplots.</p>
+                    <${BarGrid}
+                      matrix=${metricMatrix}
+                      rows=${subsetList}
+                      cols=${scenarioConfigs}
+                      selectedRow=${rowIdx}
+                      selectedCol=${colIdx}
+                      onSelect=${handleSelect}
+                      mode="real"
+                    />
+                    <p class="board-note">Axis labels render directly in scene; taller cyan highlights = the currently inspected tile.</p>
+                  </div>
+                  <div class="card">
+                    <h2>Operator knowledge</h2>
+                    <p>Operators only know the rows they've audited. Amber cubes show affordable reveals (${REVEAL_COST} credits each); click or use the buttons below.</p>
+                    <${BarGrid}
+                      matrix=${metricMatrix}
+                      rows=${subsetList}
+                      cols=${scenarioConfigs}
+                      selectedRow=${rowIdx}
+                      selectedCol=${colIdx}
+                      onSelect=${handleSelect}
+                      mode="operator"
+                      revealedRows=${revealedRows}
+                      canRevealRow=${canRevealRow}
+                      onRevealRow=${handleRevealRow}
+                    />
+                    <p class="board-note">${revealedRows.length}/${subsetList.length} rosters known · Budget ${budget} credits. Hidden rows stay at height 0.06; affordable rows rise to 0.12 until you reveal them.</p>
+                  </div>
+                </div>
+                <div class="card">
+                  <h2>Operator actions</h2>
+                  <p>Spend credits to value additional rosters and sync the operator board with reality. Costs mirror the simple mini-game: reveal = ${REVEAL_COST}.</p>
+                  <div class="pill">Budget: <strong style="font-size:15px">${budget}</strong> credits</div>
+                  <div class="ctrl-row" style="margin-top:8px;align-items:center">
+                    <label style="font-size:12px;color:var(--muted)">Add starting budget</label>
+                    <input type="number" min="0" step="1" value=${topUp} onInput=${e=>setTopUp(e.target.value)} style="width:90px;padding:6px;border-radius:10px;background:#0b1225;color:var(--fg);border:1px solid #14203a" />
+                    <button class="btn" onClick=${addBudget}>Add credits</button>
+                  </div>
+                  <div class="row-badges">
+                    ${subsetList.map((row,idx)=>{
+                      const revealed = revealedRows.includes(idx);
+                      const affordable = canRevealRow(idx);
+                      return html`
+                        <div class=${"row-badge "+(revealed?"revealed":"")}>
+                          <header>
+                            <strong>${row.label}</strong>
+                            ${revealed
+                              ? html`<span style="color:#5dd4ff;font-size:11px">Known</span>`
+                              : html`<span style="color:${affordable?ACCENT_WARM:"#5a637c"};font-size:11px">${affordable? "Hidden" : "Need credits"}</span>`}
+                          </header>
+                          ${row.blurb && html`<span style="font-size:11px;color:var(--muted)">${row.blurb}</span>`}
+                          ${revealed
+                            ? html`<span style="font-size:11px;color:var(--muted)">Accuracy now visible across worlds.</span>`
+                            : html`<button class="btn" disabled=${!affordable} onClick=${()=>handleRevealRow(idx)}>Reveal (−${REVEAL_COST})</button>`}
+                        </div>
+                      `;
+                    })}
+                  </div>
+                  <div class="ctrl-row" style="margin-top:12px">
+                    <button class="btn ghost" onClick=${resetOperator}>Reset operator state</button>
+                  </div>
+                  <div class="operator-log">
+                    <strong>Event log</strong>
+                    <ul style="margin:6px 0 0 16px;padding:0">
+                      ${operatorLog.map((entry,idx)=> html`<li key=${"oplog-"+idx}>${entry}</li>`)}
+                    </ul>
+                  </div>
+                </div>
+                <div class="card">
+                  <h2>World briefings</h2>
+                  ${scenarioConfigs.map(cfg=> html`
+                    <p><strong>${cfg.label}</strong>: ${cfg.description}</p>
+                  `)}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      render(html`<${App}/>`, document.getElementById("app"));
+    </script>
+  </body>
+</html>

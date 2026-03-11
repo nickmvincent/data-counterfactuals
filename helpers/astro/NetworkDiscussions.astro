@@ -1,0 +1,170 @@
+---
+import type { NetworkData } from '../network-data';
+
+interface ClassNames {
+  container?: string;
+  header?: string;
+  title?: string;
+  subtitle?: string;
+  backLinkWrapper?: string;
+  backLink?: string;
+  section?: string;
+  discussionsList?: string;
+  discussionListItem?: string;
+  list?: string;
+  listItem?: string;
+  description?: string;
+  muted?: string;
+  emptySection?: string;
+}
+
+interface InlineStyles {
+  container?: string;
+  header?: string;
+  subtitle?: string;
+  backLinkWrapper?: string;
+  backLink?: string;
+  section?: string;
+  list?: string;
+  discussionListItem?: string;
+  listItem?: string;
+  description?: string;
+  muted?: string;
+  emptySection?: string;
+}
+
+interface Props {
+  networkData: NetworkData | null;
+  heading?: string;
+  subtitle?: string;
+  descriptionPrefix?: string;
+  backLinkHref?: string;
+  backLinkLabel?: string;
+  containerTag?: 'main' | 'section' | 'div';
+  headingTag?: 'h1' | 'h2' | 'h3';
+  sectionHeadingTag?: 'h2' | 'h3' | 'h4';
+  hideProjectLinks?: boolean;
+  hideRelatedProjects?: boolean;
+  classes?: ClassNames;
+  styles?: InlineStyles;
+}
+
+const {
+  networkData,
+  heading = 'Discussions & Network',
+  subtitle = 'Join the conversation and explore related projects.',
+  descriptionPrefix = '',
+  backLinkHref,
+  backLinkLabel = '← Back to home',
+  containerTag = 'main',
+  headingTag = 'h1',
+  sectionHeadingTag = 'h2',
+  hideProjectLinks = false,
+  hideRelatedProjects = false,
+  classes = {},
+  styles = {},
+}: Props = Astro.props;
+
+const Container = containerTag;
+const Heading = headingTag;
+const SectionHeading = sectionHeadingTag;
+
+const labelForProvider = (provider: string) => {
+  if (provider === 'github') return 'GitHub Discussions';
+  if (provider === 'whitewind') return 'WhiteWind';
+  return provider.charAt(0).toUpperCase() + provider.slice(1);
+};
+---
+
+<Container class={classes.container} style={styles.container}>
+  <header class={classes.header} style={styles.header}>
+    <Heading class={classes.title}>{heading}</Heading>
+    <p class={classes.subtitle} style={styles.subtitle}>{subtitle}</p>
+    {backLinkHref && (
+      <div class={classes.backLinkWrapper} style={styles.backLinkWrapper}>
+        <a class={classes.backLink} style={styles.backLink} href={backLinkHref}>
+          {backLinkLabel}
+        </a>
+      </div>
+    )}
+  </header>
+
+  {networkData ? (
+    <>
+      {networkData.discussions?.length ? (
+        <section class={classes.section} style={styles.section}>
+          <SectionHeading>Join the Discussion</SectionHeading>
+          <ul class={classes.discussionsList} style={styles.list}>
+            {networkData.discussions.map((discussion) => (
+              <li
+                class={classes.discussionListItem ?? classes.listItem}
+                style={styles.discussionListItem ?? styles.listItem}
+              >
+                <a href={discussion.url} target="_blank" rel="noopener">
+                  {discussion.label || labelForProvider(discussion.provider)}
+                </a>
+                {discussion.description && (
+                  <span class={classes.description} style={styles.description}>
+                    {descriptionPrefix}
+                    {discussion.description}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {!hideRelatedProjects && networkData.relatedProjects?.length ? (
+        <section class={classes.section} style={styles.section}>
+          <SectionHeading>Related Projects</SectionHeading>
+          <ul class={classes.list} style={styles.list}>
+            {networkData.relatedProjects.map((project) => (
+              <li class={classes.listItem} style={styles.listItem}>
+                {project.website ? (
+                  <a href={project.website} target="_blank" rel="noopener">
+                    {project.title || project.name}
+                  </a>
+                ) : (
+                  <span>{project.title || project.name}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {!hideProjectLinks && (networkData.links?.website || networkData.links?.github) ? (
+        <section class={classes.section} style={styles.section}>
+          <SectionHeading>Project Links</SectionHeading>
+          <ul class={classes.list} style={styles.list}>
+            {networkData.links?.website && (
+              <li class={classes.listItem} style={styles.listItem}>
+                <a href={networkData.links.website} target="_blank" rel="noopener">
+                  Live Site
+                </a>
+              </li>
+            )}
+            {networkData.links?.github && (
+              <li class={classes.listItem} style={styles.listItem}>
+                <a href={networkData.links.github} target="_blank" rel="noopener">
+                  GitHub Repository
+                </a>
+              </li>
+            )}
+          </ul>
+        </section>
+      ) : null}
+
+      <p class={classes.muted} style={styles.muted}>
+        Generated on {new Date(networkData.generatedAt ?? Date.now()).toLocaleDateString()}
+      </p>
+    </>
+  ) : (
+    <section class={classes.emptySection ?? classes.section} style={styles.emptySection ?? styles.section}>
+      <p class={classes.muted} style={styles.muted}>
+        Network data not yet generated. Run the build to populate this page.
+      </p>
+    </section>
+  )}
+</Container>
