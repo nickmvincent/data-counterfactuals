@@ -3,7 +3,7 @@ import { useState } from "preact/hooks";
 import htm from "htm";
 const html = htm.bind(h);
 
-const palette = (t) => `hsl(${210 - 150 * t} 90% ${48 + 14 * (t - 0.5)}%)`;
+const palette = (t) => `hsl(${184 - 162 * t} ${56 + 18 * t}% ${29 + 28 * t}%)`;
 
 /**
  * @typedef {Object} MiniGridProps
@@ -35,10 +35,14 @@ export default function MiniGrid({
   const [hoverCell, setHoverCell] = useState(null);
   const [selectedCell, setSelectedCell] = useState(null);
 
-  const allVals = values.flat();
-  const min = Math.min(...allVals);
-  const max = Math.max(...allVals);
-  const norm = (v) => (max === min ? 0.5 : (v - min) / (max - min));
+  const allVals = values.flat().filter((value) => Number.isFinite(value));
+  const min = allVals.length ? Math.min(...allVals) : 0;
+  const max = allVals.length ? Math.max(...allVals) : 1;
+  const norm = (value) => {
+    if (!Number.isFinite(value)) return 0.5;
+    return max === min ? 0.5 : (value - min) / (max - min);
+  };
+  const formatValue = (value) => (Number.isFinite(value) ? value.toFixed(2) : "--");
 
   const getCellInfo = (ri, ci) => {
     const val = values[ri]?.[ci];
@@ -50,6 +54,14 @@ export default function MiniGrid({
   const handleClick = (ri, ci) => {
     if (!interactive) return;
     setSelectedCell(selectedCell?.ri === ri && selectedCell?.ci === ci ? null : { ri, ci });
+  };
+
+  const handleKeyDown = (event, ri, ci) => {
+    if (!interactive) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleClick(ri, ci);
+    }
   };
 
   return html`
@@ -73,16 +85,21 @@ export default function MiniGrid({
               const baseVal = values[compareRow]?.[ci] ?? 0;
               displayVal = val - baseVal;
             }
+            const displayLabel = formatValue(displayVal);
 
             return html`
               <div
                 class="mini-cell ${isHighlight ? 'ring-highlight' : ''} ${isCompare ? 'ring-compare' : ''} ${isSelected ? 'selected' : ''}"
                 style="background: ${palette(t)};"
+                role=${interactive ? "button" : undefined}
+                tabindex=${interactive ? 0 : undefined}
+                aria-label=${`Train ${rows[ri] ?? "?"}, evaluate ${cols[ci] ?? "?"}, score ${displayLabel}`}
                 onClick=${() => handleClick(ri, ci)}
+                onKeyDown=${(event) => handleKeyDown(event, ri, ci)}
                 onMouseEnter=${() => setHoverCell({ ri, ci })}
                 onMouseLeave=${() => setHoverCell(null)}
               >
-                <span class="mini-val">${displayVal.toFixed(2)}</span>
+                <span class="mini-val">${displayLabel}</span>
               </div>
             `;
           })}
@@ -94,7 +111,7 @@ export default function MiniGrid({
         const { val, rowLabel, colLabel } = getCellInfo(hoverCell.ri, hoverCell.ci);
         return html`
           <div class="mini-tooltip">
-            Train: <strong>${rowLabel}</strong> · Eval: <strong>${colLabel}</strong> · Score: <strong>${val?.toFixed(2)}</strong>
+            Train: <strong>${rowLabel ?? "?"}</strong> · Eval: <strong>${colLabel ?? "?"}</strong> · Score: <strong>${formatValue(val)}</strong>
           </div>
         `;
       })()}

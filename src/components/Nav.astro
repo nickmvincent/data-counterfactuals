@@ -2,14 +2,15 @@
 const { pathname } = Astro.url;
 
 const links = [
-  { href: "/", label: "Intro" },
+  { href: "/", label: "Start" },
+  { href: "/grid", label: "Explorer" },
   { href: "/memo", label: "Memo" },
-  { href: "/grid", label: "Grid" },
-  { href: "/advanced.html", label: "3D Board", external: true },
-  { href: "/collections", label: "Paper Collections" },
+  { href: "/collections", label: "Reading Lists" },
   { href: "/glossary", label: "Glossary" },
-  { href: "/about", label: "About & Feedback" },
+  { href: "/about", label: "About" },
 ];
+
+const externalLink = { href: "/advanced.html", label: "3D View", external: true };
 
 function isActive(href: string): boolean {
   if (href === "/") return pathname === "/";
@@ -18,17 +19,33 @@ function isActive(href: string): boolean {
 ---
 
 <nav class="top-nav">
-  <span class="brand">Data Counterfactuals</span>
-  <div class="nav-links">
-    {links.map(link => (
+  <div class="nav-inner">
+    <a href="/" class="brand">
+      <span class="brand-label">Data Counterfactuals</span>
+      <span class="brand-note">A field guide to training-data what-ifs</span>
+    </a>
+
+    <div class="nav-cluster">
+      <div class="nav-links">
+        {links.map(link => (
+          <a
+            class="nav-link"
+            href={link.href}
+            aria-current={isActive(link.href) ? "page" : undefined}
+          >
+            {link.label}
+          </a>
+        ))}
+      </div>
+
       <a
-        href={link.href}
-        aria-current={isActive(link.href) ? "page" : undefined}
-        target={link.external ? "_blank" : undefined}
-        rel={link.external ? "noreferrer noopener" : undefined}
+        class="nav-link nav-link-aux"
+        href={externalLink.href}
+        target="_blank"
+        rel="noreferrer noopener"
       >
-        {link.label}
+        {externalLink.label}
       </a>
-    ))}
+    </div>
   </div>
 </nav>

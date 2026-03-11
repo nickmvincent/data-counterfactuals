@@ -2,184 +2,437 @@
 import Layout from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
 import MiniGrid from "../components/MiniGrid.jsx";
+
+const framingCards = [
+  {
+    title: "Influence and attribution",
+    body: "Compare nearby rows to see which examples, or which groups of examples, are doing the work."
+  },
+  {
+    title: "Scaling and selection",
+    body: "Scan the grid by subset size to ask when more data helps and which subsets punch above their weight."
+  },
+  {
+    title: "Poisoning and robustness",
+    body: "Treat corrupted or withheld data as another counterfactual and inspect the damage directly."
+  },
+  {
+    title: "Collective action",
+    body: "Ask what happens when many contributors walk away together, instead of pretending each point acts alone."
+  }
+];
+
+const reasonCards = [
+  {
+    title: "Debug a model failure",
+    body: "When a prediction looks wrong, the framework gives you a concrete way to ask which training examples changed the outcome."
+  },
+  {
+    title: "Value a dataset",
+    body: "Instead of talking about data value in the abstract, you can compare outcomes with and without a slice of the data."
+  },
+  {
+    title: "Reason about leverage",
+    body: "People who contribute data are not just passive inputs. This framing makes their bargaining power legible."
+  }
+];
+
+const nextSteps = [
+  {
+    title: "Open the explorer",
+    body: "Manipulate a toy dataset, trigger guided examples, and see counterfactual effects in real time.",
+    href: "/grid",
+    cta: "Launch explorer"
+  },
+  {
+    title: "Read the memo",
+    body: "For the longer argument and the research framing behind the site, go straight to the core memo.",
+    href: "/memo",
+    cta: "Read memo"
+  },
+  {
+    title: "Browse the literature",
+    body: "Jump into curated paper collections once you know which corner of the problem you want to dig into.",
+    href: "/collections",
+    cta: "Open reading lists"
+  }
+];
 ---
 
 <Layout
-  title="What is a Data Counterfactual?"
-  description="A simple framework for understanding how changes to training data affect AI model behavior. Learn about data valuation, influence functions, and collective action."
+  title="Data Counterfactuals"
+  description="A field guide to training-data what-ifs. See how adding, removing, or corrupting data changes model behavior."
 >
+  <style is:global>
+    .home-page {
+      display: grid;
+      gap: 1.2rem;
+    }
+    .home-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.9fr);
+      gap: 1rem;
+      align-items: start;
+    }
+    .hero-copy {
+      display: grid;
+      gap: 1rem;
+      padding: 0.6rem 0 0.3rem;
+    }
+    .hero-panel {
+      background:
+        linear-gradient(180deg, rgba(255, 248, 238, 0.96), rgba(246, 232, 212, 0.8)),
+        var(--card);
+    }
+    .hero-note {
+      margin: 0.8rem 0 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+    .split-section {
+      align-items: stretch;
+    }
+    .callout-list {
+      list-style: none;
+      padding: 0;
+      margin: 1rem 0 0;
+      display: grid;
+      gap: 0.75rem;
+    }
+    .callout-list li {
+      padding: 0.9rem 1rem;
+      border-radius: 18px;
+      background: rgba(255, 250, 243, 0.7);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .lens-grid,
+    .reason-grid,
+    .next-grid {
+      display: grid;
+      gap: 1rem;
+      margin-top: 1.2rem;
+    }
+    .lens-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .reason-grid,
+    .next-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .lens-card,
+    .reason-card,
+    .next-card {
+      padding: 1.1rem;
+      border-radius: 22px;
+      background: rgba(255, 250, 243, 0.74);
+      border: 1px solid var(--border);
+    }
+    .lens-card h3,
+    .reason-card h3,
+    .next-card h3 {
+      margin: 0 0 0.45rem;
+      font-size: 1.02rem;
+    }
+    .lens-card p,
+    .reason-card p,
+    .next-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .next-card {
+      display: grid;
+      gap: 0.9rem;
+      align-content: start;
+    }
+    .next-card .btn {
+      width: fit-content;
+    }
+    .demo-frame {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 22px;
+      border: 1px solid rgba(47, 107, 111, 0.14);
+      background: rgba(255, 252, 247, 0.78);
+    }
+    .demo-label {
+      margin: 0 0 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .home-page .mini-grid-wrap {
+      align-items: stretch;
+      gap: 0.9rem;
+    }
+    .home-page .mini-grid {
+      gap: 4px;
+    }
+    .home-page .mini-corner,
+    .home-page .mini-row-label,
+    .home-page .mini-col-label,
+    .home-page .mini-cell {
+      border-radius: 14px;
+    }
+    .home-page .mini-corner {
+      width: 56px;
+      height: 42px;
+    }
+    .home-page .mini-col-label {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.76rem;
+      color: var(--muted);
+      background: rgba(255, 250, 243, 0.88);
+      border: 1px solid var(--border);
+    }
+    .home-page .mini-col-label.active {
+      color: var(--fg);
+      background: rgba(177, 79, 31, 0.12);
+      border-color: rgba(177, 79, 31, 0.22);
+    }
+    .home-page .mini-row-label {
+      width: 56px;
+      min-height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 0.85rem;
+      font-size: 0.76rem;
+      color: var(--muted);
+      background: rgba(255, 250, 243, 0.88);
+      border: 1px solid var(--border);
+    }
+    .home-page .mini-row-label.active {
+      color: var(--fg);
+      background: rgba(47, 107, 111, 0.1);
+      border-color: rgba(47, 107, 111, 0.22);
+    }
+    .home-page .mini-cell {
+      width: 56px;
+      min-height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: transform 180ms ease, box-shadow 180ms ease;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+    .home-page .mini-cell:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 10px 18px rgba(62, 45, 28, 0.12);
+      z-index: 2;
+    }
+    .home-page .mini-cell.ring-highlight {
+      outline: 2px solid var(--ring-thick);
+      outline-offset: -3px;
+    }
+    .home-page .mini-cell.ring-compare {
+      outline: 2px solid var(--ring-thin);
+      outline-offset: -3px;
+    }
+    .home-page .mini-cell.selected {
+      outline: 2px solid #fff;
+      outline-offset: -3px;
+    }
+    .home-page .mini-val {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    }
+    .home-page .mini-caption,
+    .home-page .mini-tooltip {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.6;
+      text-align: left;
+    }
+    .home-page .mini-tooltip {
+      margin-top: 0;
+      padding: 0.8rem 0.95rem;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(255, 250, 243, 0.8);
+    }
+    @media (max-width: 960px) {
+      .home-hero,
+      .lens-grid,
+      .reason-grid,
+      .next-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 
-<style is:global>
-  :root{
-    --ring-thin:#ffce6a;
-  }
+  <Nav />
 
-  .intro-wrap { max-width:720px; margin:0 auto; padding:3rem 1.5rem 5rem; }
-  .intro-hero { text-align:center; margin-bottom:4rem; padding-top:1.5rem; }
-  .intro-hero h1 { font-size:2.25rem; margin:0 0 1rem; font-weight:700; line-height:1.3; }
-  .intro-hero .lede { color:var(--muted); font-size:1.15rem; line-height:1.7; max-width:540px; margin:0 auto; }
+  <main class="page home-page">
+    <header class="page-header home-hero">
+      <div class="hero-copy">
+        <span class="page-eyebrow">Training-data field guide</span>
+        <h1 class="page-title">See how changing data changes the model.</h1>
+        <p class="page-lede">
+          Most machine-learning discussions treat training data like a hidden blob in the background.
+          This site does the opposite. It turns training data into something you can inspect, compare,
+          remove, corrupt, and reason about directly.
+        </p>
+        <p class="page-lede">
+          The core move is simple: ask a concrete what-if question about the data, then trace how model
+          behavior changes. That one move links influence functions, scaling laws, data valuation,
+          poisoning, and collective action without flattening them into buzzwords.
+        </p>
+        <div class="action-row">
+          <a href="/grid" class="btn">Open the explorer</a>
+          <a href="/memo" class="btn ghost">Read the memo</a>
+          <a href="/collections" class="btn ghost">Browse papers</a>
+        </div>
+        <ul class="chip-list" aria-label="Highlights">
+          <li class="chip">Interactive toy grid</li>
+          <li class="chip">Guided examples</li>
+          <li class="chip">Curated paper collections</li>
+          <li class="chip">Glossary for fast orientation</li>
+        </ul>
+      </div>
 
-  .intro-section { margin-bottom:4rem; }
-  .intro-section h2 { font-size:1.5rem; margin:0 0 1.25rem; color:var(--fg); border-bottom:1px solid var(--border); padding-bottom:0.75rem; font-weight:600; }
-  .intro-section p { color:var(--muted); line-height:1.75; margin:0 0 1.25rem; }
-  .intro-section p strong { color:var(--fg); }
+      <aside class="section-card hero-panel">
+        <p class="section-kicker">How to read the board</p>
+        <h2 class="section-title">One grid, many training-data what-ifs</h2>
+        <div class="section-copy">
+          <p>Rows are possible training sets. Columns are evaluation slices. Each cell is the score you get from that pairing.</p>
+          <p>Once you can compare two cells or two rows, you can tell a much more specific story about why the model behaves the way it does.</p>
+        </div>
+        <div class="demo-frame">
+          <p class="demo-label">Tiny example with four data points</p>
+          <MiniGrid
+            client:load
+            rows={["AB", "ABC", "ABCD", "ACD"]}
+            cols={["A", "B", "C", "D"]}
+            values={[
+              [0.85, 0.72, 0.45, 0.38],
+              [0.88, 0.8, 0.75, 0.52],
+              [0.92, 0.88, 0.85, 0.82],
+              [0.78, 0.55, 0.82, 0.8],
+            ]}
+            caption="Hover any cell to inspect the train/eval pair. Click a cell to hold onto it while you compare."
+          />
+        </div>
+        <p class="hero-note">The explorer expands this into a full powerset and lets you switch between different metrics and tutorials.</p>
+      </aside>
+    </header>
 
-  .demo-block { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; margin:2rem 0; }
-  .demo-block .demo-title { font-size:0.8rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin-bottom:1rem; }
+    <section class="stat-grid" aria-label="What is here">
+      <article class="stat-card">
+        <h3>Start from one concrete question</h3>
+        <p>What changes if we remove one example, swap in a different subset, or let a group of contributors walk away?</p>
+      </article>
+      <article class="stat-card">
+        <h3>Use the same visual language throughout</h3>
+        <p>The memo, glossary, paper lists, and explorer all point back to the same grid metaphor instead of inventing fresh jargon on each page.</p>
+      </article>
+      <article class="stat-card">
+        <h3>Move from intuition to literature</h3>
+        <p>Once the idea clicks, you can jump directly into curated references for the subfields that matter most to you.</p>
+      </article>
+    </section>
 
-  .mini-grid-wrap { display:flex; flex-direction:column; align-items:center; gap:1rem; }
-  .mini-grid { gap:3px; }
-  .mini-corner { width:54px; height:36px; }
-  .mini-col-label { height:36px; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--muted); background:var(--card); border-radius:4px 4px 0 0; }
-  .mini-col-label.active { color:var(--fg); background:#1a2440; }
-  .mini-row-label { width:54px; height:40px; display:flex; align-items:center; justify-content:flex-end; padding-right:10px; font-size:12px; color:var(--muted); background:var(--card); border-radius:4px 0 0 4px; }
-  .mini-row-label.active { color:var(--fg); background:#1a2440; }
-  .mini-cell { width:54px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative; border-radius:4px; transition:transform 0.15s ease, box-shadow 0.15s ease; }
-  .mini-cell:hover { transform:scale(1.1); z-index:2; box-shadow:0 4px 12px rgba(0,0,0,0.3); }
-  .mini-cell.ring-highlight { outline:2px solid var(--ring-thin); outline-offset:-2px; }
-  .mini-cell.ring-compare { outline:2px solid var(--ring-thick); outline-offset:-2px; }
-  .mini-cell.selected { outline:2px solid #fff; outline-offset:-2px; }
-  .mini-val { font-size:11px; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,0.5); }
-  .mini-caption { font-size:13px; color:var(--muted); text-align:center; max-width:320px; line-height:1.5; }
-  .mini-tooltip { font-size:12px; color:var(--muted); background:#0c1020; border:1px solid var(--border); padding:8px 12px; border-radius:8px; margin-top:0.75rem; }
+    <section class="page-grid cols-2 split-section">
+      <article class="section-card">
+        <p class="section-kicker">The basic move</p>
+        <h2 class="section-title">Compare nearby worlds, not vague abstractions</h2>
+        <div class="section-copy">
+          <p>
+            The easiest counterfactual is leave-one-out: compare a training set that includes one point
+            with the same training set after that point is removed.
+          </p>
+          <p>
+            That sounds almost too simple, but it gets you surprisingly far. From there you can ask the
+            same question about groups, subsets of a fixed size, corrupted examples, or withheld data.
+          </p>
+        </div>
+        <ul class="callout-list">
+          <li><strong>Rows tell you what changed in training.</strong> Move between rows to simulate different data choices.</li>
+          <li><strong>Columns tell you where the effect lands.</strong> A point may matter a lot for one evaluation slice and barely at all for another.</li>
+          <li><strong>Differences are the real story.</strong> A single score is rarely interesting on its own; the comparison is what matters.</li>
+        </ul>
+      </article>
 
-  .cta-block { text-align:center; margin-top:2.5rem; }
-  .cta-btn { display:inline-block; padding:14px 28px; background:var(--ring-thick); color:#0b1020; font-weight:600; text-decoration:none; border-radius:10px; transition:transform 0.15s, box-shadow 0.15s; }
-  .cta-btn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(51,214,255,0.3); }
+      <article class="section-card">
+        <p class="section-kicker">Leave-one-out example</p>
+        <h2 class="section-title">ABCD versus ACD</h2>
+        <div class="section-copy">
+          <p>Here the gold row trains with B and the teal row leaves B out. The biggest drop lands on evaluation point B, which is the intuition people often want in plain language.</p>
+        </div>
+        <div class="demo-frame">
+          <MiniGrid
+            client:load
+            rows={["ABCD", "ACD"]}
+            cols={["A", "B", "C", "D"]}
+            values={[
+              [0.92, 0.88, 0.85, 0.82],
+              [0.78, 0.55, 0.82, 0.8],
+            ]}
+            highlightRow={0}
+            compareRow={1}
+            caption="This is the same intuition behind influence estimates and many forms of data attribution: compare a baseline training world with a nearby altered one."
+          />
+        </div>
+      </article>
+    </section>
 
-  .concept-list { list-style:none; padding:0; margin:1.5rem 0; }
-  .concept-list li { padding:0.75rem 0; border-bottom:1px solid var(--border); color:var(--muted); line-height:1.6; }
-  .concept-list li:last-child { border-bottom:none; }
-  .concept-list strong { color:var(--fg); }
-</style>
+    <section class="section-card">
+      <p class="section-kicker">What this framing connects</p>
+      <h2 class="section-title">Different literatures, same underlying move</h2>
+      <div class="section-copy">
+        <p>
+          The point of the project is not to pretend every subfield is identical. It is to show that many of
+          them start from a shared operation: change the data, then compare the outcome.
+        </p>
+      </div>
+      <div class="lens-grid">
+        {framingCards.map((card) => (
+          <article class="lens-card">
+            <h3>{card.title}</h3>
+            <p>{card.body}</p>
+          </article>
+        ))}
+      </div>
+    </section>
 
-<Nav />
+    <section class="section-card">
+      <p class="section-kicker">Why people care</p>
+      <h2 class="section-title">Useful for debugging, bargaining, and model hygiene</h2>
+      <div class="reason-grid">
+        {reasonCards.map((card) => (
+          <article class="reason-card">
+            <h3>{card.title}</h3>
+            <p>{card.body}</p>
+          </article>
+        ))}
+      </div>
+    </section>
 
-<main class="intro-wrap">
-  <header class="intro-hero">
-    <h1>What is a Data Counterfactual?</h1>
-    <p class="lede">A proposed framework for understanding how changes to training data affect model behavior.</p>
-  </header>
-
-  <section class="intro-section">
-    <h2>The Core Question</h2>
-    <p>
-      Machine learning models learn from data. But what happens if we <strong>change the data</strong>?
-      What if we remove a data point? Add noise? Use a different subset?
-    </p>
-    <p>
-      A <strong>data counterfactual</strong> is a "what if" question about training data:
-      <em>"What would the model's performance be if we trained on different data?"</em>
-    </p>
-    <p>
-      This simple question connects many different research areas: data valuation, influence functions,
-      data poisoning, scaling laws, and algorithmic collective action. While these fields have their own
-      established terminology, we propose "data counterfactuals" as a unifying lens for understanding
-      how they relate.
-    </p>
-  </section>
-
-  <section class="intro-section">
-    <h2>The Grid Metaphor</h2>
-    <p>
-      Imagine a giant matrix. Each <strong>row</strong> represents a possible training set.
-      Each <strong>column</strong> represents a possible evaluation set.
-      Each <strong>cell</strong> contains the model's performance when trained on that row's data
-      and evaluated on that column's data.
-    </p>
-    <div class="demo-block">
-      <div class="demo-title">A tiny example with 4 data points: A, B, C, D</div>
-      <MiniGrid
-        client:load
-        rows={["AB", "ABC", "ABCD", "ACD"]}
-        cols={["A", "B", "C", "D"]}
-        values={[
-          [0.85, 0.72, 0.45, 0.38],
-          [0.88, 0.80, 0.75, 0.52],
-          [0.92, 0.88, 0.85, 0.82],
-          [0.78, 0.55, 0.82, 0.80],
-        ]}
-        caption="Rows = training sets, Columns = evaluation points, Cells = performance scores"
-      />
-    </div>
-    <p>
-      This grid contains <strong>all possible data counterfactuals</strong>. Every question about
-      how data affects performance is answered somewhere in this grid.
-    </p>
-  </section>
-
-  <section class="intro-section">
-    <h2>Leave-One-Out</h2>
-    <p>
-      The simplest counterfactual: <strong>what if we removed one data point?</strong>
-    </p>
-    <p>
-      Compare two rows in the grid—one that includes a point, and one that doesn't.
-      The difference tells you how much that point matters.
-    </p>
-    <div class="demo-block">
-      <div class="demo-title">Comparing ABCD vs ACD (leaving out B)</div>
-      <MiniGrid
-        client:load
-        rows={["ABCD", "ACD"]}
-        cols={["A", "B", "C", "D"]}
-        values={[
-          [0.92, 0.88, 0.85, 0.82],
-          [0.78, 0.55, 0.82, 0.80],
-        ]}
-        highlightRow={0}
-        compareRow={1}
-        caption="Gold row = with B, Cyan row = without B. Notice how removing B hurts performance on B."
-      />
-    </div>
-    <p>
-      This is the foundation of <strong>influence functions</strong> and <strong>data attribution</strong>—measuring
-      how much each data point contributes to the model.
-    </p>
-  </section>
-
-  <section class="intro-section">
-    <h2>From Points to Patterns</h2>
-    <p>
-      Once you understand leave-one-out, you can extend the idea:
-    </p>
-    <ul class="concept-list">
-      <li><strong>Group effects:</strong> What if we remove multiple points together? (Data strikes)</li>
-      <li><strong>Shapley values:</strong> Average a point's contribution across all possible subsets</li>
-      <li><strong>Scaling laws:</strong> Average performance across all training sets of size k</li>
-      <li><strong>Data poisoning:</strong> What if we corrupt points instead of removing them?</li>
-      <li><strong>Data selection:</strong> Which subset gives the best performance?</li>
-    </ul>
-    <p>
-      All of these are just different ways of <strong>navigating the same grid</strong>—asking different
-      counterfactual questions and aggregating the answers differently.
-    </p>
-  </section>
-
-  <section class="intro-section">
-    <h2>Why It Matters</h2>
-    <p>
-      Data counterfactuals help answer practical questions:
-    </p>
-    <ul class="concept-list">
-      <li><strong>Data valuation:</strong> How much is my data worth to this model?</li>
-      <li><strong>Debugging:</strong> Which training examples cause this prediction?</li>
-      <li><strong>Security:</strong> How vulnerable is this model to data poisoning?</li>
-      <li><strong>Fairness:</strong> How would performance change for different groups?</li>
-      <li><strong>Collective action:</strong> What leverage do data creators have?</li>
-    </ul>
-  </section>
-
-  <section class="intro-section">
-    <h2>Explore Further</h2>
-    <p>
-      The interactive Grid explorer lets you manipulate a toy dataset and see counterfactual effects in real time.
-      Try different tutorials, change the focus set, and watch how the grid responds.
-    </p>
-    <div class="cta-block">
-      <a href="/grid" class="cta-btn">Open the Grid Explorer</a>
-    </div>
-  </section>
-</main>
-
+    <section class="section-card">
+      <p class="section-kicker">Where to go next</p>
+      <h2 class="section-title">Choose the depth you want</h2>
+      <div class="next-grid">
+        {nextSteps.map((step) => (
+          <article class="next-card">
+            <div>
+              <h3>{step.title}</h3>
+              <p>{step.body}</p>
+            </div>
+            <a href={step.href} class="btn ghost">{step.cta}</a>
+          </article>
+        ))}
+      </div>
+    </section>
+  </main>
 </Layout>

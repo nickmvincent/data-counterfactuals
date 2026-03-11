@@ -4,111 +4,176 @@ import Nav from "../components/Nav.astro";
 import networkData from "../data/network.json";
 
 const githubUrl = networkData.links?.github;
+const discussions = networkData.discussions ?? [];
+const relatedProjects = networkData.relatedProjects ?? [];
 ---
 
 <Layout
   title="About"
-  description="About the Data Counterfactuals project: an educational resource for understanding how training data affects AI model behavior."
+  description="Why Data Counterfactuals exists, what it is trying to do, and how to give feedback or contribute."
 >
+  <style>
+    .about-page {
+      display: grid;
+      gap: 1rem;
+    }
+    .about-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.8fr);
+      gap: 1rem;
+      align-items: start;
+    }
+    .about-list {
+      list-style: none;
+      padding: 0;
+      margin: 1rem 0 0;
+      display: grid;
+      gap: 0.8rem;
+    }
+    .about-list li,
+    .discussion-card,
+    .project-card {
+      padding: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: rgba(255, 250, 243, 0.72);
+    }
+    .about-list li {
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .discussion-list,
+    .project-list {
+      display: grid;
+      gap: 0.8rem;
+      margin-top: 1rem;
+    }
+    .discussion-card h3,
+    .project-card h3 {
+      margin: 0 0 0.4rem;
+      font-size: 1rem;
+    }
+    .discussion-card p,
+    .project-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .sidebar-stack {
+      display: grid;
+      gap: 1rem;
+    }
+    @media (max-width: 960px) {
+      .about-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 
-<style is:global>
-  .about-wrap { max-width:720px; margin:0 auto; padding:2rem 1.5rem 4rem; }
-  .about-header { margin-bottom:2rem; }
-  .about-header h1 { font-size:1.75rem; margin:0 0 0.75rem; }
-  .about-header .lede { color:var(--muted); font-size:1.1rem; line-height:1.6; margin:0; }
+  <Nav />
 
-  .about-section { margin-bottom:2.5rem; }
-  .about-section h2 { font-size:1.25rem; margin:0 0 1rem; color:var(--fg); border-bottom:1px solid var(--border); padding-bottom:0.5rem; }
-  .about-section p { color:var(--muted); line-height:1.7; margin:0 0 1rem; }
-  .about-section ul { color:var(--muted); padding-left:1.5rem; margin:0 0 1rem; line-height:1.7; }
-  .about-section li { margin-bottom:0.5rem; }
-  .about-section strong { color:var(--fg); }
-  .about-section a { color:var(--ring-thick); }
+  <main class="page about-page">
+    <header class="page-header">
+      <span class="page-eyebrow">Project notes</span>
+      <h1 class="page-title">Why this site exists</h1>
+      <p class="page-lede">
+        Data Counterfactuals is an attempt to make training-data questions easier to see and easier to talk about.
+        The project is part explainer, part toy lab, and part research map.
+      </p>
+      <div class="page-meta">
+        <span class="pill">Work in progress</span>
+        <span class="pill">Open source</span>
+        <span class="pill">Built as a teaching tool</span>
+      </div>
+    </header>
 
-  .status-badge { display:inline-block; padding:4px 10px; background:#1a2440; border:1px solid var(--border); border-radius:6px; font-size:0.85rem; color:var(--muted); margin-bottom:1rem; }
-</style>
+    <section class="about-grid">
+      <article class="section-card">
+        <p class="section-kicker">What the project is trying to do</p>
+        <h2 class="section-title">Make training data feel inspectable</h2>
+        <div class="section-copy">
+          <p>
+            A lot of ML writing jumps straight into methods, benchmarks, or theory. That is useful, but it can leave
+            people without a clean mental model for the underlying question: what changes when the training data changes?
+          </p>
+          <p>
+            This site uses the phrase <strong>data counterfactuals</strong> and the grid metaphor as teaching tools. They are meant
+            to connect several research areas without pretending the literature already uses exactly this framing.
+          </p>
+        </div>
 
-<Nav />
+        <ul class="about-list">
+          <li><strong>Explorer:</strong> a toy environment for comparing training subsets, evaluation slices, and simple edits like poisoning or noise.</li>
+          <li><strong>Memo:</strong> the longer argument for why this framing is useful and where it helps unify adjacent literatures.</li>
+          <li><strong>Reference pages:</strong> paper collections and glossary entries for when you want to move from intuition to sources.</li>
+        </ul>
+      </article>
 
-<main class="about-wrap">
-  <header class="about-header">
-    <h1>About This Project</h1>
-    <p class="lede">An educational resource for understanding how changes to training data affect AI model behavior.</p>
-  </header>
+      <aside class="sidebar-stack">
+        <section class="section-card">
+          <p class="section-kicker">Status</p>
+          <h2 class="section-title">Still being shaped</h2>
+          <div class="section-copy">
+            <p>
+              The explorer works and the reference pages are already useful, but the site is still evolving. Some explanations
+              are intentionally provisional while the framing gets pressure-tested.
+            </p>
+          </div>
+        </section>
 
-  <section class="about-section" id="discussion">
-    <span class="status-badge">Work in Progress</span>
-    <h2>What is This?</h2>
-    <p>
-      <strong>Data Counterfactuals</strong> is an interactive explainer and research reference designed to help people understand
-      the relationship between training data and model outcomes. It proposes a unifying framework that connects several research areas
-      that are often studied separately:
-    </p>
-    <ul>
-      <li><strong>Data valuation</strong> — How much is each data point worth?</li>
-      <li><strong>Influence functions</strong> — Which training examples affect a prediction?</li>
-      <li><strong>Scaling laws</strong> — How does more data improve performance?</li>
-      <li><strong>Data poisoning</strong> — How can bad data harm a model?</li>
-      <li><strong>Collective action</strong> — What leverage do data creators have?</li>
-    </ul>
-    <p>
-      The core insight is that all of these questions are asking variations of the same thing:
-      <em>"What would happen if we trained on different data?"</em> (Just to clarify: the term "data counterfactual"
-      and the grid metaphor are pedagogical tools we developed to make these connections clearer—they
-      are not established terminology in the literature.)
-    </p>
-  </section>
+        <section class="section-card">
+          <p class="section-kicker">Contribute</p>
+          <h2 class="section-title">Corrections are welcome</h2>
+          <div class="section-copy">
+            <p>
+              If a concept is misleading, a paper list is missing something obvious, or a UI detail gets in the way, please say so.
+              That kind of feedback is exactly what helps this project get sharper.
+            </p>
+          </div>
+          <div class="action-row">
+            <a href={githubUrl || "#"} target="_blank" rel="noopener" class="btn">Open GitHub</a>
+            <a href="#discussion" class="btn ghost">Jump to discussion links</a>
+          </div>
+        </section>
+      </aside>
+    </section>
 
-  <section class="about-section">
-    <h2>Current Status</h2>
-    <p>
-      This project is under active development. The interactive Grid explorer works, but many features are still being refined.
-      The paper collections are curated but not comprehensive — they represent a starting point for exploring these research areas,
-      not a complete literature review.
-    </p>
-    <p>
-      Contributions, corrections, and suggestions are welcome.
-    </p>
-  </section>
+    <section class="section-card" id="discussion">
+      <p class="section-kicker">Talk back</p>
+      <h2 class="section-title">Places to ask questions or leave feedback</h2>
+      {discussions.length ? (
+        <div class="discussion-list">
+          {discussions.map((discussion) => (
+            <article class="discussion-card">
+              <h3>
+                <a href={discussion.url} target="_blank" rel="noopener">{discussion.label}</a>
+              </h3>
+              <p>{discussion.description}</p>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div class="empty-state">Discussion links have not been added yet.</div>
+      )}
+    </section>
 
-  <section class="about-section">
-    <h2>Join the Discussion</h2>
-    <p>
-      Have questions, feedback, or suggestions? Join the conversation:
-    </p>
-    <ul>
-      {networkData.discussions?.map((d) => (
-        <li>
-          <a href={d.url} target="_blank" rel="noopener">{d.label}</a>
-          {d.description && <span> — {d.description}</span>}
-        </li>
-      ))}
-    </ul>
-    <p>
-      You can also open issues or pull requests directly on the
-      <a href={githubUrl || "#"} target="_blank" rel="noopener">GitHub repository</a>.
-    </p>
-  </section>
-
-  <section class="about-section">
-    <h2>Who Made This?</h2>
-    <p>
-      This project is part of a broader effort to make AI/ML concepts more accessible.
-      It's open source and welcomes contributions.
-    </p>
-    <p>
-      <a href={githubUrl || "#"} target="_blank" rel="noopener">View the source on GitHub</a>
-    </p>
-  </section>
-
-  <section class="about-section">
-    <h2>Related Projects</h2>
-    <ul>
-      {networkData.relatedProjects?.map((p) => (
-        <li><a href={p.website} target="_blank" rel="noopener">{p.title}</a></li>
-      ))}
-    </ul>
-  </section>
-</main>
-
+    <section class="section-card">
+      <p class="section-kicker">Related work</p>
+      <h2 class="section-title">Projects nearby</h2>
+      {relatedProjects.length ? (
+        <div class="project-list">
+          {relatedProjects.map((project) => (
+            <article class="project-card">
+              <h3>
+                <a href={project.website} target="_blank" rel="noopener">{project.title}</a>
+              </h3>
+              <p>{project.name === project.title ? "A neighboring project in the same research orbit." : project.name}</p>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div class="empty-state">No related projects have been listed yet.</div>
+      )}
+    </section>
+  </main>
 </Layout>

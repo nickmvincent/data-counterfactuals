@@ -6,58 +6,55 @@ import { loadMemos } from "../lib/content-loader";
 import networkData from "../data/network.json";
 
 const memos = await loadMemos();
-const memo = memos.find((m)=> m.slug === "data-counterfactuals") ?? memos[0];
+const memo = memos.find((m) => m.slug === "data-counterfactuals") ?? memos[0];
 const memoMeta = memo ? { title: memo.title, summary: memo.summary } : { title: "Exploring Data Counterfactuals" };
-const memoHtml = marked.parse(memo?.body ?? "");
+const memoBody = memo?.body ?? "";
+const memoHtml = marked.parse(memoBody);
 const githubUrl = networkData.links?.github;
+const wordCount = memoBody.split(/\s+/).filter(Boolean).length;
+const readMinutes = Math.max(1, Math.round(wordCount / 220));
 ---
 
 <Layout
   title={memoMeta.title}
   description={memoMeta.summary || "A unifying framework connecting data valuation, scaling laws, data poisoning, and collective action through the lens of data counterfactuals."}
 >
+  <style>
+    .memo-page {
+      display: grid;
+      gap: 1rem;
+    }
+    .memo-card {
+      padding: clamp(1.2rem, 2.5vw, 2rem);
+    }
+    .memo-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      margin-top: 1.4rem;
+    }
+  </style>
 
-<style is:global>
-  .memo-wrap { max-width:800px; margin:0 auto; padding:2rem 1.5rem 4rem; }
-  .memo-header { margin-bottom:2rem; }
-  .memo-header h1 { font-size:1.75rem; margin:0 0 0.75rem; }
-  .memo-header .lede { color:var(--muted); font-size:1.1rem; line-height:1.6; margin:0; }
+  <Nav />
 
-  .memo-content { line-height:1.7; }
-  .memo-content h2 { font-size:1.25rem; margin:2rem 0 1rem; color:var(--fg); border-bottom:1px solid var(--border); padding-bottom:0.5rem; }
-  .memo-content h3 { font-size:1.1rem; margin:1.5rem 0 0.75rem; color:var(--fg); }
-  .memo-content p { color:var(--muted); margin:0 0 1rem; }
-  .memo-content ul, .memo-content ol { color:var(--muted); padding-left:1.5rem; margin:0 0 1rem; }
-  .memo-content li { margin-bottom:0.5rem; }
-  .memo-content strong { color:var(--fg); }
-  .memo-content code { background:#0b0f1d; border:1px solid var(--border); padding:2px 5px; border-radius:6px; font-size:0.9em; }
-  .memo-content blockquote { border-left:3px solid var(--border); margin:1rem 0; padding-left:1rem; color:var(--muted); font-style:italic; }
+  <main class="page memo-page">
+    <header class="page-header">
+      <span class="page-eyebrow">Long-form argument</span>
+      <h1 class="page-title">{memoMeta.title}</h1>
+      {memoMeta.summary && <p class="page-lede">{memoMeta.summary}</p>}
+      <div class="page-meta">
+        <span class="pill">{readMinutes} minute read</span>
+        <span class="pill">{wordCount} words</span>
+      </div>
+    </header>
 
-  .contribute-cta { margin-top:3rem; padding-top:2rem; border-top:1px solid var(--border); }
-  .contribute-cta p { color:var(--muted); font-size:14px; margin-bottom:12px; }
-  .cta-links { display:flex; gap:10px; flex-wrap:wrap; }
-  .btn { border:1px solid var(--border); background:#141827; color:var(--fg); padding:8px 14px; border-radius:10px; cursor:pointer; font-size:13px; text-decoration:none; display:inline-block; }
-  .btn:hover { border-color:var(--ring-thick); }
-  .btn.ghost { background:transparent; }
-</style>
+    <article class="section-card memo-card">
+      <div class="prose" set:html={memoHtml}></div>
 
-<Nav />
-
-<main class="memo-wrap">
-  <header class="memo-header">
-    <h1>{memoMeta.title}</h1>
-    {memoMeta.summary && <p class="lede">{memoMeta.summary}</p>}
-  </header>
-
-  <article class="memo-content" set:html={memoHtml}></article>
-
-  <div class="contribute-cta">
-    <p>Questions, feedback, or suggestions? Join the discussion or contribute directly.</p>
-    <div class="cta-links">
-      <a href="/about#discussion" class="btn">About & Feedback</a>
-      <a href={githubUrl || "#"} target="_blank" rel="noopener" class="btn ghost">View on GitHub</a>
-    </div>
-  </div>
-</main>
-
+      <div class="memo-actions">
+        <a href="/grid" class="btn secondary">Try the explorer alongside the memo</a>
+        <a href={githubUrl || "#"} target="_blank" rel="noopener" class="btn ghost">View source on GitHub</a>
+      </div>
+    </article>
+  </main>
 </Layout>

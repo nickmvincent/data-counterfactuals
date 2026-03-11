@@ -2,110 +2,524 @@
 import Layout from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
 import Explorer from "../components/Explorer.jsx";
+
+const quickTips = [
+  "Use a guided example first if you want the controls to snap into a meaningful state.",
+  "Pick a baseline train row and an evaluation column before interpreting any summary number.",
+  "Treat edits like poisoning or noise as alternative training worlds, not just cosmetic toggles."
+];
 ---
 
 <Layout
   title="Grid Explorer"
-  description="Interactive grid explorer for understanding data counterfactuals. Manipulate training sets and see how model performance changes."
+  description="Interactive toy explorer for comparing training-data counterfactuals."
 >
+  <style is:global>
+    .explorer-page {
+      display: grid;
+      gap: 1rem;
+    }
+    .explorer-intro {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.85fr);
+      gap: 1rem;
+      align-items: start;
+    }
+    .tip-list {
+      list-style: none;
+      padding: 0;
+      margin: 1rem 0 0;
+      display: grid;
+      gap: 0.75rem;
+    }
+    .tip-list li {
+      padding: 0.95rem 1rem;
+      border-radius: 18px;
+      background: rgba(255, 250, 243, 0.74);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .explorer-frame {
+      padding: 0.35rem;
+      background:
+        linear-gradient(180deg, rgba(34, 29, 25, 0.08), rgba(34, 29, 25, 0.02)),
+        rgba(255, 250, 243, 0.56);
+    }
+    .explorer-shell {
+      --explorer-bg: #181516;
+      --explorer-panel: #121519;
+      --explorer-card: #1b2027;
+      --explorer-card-soft: #232833;
+      --explorer-border: #313948;
+      --explorer-fg: #f6f0e8;
+      --explorer-muted: #b8aea5;
+      --ring-thin: #efb463;
+      --ring-thick: #68c6c1;
+      --ring-select: #fffaf0;
+    }
+    .explorer-shell .wrap {
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .explorer-shell .section {
+      margin: 14px auto;
+    }
+    .explorer-shell .lede {
+      color: var(--explorer-muted);
+      margin: 6px 0 16px;
+      max-width: 70ch;
+    }
+    .explorer-shell .card {
+      background: var(--explorer-card);
+      border: 1px solid var(--explorer-border);
+      border-radius: 18px;
+      padding: 12px;
+      margin-bottom: 12px;
+      color: var(--explorer-fg);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+    }
+    .explorer-shell .row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 12px;
+    }
+    .explorer-shell .ctrl {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0 10px;
+      flex-wrap: wrap;
+    }
+    .explorer-shell .btn {
+      border: 1px solid var(--explorer-border);
+      background: #202632;
+      color: var(--explorer-fg);
+      padding: 6px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 12px;
+      box-shadow: none;
+      min-height: auto;
+    }
+    .explorer-shell .btn[aria-pressed="true"] {
+      outline: 2px solid rgba(104, 198, 193, 0.55);
+    }
+    .explorer-shell .btn.ghost {
+      background: transparent;
+    }
+    .explorer-shell input[type="range"],
+    .explorer-shell select,
+    .explorer-shell input[type="checkbox"] {
+      background: #1a1f28;
+      color: var(--explorer-fg);
+      border: 1px solid var(--explorer-border);
+      border-radius: 10px;
+      padding: 6px 10px;
+    }
+    .explorer-shell .grid-wrap {
+      overflow: auto;
+      border: 1px solid var(--explorer-border);
+      border-radius: 16px;
+      background: #0e1218;
+    }
+    .explorer-shell .rl,
+    .explorer-shell .cl,
+    .explorer-shell .cell {
+      border-bottom: 1px solid #2d3342;
+      border-right: 1px solid #2d3342;
+    }
+    .explorer-shell .rl {
+      width: 58px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      position: sticky;
+      left: 0;
+      background: var(--explorer-card);
+      z-index: 2;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    .explorer-shell .cl {
+      width: 38px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      cursor: pointer;
+      position: sticky;
+      top: 0;
+      background: var(--explorer-card);
+      z-index: 3;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    .explorer-shell .cell {
+      width: 38px;
+      height: 36px;
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .explorer-shell .sel {
+      outline: 2px solid var(--ring-select);
+      outline-offset: -2px;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4) inset;
+    }
+    .explorer-shell .num {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
+    }
+    .explorer-shell .cell-emph {
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset, 0 0 0 1px rgba(0, 0, 0, 0.25);
+    }
+    .explorer-shell .ring {
+      position: absolute;
+      inset: 2px;
+      outline: 2px solid var(--ring-thin);
+      outline-offset: -2px;
+      border-radius: 5px;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45) inset;
+    }
+    .explorer-shell .ring-thin {
+      outline-color: var(--ring-thin);
+      box-shadow: 0 0 0 1px rgba(239, 180, 99, 0.35), 0 0 0 2px rgba(0, 0, 0, 0.45) inset;
+    }
+    .explorer-shell .ring-thick {
+      inset: 4px;
+      outline-color: var(--ring-thick);
+      box-shadow: 0 0 0 2px rgba(104, 198, 193, 0.35), 0 0 0 2px rgba(0, 0, 0, 0.45) inset;
+    }
+    .explorer-shell .cell-pulse::after {
+      content: "";
+      position: absolute;
+      inset: -6px;
+      border: 2px solid var(--ring-thick);
+      border-radius: 8px;
+      opacity: 0;
+      animation: pulseCell 0.8s ease-out;
+      pointer-events: none;
+    }
+    @keyframes pulseCell {
+      0% { opacity: 0.8; transform: scale(0.9); }
+      50% { opacity: 0.4; transform: scale(1.05); }
+      100% { opacity: 0; transform: scale(1.12); }
+    }
+    .explorer-shell .axis-active {
+      background: #232a33;
+      color: #fff;
+    }
+    .explorer-shell details {
+      background: var(--explorer-panel);
+      border: 1px solid var(--explorer-border);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+    .explorer-shell details + details {
+      margin-top: 8px;
+    }
+    .explorer-shell code {
+      background: #0d1116;
+      border: 1px solid var(--explorer-border);
+      padding: 2px 5px;
+      border-radius: 6px;
+    }
+    .explorer-shell table.small {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 12px;
+    }
+    .explorer-shell table.small th,
+    .explorer-shell table.small td {
+      border: 1px solid #2d3342;
+      padding: 4px 6px;
+      text-align: right;
+    }
+    .explorer-shell table.small th:first-child,
+    .explorer-shell table.small td:first-child {
+      text-align: left;
+    }
+    .explorer-shell .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border: 1px solid var(--explorer-border);
+      border-radius: 999px;
+      font-size: 11px;
+      color: var(--explorer-muted);
+      background: transparent;
+    }
+    .explorer-shell .spark {
+      width: 260px;
+      height: 50px;
+      display: block;
+    }
+    .explorer-shell .blog {
+      line-height: 1.6;
+    }
+    .explorer-shell .blog h2 {
+      margin: 0 0 10px;
+    }
+    .explorer-shell .blog p {
+      margin: 10px 0;
+    }
+    .explorer-shell .blog ul {
+      padding-left: 20px;
+      margin: 10px 0 10px 18px;
+      color: var(--explorer-muted);
+    }
+    .explorer-shell .blog li {
+      margin-bottom: 6px;
+    }
+    .explorer-shell .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px;
+    }
+    .explorer-shell .ctrl-block {
+      background: var(--explorer-panel);
+      border: 1px solid var(--explorer-border);
+      border-radius: 12px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .explorer-shell .ctrl-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--explorer-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .explorer-shell .ctrl-content {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      align-items: center;
+    }
+    .explorer-shell .ctrl-content select,
+    .explorer-shell .ctrl-content input[type="range"],
+    .explorer-shell .ctrl-content input[type="checkbox"] {
+      flex: 1;
+    }
+    .explorer-shell .ctrl-note {
+      font-size: 10px;
+      color: var(--explorer-muted);
+    }
+    .explorer-shell .tutorials {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px;
+    }
+    .explorer-shell .tutorial-btn {
+      border: 1px solid var(--explorer-border);
+      background: #1a2028;
+      color: var(--explorer-fg);
+      text-align: left;
+      padding: 8px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+    .explorer-shell .tutorial-btn.active {
+      border-color: var(--ring-thick);
+      box-shadow: 0 0 0 1px var(--ring-thick) inset;
+      background: #1f2d34;
+    }
+    .explorer-shell .tutorial-title {
+      font-weight: 600;
+      display: block;
+    }
+    .explorer-shell .tutorial-desc {
+      display: block;
+      font-size: 12px;
+      color: var(--explorer-muted);
+      margin-top: 2px;
+    }
+    .explorer-shell .tutorial-note {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--explorer-muted);
+      background: var(--explorer-panel);
+      border: 1px solid var(--explorer-border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      line-height: 1.5;
+    }
+    .explorer-shell .info-tip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border: 1px solid var(--explorer-border);
+      border-radius: 50%;
+      font-size: 11px;
+      color: var(--explorer-muted);
+      cursor: help;
+    }
+    .explorer-shell .btn.mini {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+    .explorer-shell .layout-shell {
+      display: grid;
+      grid-template-columns: var(--layout-cols, 320px minmax(420px, 1fr) 320px);
+      gap: 14px;
+      align-items: start;
+    }
+    .explorer-shell .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: width 0.22s ease, opacity 0.22s ease;
+      min-width: 0;
+    }
+    .explorer-shell .side-panel.closed {
+      width: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .explorer-shell .side-panel .card {
+      background: var(--explorer-card-soft);
+    }
+    .explorer-shell .grid-center {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+    }
+    .explorer-shell .panel-toggles {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .explorer-shell .edge-toggle {
+      font-size: 12px;
+      border: 1px dashed var(--explorer-border);
+      background: var(--explorer-panel);
+      color: var(--explorer-muted);
+      border-radius: 10px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    .explorer-shell .col-stack > .card + .card {
+      margin-top: 14px;
+    }
+    .explorer-shell .preset-flash {
+      animation: presetFlash 0.8s ease;
+    }
+    @keyframes presetFlash {
+      0% { box-shadow: 0 0 0 0 rgba(104, 198, 193, 0.35); }
+      50% { box-shadow: 0 0 0 14px rgba(104, 198, 193, 0.12); }
+      100% { box-shadow: 0 0 0 0 rgba(104, 198, 193, 0); }
+    }
+    .explorer-shell .computed-flash {
+      animation: computedFlash 0.9s ease;
+    }
+    @keyframes computedFlash {
+      0% { box-shadow: 0 0 0 0 rgba(239, 180, 99, 0.18); }
+      40% { box-shadow: 0 0 0 12px rgba(239, 180, 99, 0.12); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 180, 99, 0); }
+    }
+    .explorer-shell .json-block {
+      background: #0d1116;
+      border: 1px solid var(--explorer-border);
+      border-radius: 10px;
+      padding: 8px;
+      font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+      font-size: 12px;
+      color: var(--explorer-muted);
+      overflow: auto;
+      line-height: 1.35;
+    }
+    .explorer-shell .guide-details summary {
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    @media (max-width: 1180px) {
+      .explorer-shell .layout-shell {
+        grid-template-columns: 1fr !important;
+      }
+      .explorer-shell .side-panel,
+      .explorer-shell .side-panel.closed {
+        width: 100%;
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .explorer-shell .panel-toggles {
+        justify-content: flex-end;
+      }
+    }
+    @media (max-width: 960px) {
+      .explorer-intro {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 
-<style is:global>
-  :root{
-    --bg:#0b1020;
-    --bg-soft:#0e152b;
-    --fg:#e9eef8;
-    --muted:#9fb5c8;
-    --card:#0f182f;
-    --border:#1f2b45;
-    --ring-thin:#ffce6a;
-    --ring-thick:#33d6ff;
-    --ring-select:#ffffff;
-  }
-  * { box-sizing:border-box }
-  body { margin:0; background:radial-gradient(circle at 20% 20%, #101a34, #0b1020 45%), radial-gradient(circle at 80% 10%, #12203c, transparent 50%), var(--bg); color:var(--fg); font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial }
-  a { color:var(--ring-thick); }
-  .top-nav { position:sticky; top:0; z-index:20; backdrop-filter:blur(14px); background:rgba(11,12,16,0.82); border-bottom:1px solid var(--border); padding:8px 18px; display:flex; align-items:center; justify-content:space-between; gap:10px }
-  .brand { font-weight:700; letter-spacing:0.04em; text-transform:uppercase; font-size:12px; color:var(--muted) }
-  .nav-links { display:flex; gap:10px; flex-wrap:wrap }
-  .nav-links a { padding:6px 10px; border:1px solid var(--border); border-radius:10px; text-decoration:none; color:var(--fg); font-size:12px; background:#111320; }
-  .nav-links a:hover { border-color:var(--ring-thick); }
-  .wrap { max-width:1250px; margin:0 auto; padding:16px }
-  .section { margin:14px auto; }
-  .lede { color:var(--muted); margin:6px 0 16px; max-width: 70ch; }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px; margin-bottom:12px }
-  .row { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px,1fr)); gap:12px }
-  .ctrl { display:flex; align-items:center; gap:8px; margin:6px 0 10px; flex-wrap:wrap }
-  .btn { border:1px solid var(--border); background:#141827; color:var(--fg); padding:6px 10px; border-radius:10px; cursor:pointer; font-size:12px }
-  .btn[aria-pressed="true"] { outline:2px solid #7cc4ff }
-  .btn.ghost { background:transparent }
-  input[type="range"], select, input[type="checkbox"] { background:#141827; color:var(--fg); border:1px solid var(--border); border-radius:10px; padding:6px 10px }
-  .grid-wrap { overflow:auto; border:1px solid var(--border); border-radius:14px; background:#0c101d }
-  .rl, .cl, .cell { border-bottom:1px solid #2d3342; border-right:1px solid #2d3342 }
-  .rl { width:58px; height:36px; display:flex; align-items:center; justify-content:flex-end; padding-right:6px; font-size:11px; cursor:pointer; position:sticky; left:0; background:var(--card); z-index:2; transition:background .2s ease, color .2s ease }
-  .cl { width:38px; height:40px; display:flex; align-items:center; justify-content:center; font-size:11px; cursor:pointer; position:sticky; top:0; background:var(--card); z-index:3; transition:background .2s ease, color .2s ease }
-  .cell { width:38px; height:36px; position:relative; cursor:pointer; transition:transform .18s ease, box-shadow .18s ease }
-  .sel { outline:2px solid var(--ring-select); outline-offset:-2px; box-shadow:0 0 0 2px rgba(0,0,0,.4) inset }
-  .num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; text-shadow:0 1px 1px rgba(0,0,0,.6) }
-  .cell-emph { box-shadow:0 0 0 1px rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(0,0,0,0.25); }
-  .ring { position:absolute; inset:2px; outline:2px solid var(--ring-thin); outline-offset:-2px; border-radius:5px; box-shadow:0 0 0 2px rgba(0,0,0,.45) inset }
-  .ring-thin { outline-color: var(--ring-thin); box-shadow:0 0 0 1px rgba(255,209,102,0.35), 0 0 0 2px rgba(0,0,0,.45) inset }
-  .ring-thick { inset:4px; outline-color: var(--ring-thick); box-shadow:0 0 0 2px rgba(0,229,255,0.35), 0 0 0 2px rgba(0,0,0,.45) inset }
-  .cell-pulse::after { content:""; position:absolute; inset:-6px; border:2px solid var(--ring-thick); border-radius:8px; opacity:0; animation:pulseCell 0.8s ease-out; pointer-events:none }
-  @keyframes pulseCell { 0%{ opacity:0.8; transform:scale(0.9); } 50%{ opacity:0.4; transform:scale(1.05); } 100%{ opacity:0; transform:scale(1.12); } }
-  .axis-active { background:#151a2b; color:#fff; }
-  details { background:#0f1323; border:1px solid var(--border); border-radius:12px; padding:10px 12px }
-  details + details { margin-top:8px }
-  code { background:#0b0f1d; border:1px solid var(--border); padding:2px 5px; border-radius:6px }
-  table.small { border-collapse:collapse; width:100%; font-size:12px }
-  table.small th, table.small td { border:1px solid #2d3342; padding:4px 6px; text-align:right }
-  table.small th:first-child, table.small td:first-child { text-align:left }
-  .pill { display:inline-block; padding:2px 8px; border:1px solid var(--border); border-radius:999px; font-size:11px; color:var(--muted) }
-  .spark { width: 260px; height: 50px; display:block }
-  .blog { line-height:1.6 }
-  .blog h2 { margin:0 0 10px }
-  .blog p { margin:10px 0 }
-  .blog ul { padding-left:20px; margin:10px 0 10px 18px; color:var(--muted) }
-  .blog li { margin-bottom:6px }
-  .controls-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px }
-  .ctrl-block { background:#0d1120; border:1px solid var(--border); border-radius:10px; padding:8px; display:flex; flex-direction:column; gap:4px }
-  .ctrl-title { font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); display:flex; align-items:center; gap:4px }
-  .ctrl-content { display:flex; flex-wrap:wrap; gap:4px; align-items:center }
-  .ctrl-content select, .ctrl-content input[type="range"], .ctrl-content input[type="checkbox"] { flex:1 }
-  .ctrl-note { font-size:10px; color:var(--muted) }
-  .tutorials { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px }
-  .tutorial-btn { border:1px solid var(--border); background:#101423; color:var(--fg); text-align:left; padding:8px 10px; border-radius:10px; cursor:pointer; font-size:13px; line-height:1.3 }
-  .tutorial-btn.active { border-color:var(--ring-thick); box-shadow:0 0 0 1px var(--ring-thick) inset; background:#111a2f }
-  .tutorial-title { font-weight:600; display:block }
-  .tutorial-desc { display:block; font-size:12px; color:var(--muted); margin-top:2px }
-  .tutorial-note { margin-top:10px; font-size:13px; color:var(--muted); background:#0d1120; border:1px solid var(--border); border-radius:10px; padding:10px 12px; line-height:1.5 }
-  .info-tip { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border:1px solid var(--border); border-radius:50%; font-size:11px; color:var(--muted); cursor:help }
-  .btn.mini { padding:4px 8px; font-size:11px }
-  .layout-shell { display:grid; grid-template-columns: var(--layout-cols, 320px minmax(420px,1fr) 320px); gap:14px; align-items:start }
-  .side-panel { display:flex; flex-direction:column; gap:14px; transition:width .22s ease, opacity .22s ease; min-width:0 }
-  .side-panel.closed { width:0; opacity:0; pointer-events:none }
-  .side-panel .card { background:#0f1323 }
-  .grid-center { display:flex; flex-direction:column; gap:12px; position:relative }
-  .panel-toggles { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap }
-  .edge-toggle { font-size:12px; border:1px dashed var(--border); background:#0d1120; color:var(--muted); border-radius:10px; padding:6px 10px; cursor:pointer }
-  @media (max-width:1180px){
-    .layout-shell { grid-template-columns:1fr !important; }
-    .side-panel { width:100%; opacity:1; pointer-events:auto; }
-    .side-panel.closed { width:100%; opacity:1; pointer-events:auto; }
-    .panel-toggles { justify-content:flex-end; }
-  }
-  .col-stack > .card + .card { margin-top:14px }
-  .preset-flash { animation:presetFlash 0.8s ease }
-  @keyframes presetFlash { 0%{ box-shadow:0 0 0 0 rgba(0,229,255,0.35); } 50%{ box-shadow:0 0 0 14px rgba(0,229,255,0.12); } 100%{ box-shadow:0 0 0 0 rgba(0,229,255,0); } }
-  .computed-flash { animation:computedFlash 0.9s ease }
-  @keyframes computedFlash { 0%{ box-shadow:0 0 0 0 rgba(255,209,102,0.18); } 40%{ box-shadow:0 0 0 12px rgba(255,209,102,0.12); } 100%{ box-shadow:0 0 0 0 rgba(255,209,102,0); } }
-  .json-block { background:#0c0f1c; border:1px solid var(--border); border-radius:10px; padding:8px; font-family:"SFMono-Regular",Consolas,Menlo,monospace; font-size:12px; color:var(--muted); overflow:auto; line-height:1.35 }
-  .guide-details summary { cursor:pointer; font-weight:600; font-size:14px; }
-</style>
+  <Nav />
 
-<Nav />
+  <main class="page explorer-page">
+    <header class="page-header">
+      <span class="page-eyebrow">Interactive lab</span>
+      <h1 class="page-title">The grid explorer</h1>
+      <p class="page-lede">
+        This is a toy environment for comparing training-data worlds. It is deliberately small enough to inspect by eye,
+        but rich enough to show the logic behind leave-one-out, Shapley-style comparisons, scaling summaries, and simple data edits.
+      </p>
+      <div class="page-meta">
+        <span class="pill">Guided examples built in</span>
+        <span class="pill">Train and eval subsets side by side</span>
+        <span class="pill">Poisoning and noise toggles</span>
+      </div>
+    </header>
 
-<section id="explore" class="section" aria-label="Explore">
-  <Explorer client:load />
-</section>
+    <section class="explorer-intro">
+      <article class="section-card">
+        <p class="section-kicker">Before you start</p>
+        <h2 class="section-title">Three ways to get more out of the toy</h2>
+        <ul class="tip-list">
+          {quickTips.map((tip) => (
+            <li>{tip}</li>
+          ))}
+        </ul>
+      </article>
 
+      <aside class="section-card">
+        <p class="section-kicker">Keep a second tab nearby</p>
+        <h2 class="section-title">Useful companions</h2>
+        <div class="section-copy">
+          <p>The memo gives the longer framing. The glossary helps if you hit unfamiliar terms while clicking through the presets.</p>
+        </div>
+        <div class="action-row">
+          <a href="/memo" class="btn">Read memo</a>
+          <a href="/glossary" class="btn ghost">Open glossary</a>
+          <a href="/advanced.html" class="btn ghost">Try 3D view</a>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section-card explorer-frame" id="explore" aria-label="Explore">
+      <div class="explorer-shell">
+        <Explorer client:load />
+      </div>
+    </section>
+  </main>
 </Layout>

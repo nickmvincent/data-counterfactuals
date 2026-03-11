@@ -5,100 +5,194 @@ import { loadPaperCollections, loadPapersForCollection, getPriority } from "../l
 
 const collections = await loadPaperCollections();
 
-// Load papers for each collection (resolves both citation_keys and include_tags)
 const collectionsWithPapers = await Promise.all(
   collections.map(async (collection) => ({
     ...collection,
     papers: await loadPapersForCollection(collection),
   }))
 );
+
+const totalPapers = collectionsWithPapers.reduce((sum, collection) => sum + collection.papers.length, 0);
+const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 ---
 
 <Layout
   title="Paper Collections"
-  description="Curated reading lists organized by research areas in data counterfactuals: influence functions, data valuation, collective action, and more."
+  description="Curated reading lists for the main research areas that show up in data counterfactuals."
 >
+  <style>
+    .collections-page {
+      display: grid;
+      gap: 1rem;
+    }
+    .collection-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+    }
+    .collection-nav a {
+      padding: 0.55rem 0.8rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255, 250, 243, 0.82);
+      text-decoration: none;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .collection-nav a:hover {
+      color: var(--fg);
+      border-color: rgba(177, 79, 31, 0.24);
+    }
+    .collections-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .collection-card {
+      display: grid;
+      gap: 1rem;
+      align-content: start;
+    }
+    .collection-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.8rem;
+      align-items: flex-start;
+    }
+    .collection-head h2 {
+      margin: 0;
+      font-size: 1.28rem;
+    }
+    .collection-desc {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .paper-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 0.8rem;
+    }
+    .paper-card {
+      padding: 0.95rem 1rem;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: rgba(255, 250, 243, 0.74);
+    }
+    .paper-card.priority {
+      border-color: rgba(177, 79, 31, 0.24);
+      background: linear-gradient(180deg, rgba(255, 246, 236, 0.92), rgba(250, 238, 224, 0.8));
+    }
+    .paper-title-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: center;
+      margin-bottom: 0.3rem;
+    }
+    .paper-title {
+      font-weight: 700;
+      color: var(--fg);
+    }
+    .paper-meta {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+    .paper-link {
+      display: inline-flex;
+      margin-top: 0.55rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    @media (max-width: 960px) {
+      .collections-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 
-<style is:global>
-  :root{
-    --bg:#0b1020;
-    --bg-soft:#0e152b;
-    --fg:#e9eef8;
-    --muted:#9fb5c8;
-    --card:#0f182f;
-    --border:#1f2b45;
-    --ring-thick:#33d6ff;
-  }
-  * { box-sizing:border-box }
-  body { margin:0; background:radial-gradient(circle at 20% 20%, #101a34, #0b1020 45%), radial-gradient(circle at 80% 10%, #12203c, transparent 50%), var(--bg); color:var(--fg); font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial }
-  a { color:var(--ring-thick); }
-  .top-nav { position:sticky; top:0; z-index:20; backdrop-filter:blur(14px); background:rgba(11,12,16,0.82); border-bottom:1px solid var(--border); padding:8px 18px; display:flex; align-items:center; justify-content:space-between; gap:10px }
-  .brand { font-weight:700; letter-spacing:0.04em; text-transform:uppercase; font-size:12px; color:var(--muted) }
-  .nav-links { display:flex; gap:10px; flex-wrap:wrap }
-  .nav-links a { padding:6px 10px; border:1px solid var(--border); border-radius:10px; text-decoration:none; color:var(--fg); font-size:12px; background:#111320; }
-  .nav-links a:hover { border-color:var(--ring-thick); }
-  .wrap { max-width:1250px; margin:0 auto; padding:16px }
-  .section { margin:14px auto; }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px; margin-bottom:12px }
-  .lede { color:var(--muted); margin:6px 0 16px; max-width: 70ch; }
-  .collection-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px,1fr)); gap:12px }
-  .collection-card h2 { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 8px }
-  .pill { display:inline-block; padding:2px 8px; border:1px solid var(--border); border-radius:999px; font-size:11px; color:var(--muted) }
-  .paper-list { list-style:none; padding-left:0; margin:0; display:grid; gap:10px }
-  .paper-card { border:1px solid var(--border); border-radius:10px; padding:10px; background:#0f1323 }
-  .paper-card.hero { border-color:#ffce6a; background:#1a1f2e }
-  .paper-title { font-weight:700 }
-  .paper-meta { color:var(--muted); font-size:12px; margin-top:2px }
-  .hero-badge { display:inline-block; padding:2px 6px; background:#ffce6a; color:#0b1020; border-radius:4px; font-size:10px; font-weight:600; margin-left:6px; vertical-align:middle }
-  .empty { color:var(--muted); font-size:12px; border:1px dashed var(--border); padding:10px; border-radius:10px; background:#0f1323 }
-  .collection-desc { color:var(--muted); font-size:13px; line-height:1.5; margin:0 0 12px }
-</style>
+  <Nav />
 
-<Nav />
+  <main class="page collections-page">
+    <header class="page-header">
+      <span class="page-eyebrow">Reference shelf</span>
+      <h1 class="page-title">Reading lists for the main branches of the idea</h1>
+      <p class="page-lede">
+        These are not meant to be exhaustive literature reviews. They are curated entry points for the clusters
+        of work that become easier to relate once you start thinking in training-data counterfactuals.
+      </p>
+      <div class="page-meta">
+        <span class="pill">{collectionsWithPapers.length} collections</span>
+        <span class="pill">{totalPapers} linked papers</span>
+      </div>
+    </header>
 
-<section class="wrap section">
-  <div class="card">
-    <h1>Paper Collections</h1>
-    <p class="lede">Reading lists organized by the research areas referenced in the Data Counterfactuals memo.</p>
-  </div>
+    <section class="section-card">
+      <p class="section-kicker">How to use this page</p>
+      <h2 class="section-title">Start broad, then dive</h2>
+      <div class="section-copy">
+        <p>
+          If you are new to the topic, pick one collection and read the highlighted papers first. If you already know the area,
+          use the jump links below to move straight to the subfield you care about.
+        </p>
+      </div>
+      <nav class="collection-nav" aria-label="Collections">
+        {collectionsWithPapers.map((collection) => (
+          <a href={`#${slugify(collection.title)}`}>{collection.title}</a>
+        ))}
+      </nav>
+    </section>
 
-  <div class="collection-grid">
-    {collectionsWithPapers.map((collection) => (
-      <article class="card collection-card">
-        <h2>
-          <span>{collection.title}</span>
-          <span class="pill">{collection.papers.length} papers</span>
-        </h2>
-        {collection.body && <p class="collection-desc">{collection.body}</p>}
-        {collection.papers.length ? (
-          <ul class="paper-list">
-            {/* Papers are pre-sorted: priority first (by number), then by year */}
-            {collection.papers.map((paper) => {
-              const priority = getPriority(paper);
-              const hasPriority = priority !== Infinity;
-              return (
-                <li class={`paper-card ${hasPriority ? 'hero' : ''}`}>
-                  <div class="paper-title">
-                    {paper.title}
-                    {hasPriority && <span class="hero-badge">#{priority}</span>}
-                  </div>
-                  <div class="paper-meta">{paper.authors?.join(", ")}</div>
-                  <div class="paper-meta">{paper.venue ? `${paper.venue} (${paper.year})` : paper.year}</div>
-                  {paper.url && (
-                    <div style="margin-top:4px">
-                      <a href={paper.url} target="_blank" rel="noreferrer noopener">Link</a>
+    <section class="collections-grid">
+      {collectionsWithPapers.map((collection) => (
+        <article class="section-card collection-card" id={slugify(collection.title)}>
+          <div class="collection-head">
+            <div>
+              <p class="section-kicker">Collection</p>
+              <h2>{collection.title}</h2>
+            </div>
+            <span class="pill">{collection.papers.length} papers</span>
+          </div>
+
+          {collection.body && <p class="collection-desc">{collection.body}</p>}
+
+          {collection.papers.length ? (
+            <ul class="paper-list">
+              {collection.papers.map((paper) => {
+                const priority = getPriority(paper);
+                const isPriority = priority !== Infinity;
+                const priorityLabel = priority === 1 ? "Start here" : `Priority ${priority}`;
+
+                return (
+                  <li class={`paper-card ${isPriority ? "priority" : ""}`}>
+                    <div class="paper-title-row">
+                      <span class="paper-title">{paper.title}</span>
+                      {isPriority && <span class="pill">{priorityLabel}</span>}
                     </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <div class="empty">No references yet. Add citation keys to grow this collection.</div>
-        )}
-      </article>
-    ))}
-  </div>
-</section>
-
+                    {paper.authors?.length ? (
+                      <div class="paper-meta">{paper.authors.join(", ")}</div>
+                    ) : null}
+                    <div class="paper-meta">
+                      {paper.venue ? `${paper.venue}${paper.year ? ` (${paper.year})` : ""}` : paper.year}
+                    </div>
+                    {paper.url && (
+                      <a href={paper.url} target="_blank" rel="noreferrer noopener" class="paper-link">
+                        Read paper
+                      </a>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div class="empty-state">This collection has not been populated yet.</div>
+          )}
+        </article>
+      ))}
+    </section>
+  </main>
 </Layout>

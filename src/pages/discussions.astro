@@ -3,60 +3,59 @@ import Layout from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
 import NetworkDiscussions from "../../helpers/astro/NetworkDiscussions.astro";
 import type { NetworkData } from "../../helpers/network-data";
-
-// Use static import - Vite can resolve this at build time
 import networkData from "../data/network.json";
 ---
 
 <Layout
   title="Discussions"
-  description="Join the conversation about data counterfactuals. Share feedback, ask questions, and connect with related projects."
+  description="Places to discuss, question, and respond to the Data Counterfactuals project."
 >
+  <style>
+    .discussion-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 2vw, 2rem);
+      letter-spacing: -0.03em;
+    }
+  </style>
 
-<style is:global>
-  :root{
-    --bg:#0b1020;
-    --bg-soft:#0e152b;
-    --fg:#e9eef8;
-    --muted:#9fb5c8;
-    --card:#0f182f;
-    --border:#1f2b45;
-    --ring-thick:#33d6ff;
-  }
-  * { box-sizing:border-box }
-  body { margin:0; background:radial-gradient(circle at 20% 20%, #101a34, #0b1020 45%), radial-gradient(circle at 80% 10%, #12203c, transparent 50%), var(--bg); color:var(--fg); font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial }
-  a { color:var(--ring-thick); }
-  .top-nav { position:sticky; top:0; z-index:20; backdrop-filter:blur(14px); background:rgba(11,12,16,0.82); border-bottom:1px solid var(--border); padding:8px 18px; display:flex; align-items:center; justify-content:space-between; gap:10px }
-  .brand { font-weight:700; letter-spacing:0.04em; text-transform:uppercase; font-size:12px; color:var(--muted) }
-  .nav-links { display:flex; gap:10px; flex-wrap:wrap }
-  .nav-links a { padding:6px 10px; border:1px solid var(--border); border-radius:10px; text-decoration:none; color:var(--fg); font-size:12px; background:#111320; }
-  .nav-links a:hover { border-color:var(--ring-thick); }
-</style>
+  <Nav />
 
-<Nav />
+  <main class="page">
+    <header class="page-header">
+      <span class="page-eyebrow">Conversation</span>
+      <h1 class="page-title">Discussion links</h1>
+      <p class="page-lede">
+        If you want to respond to the project, ask questions, or point out something off, start here.
+        The linked spaces vary in tone, but all of them are meant to keep the work porous.
+      </p>
+    </header>
 
-<NetworkDiscussions
-  networkData={networkData as NetworkData}
-  backLinkHref="/"
-  backLinkLabel="← Back to home"
-  hideProjectLinks={true}
-  hideRelatedProjects={true}
-  classes={{
-    container: 'wrap',
-  }}
-  styles={{
-    container: 'max-width:800px; margin:0 auto; padding:2rem;',
-    header: 'margin-bottom:2rem;',
-    subtitle: 'color:var(--muted); margin-bottom:1rem;',
-    backLink: 'color:var(--ring-thick);',
-    section: 'background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.5rem; margin-bottom:1.5rem;',
-    list: 'list-style:none; padding:0; margin:0;',
-    discussionListItem: 'margin-bottom:0.75rem;',
-    listItem: 'margin-bottom:0.5rem;',
-    description: 'color:var(--muted); display:block; font-size:0.875rem; margin-top:0.25rem;',
-    muted: 'color:var(--muted); font-size:0.875rem;',
-    emptySection: 'background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.5rem;',
-  }}
-/>
-
+    <section class="section-card">
+      <NetworkDiscussions
+        networkData={networkData as NetworkData}
+        backLinkHref="/"
+        backLinkLabel="Back to home"
+        hideProjectLinks={true}
+        hideRelatedProjects={true}
+        classes={{
+          container: "discussion-helper",
+          title: "discussion-title",
+        }}
+        styles={{
+          container: "max-width:none; margin:0; padding:0;",
+          header: "margin-bottom:1.5rem;",
+          subtitle: "color:var(--muted); margin-bottom:1rem; line-height:1.7;",
+          backLink: "color:var(--ring-thick); font-weight:700;",
+          section: "background:rgba(255, 250, 243, 0.7); border:1px solid var(--border); border-radius:22px; padding:1.2rem; margin-bottom:1rem;",
+          list: "list-style:none; padding:0; margin:0;",
+          discussionListItem: "margin-bottom:0.75rem;",
+          listItem: "margin-bottom:0.5rem;",
+          description: "color:var(--muted); display:block; font-size:0.95rem; margin-top:0.25rem; line-height:1.6;",
+          muted: "color:var(--muted); font-size:0.92rem;",
+          emptySection: "background:rgba(255, 250, 243, 0.7); border:1px solid var(--border); border-radius:22px; padding:1.2rem;",
+        }}
+      />
+    </section>
+  </main>
 </Layout>

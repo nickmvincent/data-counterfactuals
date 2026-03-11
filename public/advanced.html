@@ -63,182 +63,17 @@
       import htm from "https://esm.sh/htm@3.1.1";
       import * as THREE from "https://esm.sh/three@0.164.1";
       import { OrbitControls } from "https://esm.sh/three@0.164.1/examples/jsm/controls/OrbitControls.js";
+      import {
+        buildDecisionBoundary,
+        buildModelRun,
+        defaultTaglines,
+        explanationSets,
+        metricMatrixFor,
+        predictProbability,
+        scenarioConfigs,
+        subsetDefs,
+      } from "/advanced-simulator-core.js";
       const html = htm.bind(h);
-
-      // --- Synthetic data model ----------------------------------------------------
-      const groupConfigs = [
-        { id:"A", label:0, center:[-1.6,-0.3], spread:0.42, seed:11, tagline:"Wide, slow signals" },
-        { id:"B", label:1, center:[1.1,0.45], spread:0.48, seed:22, tagline:"Fast telemetry" },
-        { id:"C", label:0, center:[-0.4,1.25], spread:0.36, seed:33, tagline:"Satellite uplinks" },
-        { id:"D", label:1, center:[1.05,-1.1], spread:0.55, seed:44, tagline:"Edge devices" }
-      ];
-      const defaultTaglines = Object.fromEntries(groupConfigs.map(g=> [g.id, g.tagline]));
-      const explanationSets = [
-        { id:"default", label:"Sensor fleet (default)", taglines: defaultTaglines },
-        { id:"llm-pretrain", label:"LLM pretraining slices", taglines:{
-          A:"Open web encyclopedias and FAQs",
-          B:"Code-heavy forums + docs",
-          C:"Newswire and policy briefs",
-          D:"Fiction + longform narrative"
-        }},
-        { id:"robotics", label:"Robotics curriculum", taglines:{
-          A:"Tabletop manipulation demos",
-          B:"Outdoor drone footage",
-          C:"Industrial arm telemetry",
-          D:"Simulated dexterity tasks"
-        }}
-      ];
-      const scenarioConfigs = [
-        {
-          id:"alpha",
-          label:"Eval α",
-          description:"Baseline mixture – same distribution as training.",
-          groups:["A","B","C","D"],
-          seed:201,
-          noise:0.1,
-          flip:0.02,
-          transform:(x,y)=> [x, y]
-        },
-        {
-          id:"beta",
-          label:"Eval β",
-          description:"Sensor drift stretches X and introduces mild label noise.",
-          groups:["A","B","D"],
-          seed:202,
-          noise:0.16,
-          flip:0.07,
-          transform:(x,y)=> [x*0.85 + 0.35, y*1.2 - 0.15]
-        },
-        {
-          id:"gamma",
-          label:"Eval γ",
-          description:"Northern skies: mostly C & D with a +Y shift.",
-          groups:["C","D"],
-          seed:203,
-          noise:0.12,
-          flip:0.04,
-          transform:(x,y)=> [x*0.95 - 0.15, y + 0.8]
-        },
-        {
-          id:"delta",
-          label:"Eval δ",
-          description:"Adversarial sweep bending trajectories and flipping more labels.",
-          groups:["A","B","C","D"],
-          seed:204,
-          noise:0.18,
-          flip:0.12,
-          transform:(x,y)=> [x + 0.45*Math.sin(y), y - 0.3*Math.cos(x)]
-        }
-      ];
-
-      function mulberry32(a){
-        return function(){
-          let t = a += 0x6d2b79f5;
-          t = Math.imul(t ^ t >>> 15, t | 1);
-          t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-          return ((t ^ t >>> 14) >>> 0) / 4294967296;
-        };
-      }
-      function normal(rng){
-        let u=0, v=0;
-        while(u===0) u=rng();
-        while(v===0) v=rng();
-        return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v);
-      }
-      const GROUP_SIZE = 42;
-      function generateGroup(cfg, seedBump=0){
-        const rng = mulberry32(cfg.seed + seedBump);
-        const out=[];
-        for(let i=0;i<GROUP_SIZE;i++){
-          const x = cfg.center[0] + normal(rng)*cfg.spread;
-          const y = cfg.center[1] + normal(rng)*cfg.spread;
-          out.push({ x, y, label: cfg.label, group: cfg.id });
-        }
-        return out;
-      }
-      function makeScenarioDataset(config, groupData, seedBump=0){
-        const rng = mulberry32(config.seed + seedBump*3);
-        const arr=[];
-        for(const gid of config.groups){
-          const src = groupData.get(gid) || [];
-          for(const pt of src){
-            let [nx, ny] = config.transform(pt.x, pt.y, rng);
-            nx += normal(rng)*config.noise;
-            ny += normal(rng)*config.noise;
-            let label = pt.label;
-            if(config.flip && rng()<config.flip) label = label ? 0 : 1;
-            arr.push({ x:nx, y:ny, label, source:gid });
-          }
-        }
-        return arr;
-      }
-      function allSubsets(ids){
-        const out=[]; const n=ids.length;
-        for(let mask=1; mask<(1<<n); mask++){
-          const picks=[];
-          for(let i=0;i<n;i++) if(mask & (1<<i)) picks.push(ids[i]);
-          out.push(picks);
-        }
-        return out.sort((a,b)=> a.length===b.length ? a.join("").localeCompare(b.join("")) : a.length - b.length);
-      }
-      const subsetDefs = allSubsets(groupConfigs.map(g=>g.id)).map(groups=>({
-        id: groups.join(""),
-        label: groups.join(" + "),
-        groups
-      }));
-
-      function logisticTrain(samples, steps=420, lr=0.12){
-        if(!samples.length) return [0,0,0];
-        let w0=0, w1=0, w2=0;
-        for(let iter=0; iter<steps; iter++){
-          let g0=0, g1=0, g2=0;
-          for(const s of samples){
-            const z = w0 + w1*s.x + w2*s.y;
-            const p = 1/(1+Math.exp(-z));
-            const err = p - s.label;
-            g0 += err;
-            g1 += err*s.x;
-            g2 += err*s.y;
-          }
-          const scale = lr / samples.length;
-          w0 -= scale * g0;
-          w1 -= scale * g1;
-          w2 -= scale * g2;
-        }
-        return [w0,w1,w2];
-      }
-      const logisticProb = (w, s)=> 1/(1+Math.exp(-(w[0] + w[1]*s.x + w[2]*s.y)));
-      function evaluate(samples, weights){
-        if(!samples.length) return { accuracy:0, precision:0, recall:0, f1:0, counts:{tp:0,fp:0,tn:0,fn:0} };
-        let correct=0, tp=0, tn=0, fp=0, fn=0;
-        for(const s of samples){
-          const prob = logisticProb(weights, s);
-          const pred = prob>=0.5 ? 1 : 0;
-          if(pred===s.label) correct++;
-          if(pred===1 && s.label===1) tp++;
-          else if(pred===1 && s.label===0) fp++;
-          else if(pred===0 && s.label===0) tn++;
-          else fn++;
-        }
-        const accuracy = correct / samples.length;
-        const precision = tp+fp? tp/(tp+fp) : 0;
-        const recall = tp+fn? tp/(tp+fn) : 0;
-        const f1 = (precision+recall)? 2*precision*recall/(precision+recall) : 0;
-        return { accuracy, precision, recall, f1, counts:{tp,fp,tn,fn} };
-      }
-      function buildModelRun(seedBump=0){
-        const groupData = new Map(groupConfigs.map(cfg=> [cfg.id, generateGroup(cfg, seedBump)]));
-        const scenarioDataMap = new Map(scenarioConfigs.map(cfg=> [cfg.id, makeScenarioDataset(cfg, groupData, seedBump)]));
-        const trainDataCache = new Map(subsetDefs.map(def=> [def.id, def.groups.flatMap(gid=> groupData.get(gid) || [])]));
-        const resultMatrix = subsetDefs.map(def=>{
-          const weights = logisticTrain(trainDataCache.get(def.id));
-          return scenarioConfigs.map(cfg=>{
-            const stats = evaluate(scenarioDataMap.get(cfg.id), weights);
-            return { weights:[...weights], stats };
-          });
-        });
-        return { groupData, scenarioDataMap, trainDataCache, resultMatrix };
-      }
 
       // --- Components --------------------------------------------------------------
       const valueColor = (v)=>{
@@ -431,7 +266,7 @@
         return html`<div class="scene-shell" ref=${mountRef}></div>`;
       };
 
-      const ScatterPlot = ({ title, data, weights=null, showDecision=false })=>{
+      const ScatterPlot = ({ title, data, decisionBoundary=null })=>{
         const canvasRef = useRef(null);
         useEffect(()=>{
           const canvas = canvasRef.current;
@@ -462,19 +297,19 @@
           ctx.lineWidth = 1;
           ctx.strokeRect(pad-6, pad-6, width-2*(pad-6), height-2*(pad-6));
 
-          if(showDecision && weights){
-            const [b,w1,w2] = weights;
+          if(decisionBoundary){
+            const { bias, xCoeff, yCoeff } = decisionBoundary;
             ctx.strokeStyle = "rgba(255,255,255,0.8)";
             ctx.setLineDash([6,4]);
             ctx.lineWidth = 2;
             ctx.beginPath();
-            if(Math.abs(w2) > 1e-4){
-              const y1 = -(b + w1*minX)/w2;
-              const y2 = -(b + w1*maxX)/w2;
+            if(Math.abs(yCoeff) > 1e-4){
+              const y1 = -(bias + xCoeff*minX)/yCoeff;
+              const y2 = -(bias + xCoeff*maxX)/yCoeff;
               ctx.moveTo(sx(minX), sy(y1));
               ctx.lineTo(sx(maxX), sy(y2));
-            } else if(Math.abs(w1) > 1e-4){
-              const xCut = -(b)/w1;
+            } else if(Math.abs(xCoeff) > 1e-4){
+              const xCut = -(bias)/xCoeff;
               ctx.moveTo(sx(xCut), sy(minY));
               ctx.lineTo(sx(xCut), sy(maxY));
             }
@@ -495,7 +330,7 @@
               ctx.stroke();
             }
           }
-        }, [data, weights, showDecision]);
+        }, [data, decisionBoundary]);
 
         return html`
           <div class="scatter-card">
@@ -628,28 +463,29 @@ text: You inherit a big roster; spend remaining budget to uncover hidden combos 
           setOperatorLog(prev=> [`Loaded puzzle “${activePuzzle.title}” (budget ${cleanBudget}, ${revealedIdxs.length} revealed).`, ...prev].slice(0,6));
         };
 
-        const metricMatrix = useMemo(()=> resultMatrix.map(row=> row.map(cell=> cell.stats[metric] || 0)), [metric, resultMatrix]);
+        const metricMatrix = useMemo(()=> metricMatrixFor(resultMatrix, metric), [metric, resultMatrix]);
         const selectedRow = subsetList[rowIdx];
         const selectedScenario = scenarioConfigs[colIdx];
         const selectedCell = resultMatrix[rowIdx][colIdx];
+        const selectedModel = selectedCell.model;
         const metricValue = selectedCell?.stats?.[metric] ?? 0;
         const trainData = useMemo(()=> trainDataCache.get(selectedRow.id) || [], [rowIdx, trainDataCache, selectedRow.id]);
         const evalPoints = useMemo(()=> {
           const evalData = scenarioDataMap.get(selectedScenario.id) || [];
-          const weights = selectedCell.weights;
           return evalData.map(pt=>{
-            const prob = logisticProb(weights, pt);
+            const prob = predictProbability(selectedModel, pt);
             const pred = prob>=0.5?1:0;
             return { ...pt, pred, prob };
           });
-        }, [rowIdx, colIdx, scenarioDataMap, selectedScenario.id, selectedCell.weights]);
+        }, [scenarioDataMap, selectedModel, selectedScenario.id]);
+        const decisionBoundary = useMemo(()=> buildDecisionBoundary(selectedModel), [selectedModel]);
 
         return html`
           <div class="wrap">
             <header>
               <div>
                 <h1>Live Counterfactual Board</h1>
-                <p class="lede">Advanced prototype: every tile now runs a real logistic-regression classifier on synthetic data. Pick a training roster (rows) against evaluation worlds (columns), then inspect the actual scatter plots, confusion matrix, and a 3D accuracy board powered by Three.js.</p>
+                <p class="lede">Advanced prototype: every tile now runs a regularized logistic-regression classifier on standardized synthetic data. Pick a training roster (rows) against evaluation worlds (columns), then inspect the actual scatter plots, confusion matrix, and a 3D accuracy board powered by Three.js.</p>
               </div>
               <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
                 <div class="pill">${subsetList.length} train combos × ${scenarioConfigs.length} eval worlds</div>
@@ -723,6 +559,24 @@ text: You inherit a big roster; spend remaining budget to uncover hidden combos 
                       </div>
                     `)}
                   </div>
+                  <div class="metrics-grid" style="margin-top:8px">
+                    <div class="metric-pill">
+                      <span>train loss</span>
+                      <strong>${selectedModel.loss.toFixed(4)}</strong>
+                    </div>
+                    <div class="metric-pill">
+                      <span>iterations</span>
+                      <strong>${selectedModel.iterations}</strong>
+                    </div>
+                    <div class="metric-pill">
+                      <span>converged</span>
+                      <strong>${selectedModel.converged ? "yes" : "no"}</strong>
+                    </div>
+                    <div class="metric-pill">
+                      <span>L2 reg</span>
+                      <strong>${selectedModel.regularization.toFixed(3)}</strong>
+                    </div>
+                  </div>
                   <table class="confusion">
                     <thead>
                       <tr><th></th><th>Pred 0</th><th>Pred 1</th></tr>
@@ -732,7 +586,7 @@ text: You inherit a big roster; spend remaining budget to uncover hidden combos 
                       <tr><th>True 1</th><td>${selectedCell.stats.counts.fn}</td><td>${selectedCell.stats.counts.tp}</td></tr>
                     </tbody>
                   </table>
-                  <p class="log">Weights ≈ [${selectedCell.weights.map(w=> w.toFixed(2)).join(", ")}], ${trainData.length} training pts · ${evalPoints.length} eval pts.</p>
+                  <p class="log">Weights ≈ [${selectedCell.weights.map(w=> w.toFixed(2)).join(", ")}], standardized on the training roster. ${trainData.length} training pts · ${evalPoints.length} eval pts.</p>
                 </div>
 
                 <div class="card">
@@ -740,7 +594,7 @@ text: You inherit a big roster; spend remaining budget to uncover hidden combos 
                   <p><strong>${selectedRow.label}</strong> training clouds</p>
                   <${ScatterPlot} title="Training distribution" data=${trainData} />
                   <p style="margin-top:12px"><strong>${selectedScenario.label}</strong> evaluation scatter</p>
-                  <${ScatterPlot} title="Eval scatter & decision boundary" data=${evalPoints} weights=${selectedCell.weights} showDecision=${true} />
+                  <${ScatterPlot} title="Eval scatter & decision boundary" data=${evalPoints} decisionBoundary=${decisionBoundary} />
                   <div class="legend">
                     <span><i style="background:${COLOR_CLASS0}"></i>Class 0</span>
                     <span><i style="background:${COLOR_CLASS1}"></i>Class 1</span>
