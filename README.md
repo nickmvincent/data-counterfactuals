@@ -30,14 +30,16 @@ npm run preview
 Cloudflare Pages is configured via `wrangler.toml`.
 
 ```bash
-wrangler pages deploy dist --project-name data-counterfactuals
+wrangler pages deploy dist --project-name datacounterfactuals
 ```
 
 If the Pages project does not exist yet:
 
 ```bash
-wrangler pages project create data-counterfactuals
+wrangler pages project create datacounterfactuals
 ```
+
+The Cloudflare Pages project is named `datacounterfactuals`, while the GitHub repo stays `data-counterfactuals`.
 
 ## Push to GitHub
 
