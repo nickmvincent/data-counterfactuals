@@ -7,12 +7,13 @@ import networkData from "../../data/network.json";
 const PRIMARY_MEMO_SLUG = "data-counterfactuals";
 
 export async function getStaticPaths() {
+  const primaryMemoSlug = "data-counterfactuals";
   const memos = (await getCollection("memos"))
     .filter((memo) => memo.data.visibility !== "private")
     .sort((a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0));
 
   return memos
-    .filter((memo) => memo.slug !== PRIMARY_MEMO_SLUG)
+    .filter((memo) => memo.slug !== primaryMemoSlug)
     .map((memo) => ({
       params: { slug: memo.slug }
     }));
