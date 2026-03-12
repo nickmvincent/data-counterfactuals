@@ -1,7 +1,21 @@
+import { existsSync } from 'node:fs';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+
 import { parseFrontmatter } from './markdown';
 
 const DEFAULT_SEMBLE_API_BASE = 'https://api.semble.so';
+const DEFAULT_SEMBLE_CACHE_PATH = 'tmp/semble-cache.json';
 const PAGE_LIMIT = 100;
+
+type SembleCachePolicy = 'network-first' | 'cache-only' | 'refresh' | 'off';
+
+const CACHE_POLICIES = new Set<SembleCachePolicy>([
+  'network-first',
+  'cache-only',
+  'refresh',
+  'off',
+]);
 
 interface SembleConfig {
   apiBase: string;
@@ -97,6 +111,36 @@ export interface SembleCollectionRecord {
 export interface SembleDataset {
   references: Map<string, SembleReference>;
   collections: SembleCollectionRecord[];
+}
+
+interface SerializedSembleDataset {
+  version: 1;
+  generated_at: string;
+  cache_key: string;
+  source: {
+    apiBase: string;
+    profileIdentifier?: string;
+    collectionAtUris: string[];
+    collectionNamePrefix?: string;
+  };
+  stats: {
+    collections: number;
+    references: number;
+  };
+  collections: SembleCollectionRecord[];
+  references: SembleReference[];
+}
+
+class SembleHttpError extends Error {
+  status: number;
+  url: string;
+
+  constructor(status: number, url: string) {
+    super(`Semble API request failed (${status}) for ${url}`);
+    this.name = 'SembleHttpError';
+    this.status = status;
+    this.url = url;
+  }
 }
 
 let datasetCache:
@@ -259,6 +303,128 @@ function buildCacheKey(config: SembleConfig): string {
   return JSON.stringify(config);
 }
 
+function getSembleCachePolicy(override?: SembleCachePolicy): SembleCachePolicy {
+  if (override && CACHE_POLICIES.has(override)) {
+    return override;
+  }
+
+  const envValue = asOptionalString(process.env.SEMBLE_CACHE_POLICY);
+  if (envValue && CACHE_POLICIES.has(envValue as SembleCachePolicy)) {
+    return envValue as SembleCachePolicy;
+  }
+
+  return 'network-first';
+}
+
+function buildRuntimeCacheKey(config: SembleConfig, cachePolicy: SembleCachePolicy): string {
+  return JSON.stringify({ config, cachePolicy });
+}
+
+export function getSembleCachePath(): string {
+  const configuredPath = asOptionalString(process.env.SEMBLE_CACHE_PATH) || DEFAULT_SEMBLE_CACHE_PATH;
+  return path.isAbsolute(configuredPath)
+    ? configuredPath
+    : path.resolve(process.cwd(), configuredPath);
+}
+
+function serializeSembleDataset(config: SembleConfig, dataset: SembleDataset): SerializedSembleDataset {
+  const references = Array.from(dataset.references.values()).sort((a, b) =>
+    a.citation_key.localeCompare(b.citation_key),
+  );
+  const collections = [...dataset.collections].sort((a, b) => a.title.localeCompare(b.title));
+
+  return {
+    version: 1,
+    generated_at: new Date().toISOString(),
+    cache_key: buildCacheKey(config),
+    source: {
+      apiBase: config.apiBase,
+      profileIdentifier: config.profileIdentifier,
+      collectionAtUris: [...config.collectionAtUris],
+      collectionNamePrefix: config.collectionNamePrefix,
+    },
+    stats: {
+      collections: collections.length,
+      references: references.length,
+    },
+    collections,
+    references,
+  };
+}
+
+function deserializeSembleDataset(
+  config: SembleConfig,
+  payload: SerializedSembleDataset | null | undefined,
+): SembleDataset | null {
+  if (!payload || payload.version !== 1) {
+    return null;
+  }
+
+  if (payload.cache_key !== buildCacheKey(config)) {
+    return null;
+  }
+
+  if (!Array.isArray(payload.references) || !Array.isArray(payload.collections)) {
+    return null;
+  }
+
+  const references = new Map<string, SembleReference>();
+  for (const candidate of payload.references) {
+    const citationKey = asOptionalString(candidate?.citation_key);
+    if (!citationKey) continue;
+    references.set(citationKey, candidate);
+  }
+
+  const collections: SembleCollectionRecord[] = [];
+  for (const candidate of payload.collections) {
+    const slug = asOptionalString(candidate?.slug);
+    const title = asOptionalString(candidate?.title);
+    if (!slug || !title) continue;
+
+    collections.push({
+      ...candidate,
+      slug,
+      title,
+      citation_keys: Array.isArray(candidate?.citation_keys)
+        ? candidate.citation_keys.map((key) => String(key))
+        : [],
+      visibility: asOptionalString(candidate?.visibility),
+      body: asOptionalString(candidate?.body),
+      uri: asOptionalString(candidate?.uri),
+    });
+  }
+
+  return { references, collections };
+}
+
+async function readSembleDatasetFromCache(config: SembleConfig): Promise<SembleDataset | null> {
+  const cachePath = getSembleCachePath();
+  if (!existsSync(cachePath)) {
+    return null;
+  }
+
+  try {
+    const raw = await readFile(cachePath, 'utf8');
+    const payload = JSON.parse(raw) as SerializedSembleDataset;
+    return deserializeSembleDataset(config, payload);
+  } catch (error) {
+    console.warn(`[semble] Failed to read cache at ${cachePath}:`, error);
+    return null;
+  }
+}
+
+async function writeSembleDatasetToCache(config: SembleConfig, dataset: SembleDataset): Promise<void> {
+  const cachePath = getSembleCachePath();
+  const payload = serializeSembleDataset(config, dataset);
+
+  try {
+    await mkdir(path.dirname(cachePath), { recursive: true });
+    await writeFile(cachePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  } catch (error) {
+    console.warn(`[semble] Failed to write cache at ${cachePath}:`, error);
+  }
+}
+
 async function fetchSemble<T>(
   config: SembleConfig,
   path: string,
@@ -278,7 +444,7 @@ async function fetchSemble<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`Semble API request failed (${response.status}) for ${url.toString()}`);
+    throw new SembleHttpError(response.status, url.toString());
   }
 
   const json = (await response.json()) as T | SembleApiEnvelope<T>;
@@ -478,9 +644,22 @@ async function buildSembleDataset(config: SembleConfig): Promise<SembleDataset> 
     ...discoveredCollections.map((collection) => asString(collection.uri)).filter(Boolean),
   ]);
 
-  const collectionPages = await Promise.all(
-    collectionUris.map((collectionAtUri) => loadCollectionPage(config, collectionAtUri)),
-  );
+  const collectionPages = (
+    await Promise.all(
+      collectionUris.map(async (collectionAtUri) => {
+        try {
+          return await loadCollectionPage(config, collectionAtUri);
+        } catch (error) {
+          if (error instanceof SembleHttpError && error.status === 404) {
+            console.warn(`[semble] Skipping missing collection ${collectionAtUri}.`);
+            return null;
+          }
+
+          throw error;
+        }
+      }),
+    )
+  ).filter((page): page is { collection: SembleCollectionSummary; cards: SembleUrlCard[] } => Boolean(page));
 
   const references = new Map<string, SembleReference>();
   const collections: SembleCollectionRecord[] = [];
@@ -516,16 +695,58 @@ async function buildSembleDataset(config: SembleConfig): Promise<SembleDataset> 
   return { references, collections };
 }
 
-export async function loadSembleDataset(options: { force?: boolean } = {}): Promise<SembleDataset | null> {
+export async function loadSembleDataset(
+  options: { force?: boolean; cachePolicy?: SembleCachePolicy } = {},
+): Promise<SembleDataset | null> {
   const config = getSembleConfig();
   if (!config) return null;
 
-  const cacheKey = buildCacheKey(config);
+  const cachePolicy = getSembleCachePolicy(options.cachePolicy);
+  const cacheKey = buildRuntimeCacheKey(config, cachePolicy);
   if (!options.force && datasetCache && datasetCache.cacheKey === cacheKey) {
     return datasetCache.value;
   }
 
-  const value = buildSembleDataset(config);
+  const value = (async () => {
+    if (cachePolicy === 'cache-only') {
+      const cachedDataset = await readSembleDatasetFromCache(config);
+      if (cachedDataset) {
+        return cachedDataset;
+      }
+
+      throw new Error(
+        `No Semble cache was found at ${getSembleCachePath()} for the current configuration. Run an online build or dev session first, or set SEMBLE_CACHE_POLICY=refresh.`,
+      );
+    }
+
+    if (cachePolicy === 'off') {
+      return buildSembleDataset(config);
+    }
+
+    if (cachePolicy === 'refresh') {
+      const freshDataset = await buildSembleDataset(config);
+      await writeSembleDatasetToCache(config, freshDataset);
+      return freshDataset;
+    }
+
+    try {
+      const freshDataset = await buildSembleDataset(config);
+      await writeSembleDatasetToCache(config, freshDataset);
+      return freshDataset;
+    } catch (error) {
+      const cachedDataset = await readSembleDatasetFromCache(config);
+      if (cachedDataset) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(
+          `[semble] Falling back to local cache at ${getSembleCachePath()} because the live fetch failed: ${message}`,
+        );
+        return cachedDataset;
+      }
+
+      throw error;
+    }
+  })();
+
   datasetCache = { cacheKey, value };
   return value;
 }

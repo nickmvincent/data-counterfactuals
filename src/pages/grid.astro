@@ -2,17 +2,20 @@
 import Layout from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
 import Explorer from "../components/Explorer.jsx";
+import { getRequiredPageEntry, getSection, renderMarkdownBlocks, splitMarkdownSections } from "../lib/page-content";
 
-const quickTips = [
-  "Rows are training worlds and columns are evaluation slices; that is the core mental model for the whole page.",
-  "The focus chips do not choose the row. They choose which point or group the current question is talking about.",
-  "Operator view applies toy edits like poisoning or noise; Real world snaps back to the untouched reference grid."
-];
+const page = await getRequiredPageEntry("grid");
+const sections = splitMarkdownSections(page.body);
+const introSection = getSection(sections, "how-to-read-the-toy");
+const quickTips = page.data.quick_tips ?? [];
+const companionLinks = page.data.companion_links ?? [];
+const headerNote = page.data.notes?.header;
+const companionNote = page.data.notes?.companions;
 ---
 
 <Layout
-  title="Grid Explorer"
-  description="Interactive toy explorer for comparing training-data counterfactuals."
+  title={page.data.title}
+  description={page.data.description}
 >
   <style is:global>
     .explorer-page {
@@ -169,6 +172,7 @@ const quickTips = [
       overflow: hidden;
       text-overflow: ellipsis;
       padding: 0 4px;
+      font-variant-numeric: tabular-nums;
     }
     .explorer-shell .cell {
       width: var(--grid-cell-w);
@@ -196,6 +200,12 @@ const quickTips = [
     .explorer-shell .cell-emph {
       box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset, 0 0 0 1px rgba(0, 0, 0, 0.25);
     }
+    .explorer-shell .cell-edited {
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.2) inset,
+        0 0 0 1px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(255, 118, 98, 0.35);
+    }
     .explorer-shell .ring {
       position: absolute;
       inset: 2px;
@@ -212,6 +222,17 @@ const quickTips = [
       inset: 4px;
       outline-color: var(--ring-thick);
       box-shadow: 0 0 0 2px rgba(104, 198, 193, 0.35), 0 0 0 2px rgba(0, 0, 0, 0.45) inset;
+    }
+    .explorer-shell .edit-flag {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 0;
+      height: 0;
+      border-top: 12px solid #ff7662;
+      border-left: 12px solid transparent;
+      filter: drop-shadow(0 0 3px rgba(255, 118, 98, 0.45));
+      pointer-events: none;
     }
     .explorer-shell .cell-pulse::after {
       content: "";
@@ -603,8 +624,6 @@ const quickTips = [
     .explorer-shell .stage-frame {
       position: sticky;
       top: 1rem;
-      max-height: calc(100vh - 2rem);
-      overflow: auto;
       display: grid;
       gap: 14px;
       padding: 18px;
@@ -730,7 +749,7 @@ const quickTips = [
       align-items: center;
     }
     .explorer-shell .stage-grid {
-      max-height: min(52vh, 44rem);
+      max-height: min(48vh, 38rem);
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
     }
     .explorer-shell .comparison-legend {
@@ -817,14 +836,13 @@ const quickTips = [
       display: grid;
       gap: 8px;
     }
-    @media (max-width: 1180px) {
+    @media (max-width: 980px) {
       .explorer-shell .story-intro-grid,
       .explorer-shell .distill-layout {
         grid-template-columns: 1fr;
       }
       .explorer-shell .stage-frame {
         position: static;
-        max-height: none;
       }
       .explorer-shell .stage-summary-grid {
         grid-template-columns: 1fr;
@@ -862,7 +880,7 @@ const quickTips = [
         border-radius: 20px;
       }
       .explorer-shell .stage-grid {
-        max-height: 24rem;
+        max-height: 22rem;
       }
     }
   </style>
@@ -872,12 +890,9 @@ const quickTips = [
   <main class="page essay-page explorer-page">
     <header class="essay-header page-header">
       <div>
-        <span class="page-eyebrow">Interactive lab</span>
-        <h1 class="page-title">The grid explorer</h1>
-        <p class="page-lede">
-          This is a toy environment for comparing training-data worlds. It is small enough to inspect by eye, but rich enough
-          to show the logic behind leave-one-out, Shapley-style comparisons, scaling summaries, and simple data edits.
-        </p>
+        {page.data.eyebrow && <span class="page-eyebrow">{page.data.eyebrow}</span>}
+        <h1 class="page-title">{page.data.title}</h1>
+        {page.data.lede && <p class="page-lede">{page.data.lede}</p>}
         <div class="page-meta">
           <span class="pill">Rows are training worlds</span>
           <span class="pill">Columns are evaluation slices</span>
@@ -886,22 +901,17 @@ const quickTips = [
       </div>
 
       <aside class="essay-side">
-        <p class="note-label">Toy, not theorem</p>
-        <p>
-          The explorer is deliberately small. Its job is to make the comparison structure visible, not to stand in for the full
-          complexity of real training pipelines.
-        </p>
+        {headerNote?.label && <p class="note-label">{headerNote.label}</p>}
+        {renderMarkdownBlocks(headerNote?.body ?? []).map((html) => (
+          <div set:html={html}></div>
+        ))}
       </aside>
     </header>
 
     <section class="essay-section">
       <div class="essay-main">
-        <h2>How to read the toy</h2>
-        <p>
-          Start by fixing the mental model: rows are possible training worlds and columns are evaluation slices. Once that is
-          in place, the rest of the interface is about moving between nearby rows, nearby columns, or nearby perturbations and
-          asking what changed.
-        </p>
+        <h2>{introSection.title}</h2>
+        <div set:html={introSection.html}></div>
         <ul class="tip-list">
           {quickTips.map((tip) => (
             <li>{tip}</li>
@@ -910,15 +920,14 @@ const quickTips = [
       </div>
 
       <aside class="essay-side">
-        <p class="note-label">Useful companions</p>
-        <p>
-          Keep the memo or glossary nearby if you want the longer framing or a quick definition while you click through the
-          presets.
-        </p>
+        {companionNote?.label && <p class="note-label">{companionNote.label}</p>}
+        {renderMarkdownBlocks(companionNote?.body ?? []).map((html) => (
+          <div set:html={html}></div>
+        ))}
         <ul class="explorer-link-list">
-          <li><a href="/memo">Read the memo for the broader argument</a></li>
-          <li><a href="/glossary">Open the glossary for fast definitions</a></li>
-          <li><a href="/advanced.html">Try the 3D view</a></li>
+          {companionLinks.map((link) => (
+            <li><a href={link.href}>{link.title}</a></li>
+          ))}
         </ul>
       </aside>
     </section>

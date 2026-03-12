@@ -4,11 +4,16 @@ import Nav from "../components/Nav.astro";
 import NetworkDiscussions from "../../helpers/astro/NetworkDiscussions.astro";
 import type { NetworkData } from "../../helpers/network-data";
 import networkData from "../data/network.json";
+import { getRequiredPageEntry, renderMarkdownBlocks } from "../lib/page-content";
+
+const page = await getRequiredPageEntry("discussions");
+const headerNote = page.data.notes?.header;
+const discussions = networkData.discussions ?? [];
 ---
 
 <Layout
-  title="Discussions"
-  description="Places to discuss, question, and respond to the Data Counterfactuals project."
+  title={page.data.title}
+  description={page.data.description}
 >
   <style>
     .discussion-page {
@@ -30,20 +35,19 @@ import networkData from "../data/network.json";
   <main class="page essay-page discussion-page">
     <header class="essay-header page-header">
       <div>
-        <span class="page-eyebrow">Conversation</span>
-        <h1 class="page-title">Discussion links</h1>
-        <p class="page-lede">
-          If you want to respond to the project, ask a question, or point out where the framing goes wrong, start here.
-          These links are meant to keep the work porous rather than sealed off.
-        </p>
+        {page.data.eyebrow && <span class="page-eyebrow">{page.data.eyebrow}</span>}
+        <h1 class="page-title">{page.data.title}</h1>
+        {page.data.lede && <p class="page-lede">{page.data.lede}</p>}
+        <div class="page-meta">
+          <span class="pill">{discussions.length} discussion venues</span>
+        </div>
       </div>
 
       <aside class="essay-side">
-        <p class="note-label">What helps most</p>
-        <p>
-          Specific feedback tends to be the most useful: a concept that does not track the literature, a missing paper, a bad
-          analogy, or an interface choice that encourages the wrong inference.
-        </p>
+        {headerNote?.label && <p class="note-label">{headerNote.label}</p>}
+        {renderMarkdownBlocks(headerNote?.body ?? []).map((html) => (
+          <div set:html={html}></div>
+        ))}
       </aside>
     </header>
 

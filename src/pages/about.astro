@@ -2,112 +2,79 @@
 import Layout from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
 import networkData from "../data/network.json";
+import { getRequiredPageEntry, getSection, renderMarkdownBlocks, splitMarkdownSections } from "../lib/page-content";
 
+const page = await getRequiredPageEntry("about");
+const sections = splitMarkdownSections(page.body);
+const introBlocks = renderMarkdownBlocks(page.data.intro ?? []);
 const githubUrl = networkData.links?.github;
 const discussions = networkData.discussions ?? [];
 const relatedProjects = networkData.relatedProjects ?? [];
-
-const siteParts = [
-  {
-    title: "Overview",
-    href: "/",
-    body: "A compact version of the argument, meant to introduce the core concept without too much local jargon."
-  },
-  {
-    title: "Memo",
-    href: "/memo",
-    body: "The longer written framing from which the rest of the site is derived."
-  },
-  {
-    title: "Explorer",
-    href: "/grid",
-    body: "A toy interface for comparing nearby training worlds and seeing what the grid metaphor makes visible."
-  },
-  {
-    title: "Reading lists and glossary",
-    href: "/collections",
-    body: "Reference pages for when you want terms, papers, and neighboring literatures rather than a guided narrative."
-  }
-];
+const siteParts = page.data.site_parts ?? [];
+const headerNote = page.data.notes?.header;
+const claimNote = page.data.notes?.claim;
+const contributingNote = page.data.notes?.contributing;
+const relatedNote = page.data.notes?.related;
+const firstSection = getSection(sections, "what-the-project-is-trying-to-make-easier");
+const responseSection = getSection(sections, "ways-to-respond");
+const projectsSection = getSection(sections, "projects-in-the-same-orbit");
 ---
 
 <Layout
-  title="About"
-  description="Why Data Counterfactuals exists, what it is trying to clarify, and where to respond or contribute."
+  title={page.data.title}
+  description={page.data.description}
 >
   <Nav />
 
   <main class="page essay-page">
     <header class="essay-header page-header">
       <div>
-        <span class="page-eyebrow">Project notes</span>
-        <h1 class="page-title">Why this site exists</h1>
-        <p class="page-lede">
-          Data Counterfactuals is an attempt to make training-data questions easier to see and easier to compare across
-          literatures that do not usually sit on the same shelf.
-        </p>
-        <p class="page-lede">
-          The site is part explainer, part toy lab, and part reading map. It is meant to support a line of thought, not to
-          present itself as a finished framework.
-        </p>
+        {page.data.eyebrow && <span class="page-eyebrow">{page.data.eyebrow}</span>}
+        <h1 class="page-title">{page.data.title}</h1>
+        {page.data.lede && <p class="page-lede">{page.data.lede}</p>}
+        {introBlocks.map((html) => (
+          <div class="page-lede" set:html={html}></div>
+        ))}
       </div>
 
       <aside class="essay-side">
-        <p class="note-label">Status</p>
-        <h2>Still being shaped</h2>
-        <p>
-          The explorer works, the memo is stable, and the references are useful already, but the framing is still being
-          pressure-tested. Corrections and disagreements are part of the point.
-        </p>
+        {headerNote?.label && <p class="note-label">{headerNote.label}</p>}
+        {headerNote?.title && <h2>{headerNote.title}</h2>}
+        {renderMarkdownBlocks(headerNote?.body ?? []).map((html) => (
+          <div set:html={html}></div>
+        ))}
         {githubUrl && <p><a href={githubUrl}>Follow the project on GitHub</a></p>}
       </aside>
     </header>
 
     <section class="essay-section">
       <div class="essay-main">
-        <h2>What the project is trying to make easier</h2>
-        <p>
-          A lot of machine-learning writing moves quickly from methods to benchmarks to theory. That is often the right move,
-          but it can leave people without a clean mental model for the underlying question: what changes when the training data
-          change?
-        </p>
-        <p>
-          This site uses the phrase <strong>data counterfactuals</strong> and the grid metaphor as teaching tools. They are
-          meant to connect several areas of work without pretending the existing literature already uses exactly this language.
-        </p>
-        <p>
-          The hope is modest but useful: if the common operation becomes easier to see, then it also becomes easier to compare
-          technical methods with questions about bargaining power, data labor, or strategic intervention.
-        </p>
+        <h2>{firstSection.title}</h2>
+        <div set:html={firstSection.html}></div>
 
         <h2>What each part of the site does</h2>
         <ul class="link-cluster">
           {siteParts.map((part) => (
             <li>
               <a href={part.href}>{part.title}</a>
-              <p>{part.body}</p>
+              {part.body && <p>{part.body}</p>}
             </li>
           ))}
         </ul>
       </div>
 
       <aside class="essay-side">
-        <p class="note-label">Not the claim</p>
-        <p>
-          The claim is not that valuation, poisoning, distillation, privacy, and collective action are all secretly the same.
-          The claim is that they become easier to line up once you keep the data intervention itself in view.
-        </p>
+        {claimNote?.label && <p class="note-label">{claimNote.label}</p>}
+        {renderMarkdownBlocks(claimNote?.body ?? []).map((html) => (
+          <div set:html={html}></div>
+        ))}
       </aside>
     </section>
 
     <section class="essay-section">
       <div class="essay-main">
-        <h2>Ways to respond</h2>
-        <p>
-          If something here feels misleading, if a literature is missing, or if the interface gets in the way of the argument,
-          that is worth hearing. Feedback is useful precisely because the site is trying to hold several neighboring ideas in
-          one frame without overclaiming.
-        </p>
+        <h2>{responseSection.title}</h2>
+        <div set:html={responseSection.html}></div>
 
         {discussions.length ? (
           <div class="reference-grid">
@@ -124,17 +91,16 @@ const siteParts = [
       </div>
 
       <aside class="essay-side">
-        <p class="note-label">Contributing</p>
-        <p>
-          Precise complaints are especially helpful here: a misleading comparison, an omitted paper, an awkward phrase, or an
-          interaction that encourages the wrong takeaway.
-        </p>
+        {contributingNote?.label && <p class="note-label">{contributingNote.label}</p>}
+        {renderMarkdownBlocks(contributingNote?.body ?? []).map((html) => (
+          <div set:html={html}></div>
+        ))}
       </aside>
     </section>
 
     <section class="essay-section">
       <div class="essay-main">
-        <h2>Projects in the same orbit</h2>
+        <h2>{projectsSection.title}</h2>
         {relatedProjects.length ? (
           <div class="reference-grid">
             {relatedProjects.map((project) => (
@@ -150,11 +116,10 @@ const siteParts = [
       </div>
 
       <aside class="essay-side">
-        <p class="note-label">Related work</p>
-        <p>
-          The site sits near a broader conversation about data leverage, data labor, provenance, and model behavior. These
-          links are there to make that neighborhood easier to traverse.
-        </p>
+        {relatedNote?.label && <p class="note-label">{relatedNote.label}</p>}
+        {renderMarkdownBlocks(relatedNote?.body ?? []).map((html) => (
+          <div set:html={html}></div>
+        ))}
       </aside>
     </section>
   </main>

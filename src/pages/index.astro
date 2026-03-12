@@ -2,53 +2,23 @@
 import Layout from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
 import MiniGrid from "../components/MiniGrid.jsx";
+import { getRequiredPageEntry, getSection, renderMarkdownBlocks, splitMarkdownSections } from "../lib/page-content";
 
-const methodFamilies = [
-  {
-    title: "Value and attribution",
-    body: "Leave-one-out, influence functions, TracIn, and Shapley-style methods all ask, in different ways, which points or groups are doing the work."
-  },
-  {
-    title: "Selection and compression",
-    body: "Active learning, coresets, curriculum learning, and dataset distillation ask which rows are worth keeping, labeling, or synthesizing."
-  },
-  {
-    title: "Robustness, privacy, and repair",
-    body: "Poisoning, privacy interventions, and some fairness-by-data methods all study what happens when the training data are corrupted, hidden, repaired, or reweighted."
-  },
-  {
-    title: "Strategic collective action",
-    body: "Data strikes, contribution campaigns, and bargaining interventions change the data-generating process itself. They are not just analytical transformations of a dataset; they are sociotechnical conflicts over power, consent, and leverage."
-  }
-];
-
-const readingPaths = [
-  {
-    title: "Read the main memo",
-    href: "/memo",
-    body: "The longer written argument behind the project."
-  },
-  {
-    title: "Compare formalisms",
-    href: "/memo/formalisms",
-    body: "A second draft that lines up several neighboring technical framings side by side."
-  },
-  {
-    title: "Open the explorer",
-    href: "/grid",
-    body: "A toy environment for inspecting the grid metaphor directly."
-  },
-  {
-    title: "Browse references",
-    href: "/collections",
-    body: "Reading lists and glossary pages for when you want papers or definitions instead of narrative."
-  }
-];
+const page = await getRequiredPageEntry("index");
+const sections = splitMarkdownSections(page.body);
+const introBlocks = renderMarkdownBlocks(page.data.intro ?? []);
+const coreMove = getSection(sections, "the-smallest-useful-move");
+const gridSection = getSection(sections, "a-grid-for-seeing-the-space");
+const connections = getSection(sections, "what-the-idea-helps-connect");
+const navigation = getSection(sections, "how-to-read-the-site");
+const methodFamilies = page.data.method_families ?? [];
+const readingPaths = page.data.reading_paths ?? [];
+const figures = page.data.figures ?? {};
 ---
 
 <Layout
-  title="Data Counterfactuals"
-  description="An interactive explainer for the core data counterfactuals idea: what changes when the training data changes?"
+  title={page.data.title}
+  description={page.data.description}
 >
   <style is:global>
     .start-page {
@@ -62,6 +32,12 @@ const readingPaths = [
     .start-intro {
       display: grid;
       gap: 1rem;
+    }
+    .start-intro .intro-block p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1.02rem;
+      line-height: 1.82;
     }
     .start-section h2 {
       margin: 0 0 0.9rem;
@@ -79,12 +55,6 @@ const readingPaths = [
     }
     .start-section p:last-child {
       margin-bottom: 0;
-    }
-    .start-intro .page-lede + p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 1.02rem;
-      line-height: 1.82;
     }
     .start-page .mini-grid-wrap {
       display: grid;
@@ -226,37 +196,20 @@ const readingPaths = [
 
   <main class="page start-page">
     <header class="page-header start-intro">
-      <span class="page-eyebrow">Interactive explainer</span>
-      <h1 class="page-title">Data Counterfactuals</h1>
-      <p class="page-lede">
-        Many data-centric methods in machine learning can be understood as asking one broad question: what changes if the
-        training data changes?
-      </p>
-      <p>
-        I started using the phrase while teaching about data valuation, algorithmic collective action, and related topics.
-        There was no single reference to hand people, so this site is an attempt to build one.
-      </p>
-      <p>
-        Part of the motivation is pedagogical, but part of it is political as well: once training data stop looking like a
-        hidden background blob, it becomes easier to ask who is supplying them, who is exposed to them, and who gets leverage
-        when they change.
-      </p>
+      {page.data.eyebrow && <span class="page-eyebrow">{page.data.eyebrow}</span>}
+      <h1 class="page-title">{page.data.title}</h1>
+      {page.data.lede && <p class="page-lede">{page.data.lede}</p>}
+      {introBlocks.map((html) => (
+        <div class="intro-block" set:html={html}></div>
+      ))}
     </header>
 
     <section class="start-section">
-      <h2>The smallest useful move</h2>
-      <p>
-        The simplest data counterfactual is leave-one-out: compare a training world that includes one point with the nearby
-        world in which that point is removed. From there you can ask the same question about groups, fixed-size subsets,
-        synthetic replacements, corrupted examples, withheld data, or coordinated withdrawal.
-      </p>
-      <p>
-        In that sense, a <strong>data counterfactual</strong> is just a concrete what-if question about the data used to train
-        a model.
-      </p>
+      <h2>{coreMove.title}</h2>
+      <div set:html={coreMove.html}></div>
 
       <div class="essay-figure">
-        <p class="note-label">Leave-one-out toy example</p>
+        {figures.leave_one_out?.label && <p class="note-label">{figures.leave_one_out.label}</p>}
         <MiniGrid
           client:load
           rows={["ABCD", "ACD"]}
@@ -267,24 +220,17 @@ const readingPaths = [
           ]}
           highlightRow={0}
           compareRow={1}
-          caption="Here the lower row leaves out B. The largest drop lands on evaluation point B, which is the intuition many attribution methods are trying to formalize."
+          caption={figures.leave_one_out?.caption}
         />
       </div>
     </section>
 
     <section class="start-section">
-      <h2>A grid for seeing the space</h2>
-      <p>
-        The site uses a simple teaching model: imagine possible training sets as rows and possible evaluation slices as
-        columns. Each cell stores the performance you would observe for that train-eval pairing.
-      </p>
-      <p>
-        Real systems do not literally enumerate this whole grid. The point of the metaphor is to make comparisons visible:
-        which row changed, where the effect landed, and how large the difference was.
-      </p>
+      <h2>{gridSection.title}</h2>
+      <div set:html={gridSection.html}></div>
 
       <div class="essay-figure">
-        <p class="note-label">Toy world with four observations</p>
+        {figures.grid?.label && <p class="note-label">{figures.grid.label}</p>}
         <MiniGrid
           client:load
           rows={["AB", "ABC", "ABCD", "ACD"]}
@@ -295,25 +241,14 @@ const readingPaths = [
             [0.92, 0.88, 0.85, 0.82],
             [0.78, 0.55, 0.82, 0.8]
           ]}
-          caption="Rows are possible training sets. Columns are evaluation slices. The interesting thing is usually the difference between nearby cells or rows."
+          caption={figures.grid?.caption}
         />
       </div>
     </section>
 
     <section class="start-section">
-      <h2>What the idea helps connect</h2>
-      <p>
-        The framing is intentionally broad. It can pull together data valuation, scaling, selection, dataset distillation,
-        poisoning, some forms of privacy analysis, some fairness interventions, and strategic collective action around data.
-      </p>
-      <p>
-        I am not claiming those fields are formally identical. I am claiming they often become easier to compare once you view
-        them as different ways of changing the training data and comparing the outcome.
-      </p>
-      <p>
-        That comparison should not make the differences disappear. In some cases the “data change” is a technical intervention
-        inside an optimization pipeline. In others it is a dispute over labor, governance, privacy, or institutional power.
-      </p>
+      <h2>{connections.title}</h2>
+      <div set:html={connections.html}></div>
 
       <ul class="family-list">
         {methodFamilies.map((family) => (
@@ -326,17 +261,14 @@ const readingPaths = [
     </section>
 
     <section class="start-section">
-      <h2>How to read the site</h2>
-      <p>
-        The pages are arranged more like an essay with appendices than a landing page. Start wherever matches the question you
-        already have, then move outward.
-      </p>
+      <h2>{navigation.title}</h2>
+      <div set:html={navigation.html}></div>
 
       <ul class="link-cluster start-links">
         {readingPaths.map((path) => (
           <li>
             <a href={path.href}>{path.title}</a>
-            <p>{path.body}</p>
+            {path.body && <p>{path.body}</p>}
           </li>
         ))}
       </ul>

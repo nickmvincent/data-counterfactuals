@@ -1,34 +1,48 @@
 ---
 import Layout from "../../layouts/Base.astro";
 import Nav from "../../components/Nav.astro";
-import { marked } from "marked";
-import { loadMemos } from "../../lib/content-loader";
+import { getCollection, render } from "astro:content";
 import networkData from "../../data/network.json";
 
+const PRIMARY_MEMO_SLUG = "data-counterfactuals";
+
 export async function getStaticPaths() {
-  const memos = await loadMemos();
+  const memos = (await getCollection("memos"))
+    .filter((memo) => memo.data.visibility !== "private")
+    .sort((a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0));
+
   return memos
-    .filter((memo) => memo.slug !== "data-counterfactuals")
+    .filter((memo) => memo.slug !== PRIMARY_MEMO_SLUG)
     .map((memo) => ({
-      params: { slug: memo.slug },
-      props: { memo, memos }
+      params: { slug: memo.slug }
     }));
 }
 
-const { memo, memos } = Astro.props;
-const memoMeta = memo ? { title: memo.title, summary: memo.summary } : { title: "Memo" };
-const memoBody = memo?.body ?? "";
-const memoHtml = marked.parse(memoBody);
+const slug = Astro.params.slug;
+if (!slug) {
+  throw new Error("Missing memo slug.");
+}
+
+const memos = (await getCollection("memos"))
+  .filter((memo) => memo.data.visibility !== "private")
+  .sort((a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0));
+const memo = memos.find((entry) => entry.slug === slug);
+
+if (!memo) {
+  throw new Error(`Missing memo '${slug}'.`);
+}
+
+const { Content } = await render(memo);
 const githubUrl = networkData.links?.github;
-const wordCount = memoBody.split(/\s+/).filter(Boolean).length;
+const wordCount = memo.body.split(/\s+/).filter(Boolean).length;
 const readMinutes = Math.max(1, Math.round(wordCount / 220));
-const memoHref = (slug: string) => slug === "data-counterfactuals" ? "/memo" : `/memo/${slug}`;
-const otherMemos = (memos ?? []).filter((otherMemo: { slug: string }) => otherMemo.slug !== memo?.slug);
+const memoHref = (slug: string) => slug === PRIMARY_MEMO_SLUG ? "/memo" : `/memo/${slug}`;
+const otherMemos = memos.filter((entry) => entry.id !== memo.id);
 ---
 
 <Layout
-  title={memoMeta.title}
-  description={memoMeta.summary || "An additional memo in the Data Counterfactuals project."}
+  title={memo.data.title}
+  description={memo.data.summary || "An additional memo in the Data Counterfactuals project."}
 >
   <style>
     .memo-page {
@@ -48,8 +62,8 @@ const otherMemos = (memos ?? []).filter((otherMemo: { slug: string }) => otherMe
     <header class="essay-header page-header">
       <div>
         <span class="page-eyebrow">Working memo</span>
-        <h1 class="page-title">{memoMeta.title}</h1>
-        {memoMeta.summary && <p class="page-lede">{memoMeta.summary}</p>}
+        <h1 class="page-title">{memo.data.title}</h1>
+        {memo.data.summary && <p class="page-lede">{memo.data.summary}</p>}
         <div class="page-meta">
           <span class="pill">{readMinutes} minute read</span>
           <span class="pill">{wordCount} words</span>
@@ -72,8 +86,8 @@ const otherMemos = (memos ?? []).filter((otherMemo: { slug: string }) => otherMe
           <>
             <p class="note-label">Other memos</p>
             <ul>
-              {otherMemos.map((otherMemo: { slug: string; title: string }) => (
-                <li><a href={memoHref(otherMemo.slug)}>{otherMemo.title}</a></li>
+              {otherMemos.map((otherMemo) => (
+                <li><a href={memoHref(otherMemo.slug)}>{otherMemo.data.title}</a></li>
               ))}
             </ul>
           </>
@@ -82,7 +96,9 @@ const otherMemos = (memos ?? []).filter((otherMemo: { slug: string }) => otherMe
     </header>
 
     <section class="essay-section">
-      <article class="essay-main prose memo-article" set:html={memoHtml}></article>
+      <article class="essay-main prose memo-article">
+        <Content />
+      </article>
 
       <aside class="essay-side">
         <p class="note-label">Draft note</p>

@@ -114,9 +114,14 @@ function sparkPath(values, width = 260, height = 50, pad = 4) {
   return { d: path, min, max };
 }
 
-function compactSubsetLabel(subset, maxLength = 4) {
+function formatColumnHeader(index) {
+  return `${index}`;
+}
+
+function formatRowHeader(index, subset) {
   const full = label(subset);
-  return full.length > maxLength ? `${full.slice(0, maxLength)}...` : full;
+  if (full.length <= 2) return `${index}:${full}`;
+  return `${index}:${full.slice(0, 2)}...`;
 }
 
 function App() {
@@ -696,13 +701,114 @@ function App() {
     ? `Active edit layer: ${activeEditLabels.join(" and ")}.`
     : "No toy edits are active, so the operator grid and the untouched reference grid currently match.";
 
+  const analysisDetailBlock = html`
+    <div class=${`analysis-card ${computedFlash ? "computed-flash" : ""}`}>
+      <div class="analysis-head">
+        <div>
+          <span class="summary-kicker">Read the statistic</span>
+          <h3 style="margin:4px 0 0">${lensGuide.title}</h3>
+        </div>
+        <span class="pill">${questionMeta[computed]}</span>
+      </div>
+      <p class="analysis-copy">${lensGuide.body}</p>
+      <div class="equation-block">${formulaLine}</div>
+
+      ${computed === "shapley"
+        ? html`
+            <div style="font-size:13px;color:var(--explorer-muted)">
+              <div><b>Shapley value</b> asks: on average, how much does the focus point change the score when added to a partial training world?</div>
+              <div style="margin-top:4px"><b>phi</b> = <b>${shapleyStats.phi.toFixed(4)}</b> from <b>${shapleyStats.cnt}</b> pairs at eval <b>${label(evalSet)}</b>.</div>
+              ${shapleyStats.rows.length > 0
+                ? html`
+                    <table class="small" style="margin-top:6px">
+                      <thead>
+                        <tr><th>|S|</th><th>Avg marginal delta</th><th>#pairs</th></tr>
+                      </thead>
+                      <tbody>
+                        ${shapleyStats.rows.map(
+                          (row) => html`<tr><td>${row.size}</td><td>${row.avg.toFixed(4)}</td><td>${row.n}</td></tr>`,
+                        )}
+                      </tbody>
+                    </table>
+                  `
+                : null}
+            </div>
+          `
+        : null}
+
+      ${computed === "loo"
+        ? html`
+            <div style="font-size:13px;color:var(--explorer-muted)">
+              <div><b>Leave-one-out</b> measures the change if we remove the focus point from the selected training world.</div>
+              <div>S = <b>${label(Srow)}</b>; S\\{${focusPrimary}} = <b>${label(looMinus)}</b>; E = <b>${label(evalSet)}</b></div>
+              <div style="margin-top:4px">Delta = <b>${looDelta.toFixed(4)}</b></div>
+            </div>
+          `
+        : null}
+
+      ${computed === "group"
+        ? html`
+            <div style="font-size:13px;color:var(--explorer-muted)">
+              <div><b>Group leave-one-out</b> asks what happens if a whole set of contributors disappears together.</div>
+              <div class="ctrl-note" style="margin-top:4px">Pick group members in the focus chips above the grid.</div>
+              <div>S = <b>${label(Srow)}</b>; G = <b>${groupSet.length ? label(groupSet) : "choose a group"}</b>; S\\G = <b>${label(strikeMinus)}</b>; E = <b>${label(evalSet)}</b></div>
+              <div style="margin-top:4px">Delta = <b>${looDelta.toFixed(4)}</b></div>
+            </div>
+          `
+        : null}
+
+      ${computed === "scaling"
+        ? html`
+            <div style="font-size:13px;color:var(--explorer-muted)">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-size:12px"><b>k (row size)</b></span>
+                <input type="range" min="0" max=${base.length} value=${k} onInput=${(event) => setK(+event.target.value)} />
+                <span class="pill">k = ${k}</span>
+                <button class="btn ghost" onClick=${() => setPlaying((previous) => !previous)}>${playing ? "Stop" : "Animate k"}</button>
+              </div>
+              <div class="ctrl-note" style="margin-top:2px">
+                Scaling ignores the currently selected row for the headline statistic and instead averages every row whose size is k.
+              </div>
+              <div style="margin:6px 0">
+                <svg class="spark" viewBox="0 0 260 50">
+                  <path d=${spark.d} fill="none" stroke="#FFD166" stroke-width="2" />
+                  ${scalingAll.map((row, index) => {
+                    const total = scalingAll.length || 1;
+                    const minValue = Math.min(...scalingAll.map((entry) => entry.avg));
+                    const maxValue = Math.max(...scalingAll.map((entry) => entry.avg));
+                    const width = 260;
+                    const height = 50;
+                    const pad = 4;
+                    const x = pad + (index * (width - 2 * pad)) / Math.max(1, total - 1);
+                    const normalized = maxValue === minValue ? 0.5 : (row.avg - minValue) / (maxValue - minValue);
+                    const y = pad + (1 - normalized) * (height - 2 * pad);
+                    return html`<circle cx=${x} cy=${y} r="2.5" fill="#00E5FF" />`;
+                  })}
+                </svg>
+                <table class="small" style="margin-top:6px">
+                  <thead>
+                    <tr><th>k</th><th>Avg f(S,E)</th><th>#rows</th></tr>
+                  </thead>
+                  <tbody>
+                    ${scalingAll.map(
+                      (row) => html`<tr><td>${row.k}</td><td>${row.avg.toFixed(4)}</td><td>${row.n}</td></tr>`,
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `
+        : null}
+    </div>
+  `;
+
   useEffect(() => {
     const container = gridWrapRef.current;
     if (!container) return;
     const selectedCell = container.querySelector('[data-selected="true"]');
     if (!selectedCell) return;
     selectedCell.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [safeRowIdx, safeColIdx, subs.length, computed]);
+  }, [safeRowIdx, safeColIdx, subs.length]);
 
   return html`
     <div class="distill-shell">
@@ -767,8 +873,8 @@ function App() {
           <div class="stage-frame">
             <div class="stage-head">
               <div class="summary-inline">
-                <span class="pill">Train ${label(Srow)}</span>
-                <span class="pill">Eval ${label(evalSet)}</span>
+                <span class="pill">Row ${safeRowIdx}: ${label(Srow)}</span>
+                <span class="pill">Col ${safeColIdx}: ${label(evalSet)}</span>
                 <span class="pill">Focus ${focusLabel}</span>
                 <span class="pill">${metricMeta[metric].short}</span>
               </div>
@@ -850,10 +956,10 @@ function App() {
                       <div
                         key=${`col-${colIndex}`}
                         class=${`cl ${active ? "axis-active" : ""}`}
-                        title=${label(colSet)}
+                        title=${`Col ${colIndex}: ${label(colSet)}`}
                         onClick=${() => setColIdx(colIndex)}
                       >
-                        ${compactSubsetLabel(colSet)}
+                        ${formatColumnHeader(colIndex)}
                       </div>
                     `;
                   })}
@@ -866,15 +972,16 @@ function App() {
                     <div key=${`row-${rowIndex}`} style="display:flex">
                       <div
                         class=${`rl ${selected ? "axis-active" : ""}`}
-                        title=${label(rowSet)}
+                        title=${`Row ${rowIndex}: ${label(rowSet)}`}
                         onClick=${() => setRowIdx(rowIndex)}
                       >
-                        ${compactSubsetLabel(rowSet, 5)}
+                        ${formatRowHeader(rowIndex, rowSet)}
                       </div>
                       ${subs.map((evSet, colIndex) => {
                         const value = displayMatrix[rowIndex][colIndex];
                         const normalized = normalizeValue(value, dispMin, dispMax, 0.5);
                         const isSel = rowIndex === safeRowIdx && colIndex === safeColIdx;
+                        const edited = poisonRows.has(rowIndex) && colIndex === safeColIdx;
 
                         let thin = false;
                         let thick = false;
@@ -893,14 +1000,12 @@ function App() {
                         if (computed === "scaling" && colIndex === safeColIdx && sizeK) {
                           thin = true;
                         }
-                        if (poisonRows.has(rowIndex) && colIndex === safeColIdx) {
-                          thick = true;
-                        }
 
                         const highlight = thin || thick || isSel;
                         const classes = ["cell"];
                         if (isSel) classes.push("sel");
                         if (highlight) classes.push("cell-emph");
+                        if (edited) classes.push("cell-edited");
                         if (switchPulse && highlight) classes.push("cell-pulse");
 
                         return html`
@@ -917,6 +1022,7 @@ function App() {
                           >
                             ${thin ? html`<div class="ring ring-thin"></div>` : null}
                             ${thick ? html`<div class="ring ring-thick"></div>` : null}
+                            ${edited ? html`<div class="edit-flag" title="Toy edit affects this row in operator view"></div>` : null}
                             ${showNums ? html`<div class="num">${value.toFixed(2)}</div>` : null}
                           </div>
                         `;
@@ -928,109 +1034,11 @@ function App() {
 
               <div class="comparison-legend">
                 <div>
-                  <b>White outline:</b> selected cell. <b>Amber ring:</b> the comparison source. <b>Cyan ring:</b> the comparison partner or edited rows.
+                  <b>White outline:</b> selected cell. <b>Amber ring:</b> comparison source. <b>Cyan ring:</b> comparison partner. <b>Red corner:</b> toy edit touches that row in operator view.
                 </div>
+                <div><b>Axis ids:</b> column headers use subset ids for readability at larger grid sizes; the full active row and column labels stay spelled out above.</div>
                 <div>${formulaLine}</div>
               </div>
-            </div>
-
-            <div class=${`analysis-card ${computedFlash ? "computed-flash" : ""}`}>
-              <div class="analysis-head">
-                <div>
-                  <span class="summary-kicker">Read the statistic</span>
-                  <h3 style="margin:4px 0 0">${lensGuide.title}</h3>
-                </div>
-                <span class="pill">${questionMeta[computed]}</span>
-              </div>
-              <p class="analysis-copy">${lensGuide.body}</p>
-              <div class="equation-block">${formulaLine}</div>
-
-              ${computed === "shapley"
-                ? html`
-                    <div style="font-size:13px;color:var(--explorer-muted)">
-                      <div><b>Shapley value</b> asks: on average, how much does the focus point change the score when added to a partial training world?</div>
-                      <div style="margin-top:4px"><b>phi</b> = <b>${shapleyStats.phi.toFixed(4)}</b> from <b>${shapleyStats.cnt}</b> pairs at eval <b>${label(evalSet)}</b>.</div>
-                      ${shapleyStats.rows.length > 0
-                        ? html`
-                            <table class="small" style="margin-top:6px">
-                              <thead>
-                                <tr><th>|S|</th><th>Avg marginal delta</th><th>#pairs</th></tr>
-                              </thead>
-                              <tbody>
-                                ${shapleyStats.rows.map(
-                                  (row) => html`<tr><td>${row.size}</td><td>${row.avg.toFixed(4)}</td><td>${row.n}</td></tr>`,
-                                )}
-                              </tbody>
-                            </table>
-                          `
-                        : null}
-                    </div>
-                  `
-                : null}
-
-              ${computed === "loo"
-                ? html`
-                    <div style="font-size:13px;color:var(--explorer-muted)">
-                      <div><b>Leave-one-out</b> measures the change if we remove the focus point from the selected training world.</div>
-                      <div>S = <b>${label(Srow)}</b>; S\\{${focusPrimary}} = <b>${label(looMinus)}</b>; E = <b>${label(evalSet)}</b></div>
-                      <div style="margin-top:4px">Delta = <b>${looDelta.toFixed(4)}</b></div>
-                    </div>
-                  `
-                : null}
-
-              ${computed === "group"
-                ? html`
-                    <div style="font-size:13px;color:var(--explorer-muted)">
-                      <div><b>Group leave-one-out</b> asks what happens if a whole set of contributors disappears together.</div>
-                      <div class="ctrl-note" style="margin-top:4px">Pick group members in the focus chips above the grid.</div>
-                      <div>S = <b>${label(Srow)}</b>; G = <b>${groupSet.length ? label(groupSet) : "choose a group"}</b>; S\\G = <b>${label(strikeMinus)}</b>; E = <b>${label(evalSet)}</b></div>
-                      <div style="margin-top:4px">Delta = <b>${looDelta.toFixed(4)}</b></div>
-                    </div>
-                  `
-                : null}
-
-              ${computed === "scaling"
-                ? html`
-                    <div style="font-size:13px;color:var(--explorer-muted)">
-                      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                        <span style="font-size:12px"><b>k (row size)</b></span>
-                        <input type="range" min="0" max=${base.length} value=${k} onInput=${(event) => setK(+event.target.value)} />
-                        <span class="pill">k = ${k}</span>
-                        <button class="btn ghost" onClick=${() => setPlaying((previous) => !previous)}>${playing ? "Stop" : "Animate k"}</button>
-                      </div>
-                      <div class="ctrl-note" style="margin-top:2px">
-                        Scaling ignores the currently selected row for the headline statistic and instead averages every row whose size is k.
-                      </div>
-                      <div style="margin:6px 0">
-                        <svg class="spark" viewBox="0 0 260 50">
-                          <path d=${spark.d} fill="none" stroke="#FFD166" stroke-width="2" />
-                          ${scalingAll.map((row, index) => {
-                            const total = scalingAll.length || 1;
-                            const minValue = Math.min(...scalingAll.map((entry) => entry.avg));
-                            const maxValue = Math.max(...scalingAll.map((entry) => entry.avg));
-                            const width = 260;
-                            const height = 50;
-                            const pad = 4;
-                            const x = pad + (index * (width - 2 * pad)) / Math.max(1, total - 1);
-                            const normalized = maxValue === minValue ? 0.5 : (row.avg - minValue) / (maxValue - minValue);
-                            const y = pad + (1 - normalized) * (height - 2 * pad);
-                            return html`<circle cx=${x} cy=${y} r="2.5" fill="#00E5FF" />`;
-                          })}
-                        </svg>
-                        <table class="small" style="margin-top:6px">
-                          <thead>
-                            <tr><th>k</th><th>Avg f(S,E)</th><th>#rows</th></tr>
-                          </thead>
-                          <tbody>
-                            ${scalingAll.map(
-                              (row) => html`<tr><td>${row.k}</td><td>${row.avg.toFixed(4)}</td><td>${row.n}</td></tr>`,
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  `
-                : null}
             </div>
           </div>
         </aside>
@@ -1188,6 +1196,7 @@ function App() {
               </div>
 
               <div class="story-note">${questionSummary.trace}</div>
+              ${analysisDetailBlock}
             </div>
           </section>
 

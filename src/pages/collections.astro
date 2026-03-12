@@ -2,6 +2,7 @@
 import Layout from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
 import { loadPaperCollections, loadPapersForCollection, getPriority } from "../lib/content-loader";
+import { getRequiredPageEntry, getSection, renderMarkdownBlocks, splitMarkdownSections } from "../lib/page-content";
 
 const collections = await loadPaperCollections();
 
@@ -14,11 +15,16 @@ const collectionsWithPapers = await Promise.all(
 
 const totalPapers = collectionsWithPapers.reduce((sum, collection) => sum + collection.papers.length, 0);
 const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const page = await getRequiredPageEntry("collections");
+const sections = splitMarkdownSections(page.body);
+const introSection = getSection(sections, "start-broad-then-follow-the-thread-you-need");
+const headerNote = page.data.notes?.header;
+const sectionNote = page.data.notes?.section;
 ---
 
 <Layout
-  title="Paper Collections"
-  description="Curated reading lists for the research areas that become easier to compare once you start thinking in data counterfactuals."
+  title={page.data.title}
+  description={page.data.description}
 >
   <style>
     .collections-page {
@@ -124,12 +130,9 @@ const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-
   <main class="page essay-page collections-page">
     <header class="essay-header page-header">
       <div>
-        <span class="page-eyebrow">Reference shelf</span>
-        <h1 class="page-title">Reading lists for the main branches of the idea</h1>
-        <p class="page-lede">
-          These lists are not meant to be exhaustive literature reviews. They are curated entry points for the clusters of
-          work that become easier to relate once you start thinking in terms of data counterfactuals.
-        </p>
+        {page.data.eyebrow && <span class="page-eyebrow">{page.data.eyebrow}</span>}
+        <h1 class="page-title">{page.data.title}</h1>
+        {page.data.lede && <p class="page-lede">{page.data.lede}</p>}
         <div class="page-meta">
           <span class="pill">{collectionsWithPapers.length} collections</span>
           <span class="pill">{totalPapers} linked papers</span>
@@ -137,11 +140,10 @@ const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-
       </div>
 
       <aside class="essay-side">
-        <p class="note-label">How to use this page</p>
-        <p>
-          If you are new to the topic, pick one collection and read the highlighted papers first. If you already know the
-          area, use the jump links to move directly to the shelf you care about.
-        </p>
+        {headerNote?.label && <p class="note-label">{headerNote.label}</p>}
+        {renderMarkdownBlocks(headerNote?.body ?? []).map((html) => (
+          <div set:html={html}></div>
+        ))}
         <ul class="collection-jumps">
           {collectionsWithPapers.map((collection) => (
             <li><a href={`#${slugify(collection.title)}`}>{collection.title}</a></li>
@@ -152,23 +154,15 @@ const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-
 
     <section class="essay-section">
       <div class="essay-main">
-        <h2>Start broad, then follow the thread you need</h2>
-        <p>
-          Each collection names one corner of the larger picture. The point is not to force everything into one taxonomy; it is
-          to make the overlaps easier to notice once you keep the training-data intervention itself in view.
-        </p>
-        <p>
-          Priority labels simply mark especially useful starting points for a collection. They do not mean the other papers are
-          secondary in any global sense.
-        </p>
+        <h2>{introSection.title}</h2>
+        <div set:html={introSection.html}></div>
       </div>
 
       <aside class="essay-side">
-        <p class="note-label">Reading strategy</p>
-        <p>
-          Move between the memo, one collection, and the glossary if you want the fastest route from the broad concept to a
-          specific literature.
-        </p>
+        {sectionNote?.label && <p class="note-label">{sectionNote.label}</p>}
+        {renderMarkdownBlocks(sectionNote?.body ?? []).map((html) => (
+          <div set:html={html}></div>
+        ))}
       </aside>
     </section>
 

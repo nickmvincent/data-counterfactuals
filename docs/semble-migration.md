@@ -1,6 +1,6 @@
 # Semble Migration
 
-This site can now load bibliography data from public Semble collections at build time.
+This site now loads bibliography data from public Semble collections at build time.
 
 ## Content model
 
@@ -56,62 +56,45 @@ Optional filters:
   Only collections whose names start with this prefix are included. The prefix is stripped from the displayed title.
 - `SEMBLE_API_BASE`
   Defaults to `https://api.semble.so`.
+- `SEMBLE_CACHE_PATH`
+  Defaults to `tmp/semble-cache.json`.
+- `SEMBLE_CACHE_POLICY`
+  Defaults to `network-first`. Other useful values are `refresh` and `cache-only`.
 
-## Suggested migration flow
+## Local cache
 
-1. Create a dedicated Semble profile for the site, or use a naming prefix like `dc/` for site collections.
-2. Recreate each reading list as a Semble collection with the site-ready title and description.
-3. Add each paper as a URL card to the relevant collections.
-4. Paste the YAML note onto each card so the site keeps authors, year, tags, DOI, and priority labels.
-5. Set `SEMBLE_PROFILE_IDENTIFIER` or `SEMBLE_COLLECTION_AT_URIS` in the build environment.
-6. Run the site locally and compare `/collections` against the current markdown-backed version.
-7. Remove the old markdown bibliography only after the Semble-backed build matches what you want.
+Successful Semble fetches write a normalized JSON snapshot to `tmp/semble-cache.json` by default.
 
-## Exporter script
+That cache file includes:
 
-This repo now includes a one-off exporter at `scripts/export-to-semble.js`.
+- `collections`
+- `references`
+- `generated_at`
+- `stats`
 
-Dry run:
+This is useful for two things:
 
-```bash
-npm run semble:export
-```
+1. Offline dev: `SEMBLE_CACHE_POLICY=cache-only` loads from the local snapshot without touching the network.
+2. Research/agent workflows: agents can read the current collection membership and paper metadata directly from the cache JSON.
 
-That writes a plan file to `tmp/semble-export-plan.json` without touching Semble.
-
-Publish all collections:
+Examples:
 
 ```bash
-ATP_IDENTIFIER=your-handle.bsky.social \
-ATP_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx \
-npm run semble:export -- --publish
+# Refresh the cache from live Semble data
+SEMBLE_PROFILE_IDENTIFIER=nickmvincent.bsky.social SEMBLE_CACHE_POLICY=refresh npm run build
+
+# Use the cached snapshot while offline
+SEMBLE_PROFILE_IDENTIFIER=nickmvincent.bsky.social SEMBLE_CACHE_POLICY=cache-only npm run dev
 ```
 
-Publish only a subset:
+## Ongoing workflow
 
-```bash
-ATP_IDENTIFIER=your-handle.bsky.social \
-ATP_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx \
-npm run semble:export -- --publish --collections data-leverage,data-poisoning
-```
+1. Edit papers, tags, and collection membership in Semble.
+2. Keep the build env pointed at Semble with `SEMBLE_PROFILE_IDENTIFIER` or `SEMBLE_COLLECTION_AT_URIS`.
+3. Run a normal build/dev session, or use `SEMBLE_CACHE_POLICY=refresh`, to update the local cache snapshot.
+4. Rebuild and redeploy this site whenever you want those Semble edits reflected here.
 
-Useful flags:
-
-- `--collection-prefix "dc/"`
-  Creates Semble collections like `dc/Data Leverage & Collective Action`
-- `--collections data-leverage,data-poisoning`
-  Filters by local collection slug or title
-- `--no-extra-fields`
-  Exports only the main site fields instead of carrying over extra frontmatter like `cited_in`
-- `--no-update-existing`
-  Only creates missing collections/cards/links and leaves existing notes/descriptions alone
-
-The exporter is designed to be rerunnable:
-
-- Reuses existing Semble collections by exact name
-- Reuses existing URL cards by exact URL
-- Updates an attached note if the generated note text changed
-- Adds missing collection links without duplicating existing ones
+The repo-local markdown bibliography and paper-collection files have been removed so Semble stays the only source of truth.
 
 ## Taxonomy guidance
 

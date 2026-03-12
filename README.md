@@ -5,26 +5,49 @@ Standalone Astro + Preact repo for `datacounterfactuals.org`.
 ## What's here
 
 - Site source in `src/`
-- Memo content in `content/data-counterfactuals/memos/`
-- Paper collections in `content/shared-references/paper-collections/`
-- A curated bibliography slice in `content/shared-references/bibtex-entries/`
+- Authored page content in `src/content/pages/`
+- Memo content in `src/content/memos/`
 - Semble migration notes in `docs/semble-migration.md`
 
 ## Semble-backed bibliography
 
-If you set `SEMBLE_PROFILE_IDENTIFIER` or `SEMBLE_COLLECTION_AT_URIS`, the build will pull paper collections and bibliography metadata from public Semble collections at build time.
+Semble is now the source of truth for bibliography data and reading-list membership.
+
+Set `SEMBLE_PROFILE_IDENTIFIER` or `SEMBLE_COLLECTION_AT_URIS` in your build environment and the site will pull paper collections and bibliography metadata from public Semble collections at build time.
+
+If those env vars are missing, the site will fail fast rather than falling back to repo-local bibliography files.
+
+After you edit papers, tags, or collections in Semble, update the site here by rebuilding and redeploying.
+
+For example:
+
+```bash
+SEMBLE_PROFILE_IDENTIFIER=your-handle.bsky.social npm run build
+```
+
+Successful Semble loads also write a local snapshot to `tmp/semble-cache.json`. That gives you an offline fallback during dev and a machine-readable paper inventory for later agent workflows.
+
+Useful cache modes:
+
+```bash
+# Force a fresh snapshot from Semble
+SEMBLE_PROFILE_IDENTIFIER=your-handle.bsky.social SEMBLE_CACHE_POLICY=refresh npm run build
+
+# Work entirely from the last local snapshot
+SEMBLE_PROFILE_IDENTIFIER=your-handle.bsky.social SEMBLE_CACHE_POLICY=cache-only npm run dev
+```
 
 ## Local dev
 
 ```bash
 npm install
-npm run dev
+SEMBLE_PROFILE_IDENTIFIER=your-handle.bsky.social npm run dev
 ```
 
 ## Build
 
 ```bash
-npm run build
+SEMBLE_PROFILE_IDENTIFIER=your-handle.bsky.social npm run build
 npm run preview
 ```
 

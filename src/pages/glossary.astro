@@ -1,6 +1,7 @@
 ---
 import Layout from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
+import { getRequiredPageEntry, getSection, renderMarkdownBlocks, splitMarkdownSections } from "../lib/page-content";
 
 const terms = [
   {
@@ -109,12 +110,17 @@ const terms = [
   },
 ];
 
+const page = await getRequiredPageEntry("glossary");
+const sections = splitMarkdownSections(page.body);
+const searchSection = getSection(sections, "search-or-jump");
+const headerNote = page.data.notes?.header;
+const sectionNote = page.data.notes?.section;
 const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 ---
 
 <Layout
-  title="Glossary"
-  description="A working glossary for the key terms used throughout the Data Counterfactuals site."
+  title={page.data.title}
+  description={page.data.description}
 >
   <style>
     .glossary-page {
@@ -176,33 +182,30 @@ const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-
   <main class="page essay-page glossary-page">
     <header class="essay-header page-header">
       <div>
-        <span class="page-eyebrow">Orientation</span>
-        <h1 class="page-title">A working glossary for the site</h1>
-        <p class="page-lede">
-          Use this when you want a quick definition without leaving the thread of the argument. The entries lean on the grid
-          metaphor when it helps, but try not to become a second, heavier version of the memo.
-        </p>
+        {page.data.eyebrow && <span class="page-eyebrow">{page.data.eyebrow}</span>}
+        <h1 class="page-title">{page.data.title}</h1>
+        {page.data.lede && <p class="page-lede">{page.data.lede}</p>}
       </div>
 
       <aside class="essay-side">
-        <p class="note-label">How to use it</p>
-        <p>
-          Search if you already know the term. Jump by eye if you only half-remember it. Keep the page nearby while reading the
-          memo or clicking through the explorer.
-        </p>
+        {headerNote?.label && <p class="note-label">{headerNote.label}</p>}
+        {renderMarkdownBlocks(headerNote?.body ?? []).map((html) => (
+          <div set:html={html}></div>
+        ))}
       </aside>
     </header>
 
     <section class="essay-section">
       <div class="essay-main">
-        <h2>Search or jump</h2>
+        <h2>{searchSection.title}</h2>
+        <div set:html={searchSection.html}></div>
         <div class="glossary-tools">
           <label>
             <span class="sr-only">Search glossary terms</span>
             <input
               class="glossary-search"
               type="search"
-              placeholder="Search terms like Shapley, poisoning, leverage, or privacy"
+              placeholder={page.data.search_placeholder}
               data-glossary-search
             />
           </label>
@@ -218,11 +221,10 @@ const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-
       </div>
 
       <aside class="essay-side">
-        <p class="note-label">Scope</p>
-        <p>
-          These are working definitions for this project. They are meant to make the site easier to navigate, not to settle
-          contested terminology across the entire literature.
-        </p>
+        {sectionNote?.label && <p class="note-label">{sectionNote.label}</p>}
+        {renderMarkdownBlocks(sectionNote?.body ?? []).map((html) => (
+          <div set:html={html}></div>
+        ))}
       </aside>
     </section>
 

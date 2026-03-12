@@ -1,16 +1,55 @@
-import { z, defineCollection } from 'astro:content';
-import { glob } from 'astro/loaders';
+import { z, defineCollection } from "astro:content";
 
-const memos = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './content/data-counterfactuals/memos' }),
+const note = z.object({
+  label: z.string().optional(),
+  title: z.string().optional(),
+  body: z.array(z.string()).default([]),
+});
+
+const linkItem = z.object({
+  title: z.string(),
+  href: z.string(),
+  body: z.string().optional(),
+});
+
+const titledBodyItem = z.object({
+  title: z.string(),
+  body: z.string(),
+});
+
+const figure = z.object({
+  label: z.string().optional(),
+  caption: z.string().optional(),
+});
+
+const pages = defineCollection({
+  type: "content",
   schema: z.object({
     title: z.string(),
-    summary: z.string().optional(),
-    visibility: z.string().optional(),
+    description: z.string(),
+    eyebrow: z.string().optional(),
+    lede: z.string().optional(),
+    intro: z.array(z.string()).optional(),
+    notes: z.record(note).optional(),
+    method_families: z.array(titledBodyItem).optional(),
+    reading_paths: z.array(linkItem).optional(),
+    site_parts: z.array(linkItem).optional(),
+    quick_tips: z.array(z.string()).optional(),
+    companion_links: z.array(linkItem).optional(),
+    search_placeholder: z.string().optional(),
+    figures: z.record(figure).optional(),
   }),
 });
 
-// Paper collections are loaded from shared-references via content-loader.ts
-// No Astro content collection needed here
+const memos = defineCollection({
+  type: "content",
+  schema: z.object({
+    title: z.string(),
+    summary: z.string().optional(),
+    date: z.coerce.date().optional(),
+    visibility: z.string().optional(),
+    type: z.string().optional(),
+  }),
+});
 
-export const collections = { memos };
+export const collections = { pages, memos };
