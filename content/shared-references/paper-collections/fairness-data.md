@@ -17,4 +17,4 @@ tags:
   - ml-methods
 ---
 
-Many fairness problems trace back to training data—who's included, how they're labeled, what's missing. Datasheets for Datasets is a practical starting point; Gender Shades demonstrates concrete harms. This collection mixes technical interventions with documentation practices.
+Many fairness problems trace back to training data—who's included, how they're labeled, what's missing, and how different groups are weighted. Datasheets for Datasets is a practical starting point; Gender Shades demonstrates concrete harms; work on reweighting, repairing, and certifying disparate impact shows how fairness can operate as an explicit data intervention.

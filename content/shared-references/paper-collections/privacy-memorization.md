@@ -17,4 +17,4 @@ tags:
   - training-dynamics
 ---
 
-Models can memorize training data—sometimes enough to extract it verbatim. Differential privacy limits how much any single point can affect the model (constraining movement in the grid). The Carlini et al. extraction paper is a good entry point for understanding what's at stake.
+Models can memorize training data—sometimes enough to extract it verbatim. Differential privacy limits how much any single point can affect the model (constraining movement in the grid). Shokri et al. is the canonical starting point for membership inference; Carlini et al. shows how memorization can escalate into direct extraction.

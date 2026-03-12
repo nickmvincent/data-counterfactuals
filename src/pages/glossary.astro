@@ -5,7 +5,7 @@ import Nav from "../components/Nav.astro";
 const terms = [
   {
     term: "Data counterfactual",
-    definition: "A \"what if\" question about training data. What would happen to model performance if we trained on different data? The grid visualization shows all possible counterfactuals: each row is a possible training set, each column is an evaluation point.",
+    definition: "A \"what if\" question about training data. What would happen to model performance if we trained on different data? The grid visualization is a teaching model for organizing those questions, not something we literally enumerate in real systems.",
   },
   {
     term: "Influence function",
@@ -14,6 +14,14 @@ const terms = [
   {
     term: "Data Shapley",
     definition: "A method for assigning value to each training point based on its average marginal contribution across all possible subsets. Borrowed from cooperative game theory. Computationally expensive but theoretically principled.",
+  },
+  {
+    term: "Beta Shapley",
+    definition: "A version of Data Shapley that puts more or less emphasis on different subset sizes. In grid terms, it changes which kinds of row comparisons matter most when you assign value to data.",
+  },
+  {
+    term: "Banzhaf value",
+    definition: "Another rule for valuing data points by asking how much they help across many possible subsets. Compared with Shapley-style methods, it uses a simpler averaging rule over those subsets.",
   },
   {
     term: "Leave-one-out",
@@ -70,6 +78,26 @@ const terms = [
   {
     term: "Membership inference",
     definition: "Trying to determine whether a specific example was in a model's training set by exploiting differences between seen and unseen data.",
+  },
+  {
+    term: "Dataset distillation",
+    definition: "Learning a tiny synthetic training set that produces similar downstream behavior to a much larger real dataset. In grid terms, it tries to replace a large row neighborhood with a compact synthetic stand-in.",
+  },
+  {
+    term: "Representer point",
+    definition: "A training example flagged as especially helpful for explaining a prediction. It plays a role similar to influence functions, but comes from a different mathematical route.",
+  },
+  {
+    term: "Forgetting event",
+    definition: "A moment during training when an example flips from correctly classified to incorrectly classified. Many forgetting events can signal hard, noisy, or atypical data points.",
+  },
+  {
+    term: "Data cartography",
+    definition: "Mapping examples by training dynamics such as confidence and variability. It helps surface easy, ambiguous, or potentially mislabeled regions of a dataset.",
+  },
+  {
+    term: "Reweighing",
+    definition: "A fairness-oriented preprocessing method that changes how much different examples or groups count during training. In grid language, it changes the row before learning starts.",
   },
   {
     term: "Training set",

@@ -7,9 +7,9 @@ include_tags:
   - collection:data-valuation
 sort_by: year
 description: >
-  Research on data valuation methods, particularly Data Shapley and related
-  approaches for quantifying individual training point contributions. Key
-  for data markets, debugging, and understanding data value.
+  Research on data valuation methods, including Data Shapley, semivalue
+  variants like Beta Shapley and Data Banzhaf, and related approaches for
+  quantifying individual training point contributions.
 tags:
   - data-governance
   - ai-society
@@ -20,4 +20,4 @@ tags:
 
 ---
 
-Data Shapley and related methods assign a "value" to each training point by averaging its marginal contribution across many possible training sets. This is essentially a principled way to aggregate over the grid. These techniques matter for data markets, debugging, and understanding what data actually helps.
+Data valuation methods assign a "value" to each training point by aggregating its marginal contribution across many possible training sets. Shapley is the classic version, but semivalue variants like Beta Shapley and Data Banzhaf are especially useful here because they make the aggregation rule explicit. These techniques matter for data markets, debugging, and understanding what data actually helps.

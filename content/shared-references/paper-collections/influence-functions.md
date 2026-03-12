@@ -18,4 +18,4 @@ tags:
 
 ---
 
-Influence functions let you ask: "which training examples are responsible for this prediction?" In grid terms, they approximate what would happen if you removed or upweighted specific rows. The original Koh & Liang paper is the standard starting point; more recent work extends these ideas to LLMs.
+Influence functions let you ask: "which training examples are responsible for this prediction?" In grid terms, they approximate what would happen if you removed or upweighted specific rows. The original Koh & Liang paper is the standard starting point; more recent work extends these ideas to LLMs, while adjacent methods like TracIn and representer points broaden the attribution toolkit.

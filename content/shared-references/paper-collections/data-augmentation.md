@@ -16,4 +16,4 @@ tags:
   - data-selection
 ---
 
-Augmentation creates synthetic variations of training data—effectively generating new rows in the grid. Curriculum learning orders training examples from easy to hard. Mixup is a simple, influential technique; the survey covers the broader landscape.
+Augmentation creates synthetic variations of training data—effectively generating new rows in the grid. Curriculum learning orders training examples from easy to hard. Mixup is a simple, influential technique; for the more aggressive move of compressing a large dataset into a tiny synthetic one, see the dataset distillation and condensation collection.

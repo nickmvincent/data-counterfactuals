@@ -17,6 +17,7 @@ abstract: >-
   and saved checkpoints for scalability.
 tags:
   - 'collection:influence-functions'
+  - 'collection:training-dynamics-debugging'
   - data-attribution
   - data-governance
   - interpretability
@@ -82,4 +83,3 @@ check_log:
     venue: arXiv (Cornell University)
     doi: 10.48550/arxiv.2002.08484
 ---
-
