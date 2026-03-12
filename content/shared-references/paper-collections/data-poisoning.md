@@ -3,8 +3,9 @@ type: paper_collection
 title: Data Poisoning & Adversarial Training
 slug: data-poisoning
 visibility: public
-include_tags:
-  - collection:data-poisoning
+citation_keys:
+  - biggio2012poisoning
+  - gu2017badnets
 sort_by: year
 description: >
   Research on data poisoning attacks and defenses. Covers backdoor attacks,

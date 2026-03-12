@@ -3,8 +3,8 @@ type: paper_collection
 title: Dataset Distillation & Condensation
 slug: dataset-distillation
 visibility: public
-include_tags:
-  - collection:dataset-distillation
+citation_keys:
+  - wang2018datasetdistillation
 sort_by: year
 description: >
   Research on learning tiny synthetic datasets that reproduce the behavior of

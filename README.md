@@ -8,8 +8,11 @@ Standalone Astro + Preact repo for `datacounterfactuals.org`.
 - Memo content in `content/data-counterfactuals/memos/`
 - Paper collections in `content/shared-references/paper-collections/`
 - A curated bibliography slice in `content/shared-references/bibtex-entries/`
+- Semble migration notes in `docs/semble-migration.md`
 
-The extracted bibliography currently includes the 57 reference files matched by the paper-collection tags used on the site.
+## Semble-backed bibliography
+
+If you set `SEMBLE_PROFILE_IDENTIFIER` or `SEMBLE_COLLECTION_AT_URIS`, the build will pull paper collections and bibliography metadata from public Semble collections at build time.
 
 ## Local dev
 

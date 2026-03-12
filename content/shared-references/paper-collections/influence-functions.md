@@ -3,8 +3,9 @@ type: paper_collection
 title: Influence Functions & Data Attribution
 slug: influence-functions
 visibility: public
-include_tags:
-  - collection:influence-functions
+citation_keys:
+  - koh2017understanding
+  - pruthi2020tracin
 sort_by: year
 description: >
   Research on influence functions and data attribution methods. Covers

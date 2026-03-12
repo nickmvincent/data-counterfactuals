@@ -3,8 +3,8 @@ type: paper_collection
 title: Data Selection & Coresets
 slug: data-selection
 visibility: public
-include_tags:
-  - collection:data-selection
+citation_keys:
+  - mirzasoleiman2020craig
 sort_by: year
 description: >
   Research on coreset selection and efficient data subset methods. Covers

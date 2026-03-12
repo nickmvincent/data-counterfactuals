@@ -236,6 +236,7 @@ export function createTutorialPresets(actions) {
     setPendingSelection,
     setPoisonActive,
     setNoiseLevel,
+    setEditorMode,
   } = actions;
 
   return [
@@ -247,6 +248,7 @@ export function createTutorialPresets(actions) {
       how: "We train on ABC, then omit B so we can compare the ABC vs AC cells directly.",
       concept: "Leave-one-out influence",
       setup: () => {
+        setEditorMode?.("poison");
         setCount(3);
         setMetric("jaccard");
         setFocusSet(["B"]);
@@ -264,6 +266,7 @@ export function createTutorialPresets(actions) {
       how: "We train on ABCD, then look across the entire powerset via the scaling summary.",
       concept: "Scaling laws",
       setup: () => {
+        setEditorMode?.("poison");
         setCount(4);
         setMetric("jaccard");
         setFocusSet(["A"]);
@@ -281,6 +284,7 @@ export function createTutorialPresets(actions) {
       how: "We train on ABCD, then have C and D walk out together to watch the data strike drop performance.",
       concept: "Group leave-one-out / data strike",
       setup: () => {
+        setEditorMode?.("poison");
         setCount(4);
         setMetric("jaccard");
         setFocusSet(["C", "D"].sort());
@@ -298,6 +302,7 @@ export function createTutorialPresets(actions) {
       how: "We let the Shapley view sweep all subsets at eval ABC and focus on B's average marginal gain.",
       concept: "Shapley value",
       setup: () => {
+        setEditorMode?.("poison");
         setCount(3);
         setMetric("jaccard");
         setFocusSet(["B"]);
@@ -315,6 +320,7 @@ export function createTutorialPresets(actions) {
       how: "We turn on the poison edit (rows containing A drop) rather than expanding the universe.",
       concept: "Data poisoning / leverage",
       setup: () => {
+        setEditorMode?.("poison");
         setPoisonActive(true);
         setNoiseLevel(0);
         setCount(3);

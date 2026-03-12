@@ -1,25 +1,34 @@
 ---
-import Layout from "../layouts/Base.astro";
-import Nav from "../components/Nav.astro";
+import Layout from "../../layouts/Base.astro";
+import Nav from "../../components/Nav.astro";
 import { marked } from "marked";
-import { loadMemos } from "../lib/content-loader";
-import networkData from "../data/network.json";
+import { loadMemos } from "../../lib/content-loader";
+import networkData from "../../data/network.json";
 
-const memos = await loadMemos();
-const memo = memos.find((m) => m.slug === "data-counterfactuals") ?? memos[0];
-const memoMeta = memo ? { title: memo.title, summary: memo.summary } : { title: "Exploring Data Counterfactuals" };
+export async function getStaticPaths() {
+  const memos = await loadMemos();
+  return memos
+    .filter((memo) => memo.slug !== "data-counterfactuals")
+    .map((memo) => ({
+      params: { slug: memo.slug },
+      props: { memo, memos }
+    }));
+}
+
+const { memo, memos } = Astro.props;
+const memoMeta = memo ? { title: memo.title, summary: memo.summary } : { title: "Memo" };
 const memoBody = memo?.body ?? "";
 const memoHtml = marked.parse(memoBody);
 const githubUrl = networkData.links?.github;
 const wordCount = memoBody.split(/\s+/).filter(Boolean).length;
 const readMinutes = Math.max(1, Math.round(wordCount / 220));
 const memoHref = (slug: string) => slug === "data-counterfactuals" ? "/memo" : `/memo/${slug}`;
-const otherMemos = memos.filter((m) => m.slug !== memo?.slug);
+const otherMemos = (memos ?? []).filter((otherMemo: { slug: string }) => otherMemo.slug !== memo?.slug);
 ---
 
 <Layout
   title={memoMeta.title}
-  description={memoMeta.summary || "A longer essay introducing data counterfactuals as a way to compare how changes in training data affect model behavior."}
+  description={memoMeta.summary || "An additional memo in the Data Counterfactuals project."}
 >
   <style>
     .memo-page {
@@ -38,7 +47,7 @@ const otherMemos = memos.filter((m) => m.slug !== memo?.slug);
   <main class="page essay-page memo-page">
     <header class="essay-header page-header">
       <div>
-        <span class="page-eyebrow">Core memo</span>
+        <span class="page-eyebrow">Working memo</span>
         <h1 class="page-title">{memoMeta.title}</h1>
         {memoMeta.summary && <p class="page-lede">{memoMeta.summary}</p>}
         <div class="page-meta">
@@ -50,12 +59,12 @@ const otherMemos = memos.filter((m) => m.slug !== memo?.slug);
       <aside class="essay-side">
         <p class="note-label">How this page fits</p>
         <p>
-          This is the longer written argument that the rest of the site grows out of. The overview page compresses it; the
-          explorer turns the grid metaphor into a toy you can inspect; the reading lists point outward to the literature.
+          This is an additional memo in the same project. The main memo introduces the broad concept; this page follows one
+          narrower thread further.
         </p>
         <ul>
+          <li><a href="/memo">Return to the main memo</a></li>
           <li><a href="/">Return to the overview</a></li>
-          <li><a href="/grid">Open the explorer alongside the memo</a></li>
           <li><a href="/collections">Browse the related literatures</a></li>
           {githubUrl && <li><a href={githubUrl}>View the source on GitHub</a></li>}
         </ul>
@@ -63,7 +72,7 @@ const otherMemos = memos.filter((m) => m.slug !== memo?.slug);
           <>
             <p class="note-label">Other memos</p>
             <ul>
-              {otherMemos.map((otherMemo) => (
+              {otherMemos.map((otherMemo: { slug: string; title: string }) => (
                 <li><a href={memoHref(otherMemo.slug)}>{otherMemo.title}</a></li>
               ))}
             </ul>
@@ -76,10 +85,10 @@ const otherMemos = memos.filter((m) => m.slug !== memo?.slug);
       <article class="essay-main prose memo-article" set:html={memoHtml}></article>
 
       <aside class="essay-side">
-        <p class="note-label">Reading note</p>
+        <p class="note-label">Draft note</p>
         <p>
-          The memo deliberately treats the grid as a conceptual scaffold rather than a literal engineering recipe. It is there
-          to make comparisons legible, not to claim that real systems enumerate every possible training world.
+          This memo is meant to line up neighboring formalisms rather than settle notation. Where the literature uses different
+          symbols, I have preferred a common schematic template over paper-specific typography.
         </p>
       </aside>
     </section>

@@ -3,8 +3,9 @@ type: paper_collection
 title: Privacy, Memorization & Unlearning
 slug: privacy-memorization
 visibility: public
-include_tags:
-  - collection:privacy-memorization
+citation_keys:
+  - shokri2017membershipinference
+  - carlini_extracting_training_data_2021
 sort_by: year
 description: >
   Research on privacy risks from model memorization and differential privacy

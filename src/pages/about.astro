@@ -6,174 +6,156 @@ import networkData from "../data/network.json";
 const githubUrl = networkData.links?.github;
 const discussions = networkData.discussions ?? [];
 const relatedProjects = networkData.relatedProjects ?? [];
+
+const siteParts = [
+  {
+    title: "Overview",
+    href: "/",
+    body: "A compact version of the argument, meant to introduce the core concept without too much local jargon."
+  },
+  {
+    title: "Memo",
+    href: "/memo",
+    body: "The longer written framing from which the rest of the site is derived."
+  },
+  {
+    title: "Explorer",
+    href: "/grid",
+    body: "A toy interface for comparing nearby training worlds and seeing what the grid metaphor makes visible."
+  },
+  {
+    title: "Reading lists and glossary",
+    href: "/collections",
+    body: "Reference pages for when you want terms, papers, and neighboring literatures rather than a guided narrative."
+  }
+];
 ---
 
 <Layout
   title="About"
-  description="Why Data Counterfactuals exists, what it is trying to do, and how to give feedback or contribute."
+  description="Why Data Counterfactuals exists, what it is trying to clarify, and where to respond or contribute."
 >
-  <style>
-    .about-page {
-      display: grid;
-      gap: 1rem;
-    }
-    .about-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.8fr);
-      gap: 1rem;
-      align-items: start;
-    }
-    .about-list {
-      list-style: none;
-      padding: 0;
-      margin: 1rem 0 0;
-      display: grid;
-      gap: 0.8rem;
-    }
-    .about-list li,
-    .discussion-card,
-    .project-card {
-      padding: 1rem;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      background: rgba(255, 250, 243, 0.72);
-    }
-    .about-list li {
-      color: var(--muted);
-      line-height: 1.7;
-    }
-    .discussion-list,
-    .project-list {
-      display: grid;
-      gap: 0.8rem;
-      margin-top: 1rem;
-    }
-    .discussion-card h3,
-    .project-card h3 {
-      margin: 0 0 0.4rem;
-      font-size: 1rem;
-    }
-    .discussion-card p,
-    .project-card p {
-      margin: 0;
-      color: var(--muted);
-      line-height: 1.7;
-    }
-    .sidebar-stack {
-      display: grid;
-      gap: 1rem;
-    }
-    @media (max-width: 960px) {
-      .about-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
-
   <Nav />
 
-  <main class="page about-page">
-    <header class="page-header">
-      <span class="page-eyebrow">Project notes</span>
-      <h1 class="page-title">Why this site exists</h1>
-      <p class="page-lede">
-        Data Counterfactuals is an attempt to make training-data questions easier to see and easier to talk about.
-        The project is part explainer, part toy lab, and part research map.
-      </p>
-      <div class="page-meta">
-        <span class="pill">Work in progress</span>
-        <span class="pill">Open source</span>
-        <span class="pill">Built as a teaching tool</span>
+  <main class="page essay-page">
+    <header class="essay-header page-header">
+      <div>
+        <span class="page-eyebrow">Project notes</span>
+        <h1 class="page-title">Why this site exists</h1>
+        <p class="page-lede">
+          Data Counterfactuals is an attempt to make training-data questions easier to see and easier to compare across
+          literatures that do not usually sit on the same shelf.
+        </p>
+        <p class="page-lede">
+          The site is part explainer, part toy lab, and part reading map. It is meant to support a line of thought, not to
+          present itself as a finished framework.
+        </p>
       </div>
+
+      <aside class="essay-side">
+        <p class="note-label">Status</p>
+        <h2>Still being shaped</h2>
+        <p>
+          The explorer works, the memo is stable, and the references are useful already, but the framing is still being
+          pressure-tested. Corrections and disagreements are part of the point.
+        </p>
+        {githubUrl && <p><a href={githubUrl}>Follow the project on GitHub</a></p>}
+      </aside>
     </header>
 
-    <section class="about-grid">
-      <article class="section-card">
-        <p class="section-kicker">What the project is trying to do</p>
-        <h2 class="section-title">Make training data feel inspectable</h2>
-        <div class="section-copy">
-          <p>
-            A lot of ML writing jumps straight into methods, benchmarks, or theory. That is useful, but it can leave
-            people without a clean mental model for the underlying question: what changes when the training data changes?
-          </p>
-          <p>
-            This site uses the phrase <strong>data counterfactuals</strong> and the grid metaphor as teaching tools. They are meant
-            to connect several research areas without pretending the literature already uses exactly this framing.
-          </p>
-        </div>
+    <section class="essay-section">
+      <div class="essay-main">
+        <h2>What the project is trying to make easier</h2>
+        <p>
+          A lot of machine-learning writing moves quickly from methods to benchmarks to theory. That is often the right move,
+          but it can leave people without a clean mental model for the underlying question: what changes when the training data
+          change?
+        </p>
+        <p>
+          This site uses the phrase <strong>data counterfactuals</strong> and the grid metaphor as teaching tools. They are
+          meant to connect several areas of work without pretending the existing literature already uses exactly this language.
+        </p>
+        <p>
+          The hope is modest but useful: if the common operation becomes easier to see, then it also becomes easier to compare
+          technical methods with questions about bargaining power, data labor, or strategic intervention.
+        </p>
 
-        <ul class="about-list">
-          <li><strong>Explorer:</strong> a toy environment for comparing training subsets, evaluation slices, and simple edits like poisoning or noise.</li>
-          <li><strong>Memo:</strong> the longer argument for why this framing is useful and where it helps unify adjacent literatures.</li>
-          <li><strong>Reference pages:</strong> paper collections and glossary entries for when you want to move from intuition to sources.</li>
+        <h2>What each part of the site does</h2>
+        <ul class="link-cluster">
+          {siteParts.map((part) => (
+            <li>
+              <a href={part.href}>{part.title}</a>
+              <p>{part.body}</p>
+            </li>
+          ))}
         </ul>
-      </article>
+      </div>
 
-      <aside class="sidebar-stack">
-        <section class="section-card">
-          <p class="section-kicker">Status</p>
-          <h2 class="section-title">Still being shaped</h2>
-          <div class="section-copy">
-            <p>
-              The explorer works and the reference pages are already useful, but the site is still evolving. Some explanations
-              are intentionally provisional while the framing gets pressure-tested.
-            </p>
-          </div>
-        </section>
-
-        <section class="section-card">
-          <p class="section-kicker">Contribute</p>
-          <h2 class="section-title">Corrections are welcome</h2>
-          <div class="section-copy">
-            <p>
-              If a concept is misleading, a paper list is missing something obvious, or a UI detail gets in the way, please say so.
-              That kind of feedback is exactly what helps this project get sharper.
-            </p>
-          </div>
-          <div class="action-row">
-            <a href={githubUrl || "#"} target="_blank" rel="noopener" class="btn">Open GitHub</a>
-            <a href="#discussion" class="btn ghost">Jump to discussion links</a>
-          </div>
-        </section>
+      <aside class="essay-side">
+        <p class="note-label">Not the claim</p>
+        <p>
+          The claim is not that valuation, poisoning, distillation, privacy, and collective action are all secretly the same.
+          The claim is that they become easier to line up once you keep the data intervention itself in view.
+        </p>
       </aside>
     </section>
 
-    <section class="section-card" id="discussion">
-      <p class="section-kicker">Talk back</p>
-      <h2 class="section-title">Places to ask questions or leave feedback</h2>
-      {discussions.length ? (
-        <div class="discussion-list">
-          {discussions.map((discussion) => (
-            <article class="discussion-card">
-              <h3>
-                <a href={discussion.url} target="_blank" rel="noopener">{discussion.label}</a>
-              </h3>
-              <p>{discussion.description}</p>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <div class="empty-state">Discussion links have not been added yet.</div>
-      )}
+    <section class="essay-section">
+      <div class="essay-main">
+        <h2>Ways to respond</h2>
+        <p>
+          If something here feels misleading, if a literature is missing, or if the interface gets in the way of the argument,
+          that is worth hearing. Feedback is useful precisely because the site is trying to hold several neighboring ideas in
+          one frame without overclaiming.
+        </p>
+
+        {discussions.length ? (
+          <div class="reference-grid">
+            {discussions.map((discussion) => (
+              <article class="reference-card">
+                <h3><a href={discussion.url} target="_blank" rel="noopener">{discussion.label}</a></h3>
+                <p>{discussion.description}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div class="empty-state">Discussion links have not been added yet.</div>
+        )}
+      </div>
+
+      <aside class="essay-side">
+        <p class="note-label">Contributing</p>
+        <p>
+          Precise complaints are especially helpful here: a misleading comparison, an omitted paper, an awkward phrase, or an
+          interaction that encourages the wrong takeaway.
+        </p>
+      </aside>
     </section>
 
-    <section class="section-card">
-      <p class="section-kicker">Related work</p>
-      <h2 class="section-title">Projects nearby</h2>
-      {relatedProjects.length ? (
-        <div class="project-list">
-          {relatedProjects.map((project) => (
-            <article class="project-card">
-              <h3>
-                <a href={project.website} target="_blank" rel="noopener">{project.title}</a>
-              </h3>
-              <p>{project.name === project.title ? "A neighboring project in the same research orbit." : project.name}</p>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <div class="empty-state">No related projects have been listed yet.</div>
-      )}
+    <section class="essay-section">
+      <div class="essay-main">
+        <h2>Projects in the same orbit</h2>
+        {relatedProjects.length ? (
+          <div class="reference-grid">
+            {relatedProjects.map((project) => (
+              <article class="reference-card">
+                <h3><a href={project.website} target="_blank" rel="noopener">{project.title}</a></h3>
+                <p>{project.name === project.title ? "A neighboring project with overlapping concerns." : project.name}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div class="empty-state">No related projects have been listed yet.</div>
+        )}
+      </div>
+
+      <aside class="essay-side">
+        <p class="note-label">Related work</p>
+        <p>
+          The site sits near a broader conversation about data leverage, data labor, provenance, and model behavior. These
+          links are there to make that neighborhood easier to traverse.
+        </p>
+      </aside>
     </section>
   </main>
 </Layout>

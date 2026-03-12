@@ -3,8 +3,8 @@ type: paper_collection
 title: Data Valuation & Shapley
 slug: data-valuation
 visibility: public
-include_tags:
-  - collection:data-valuation
+citation_keys:
+  - ghorbani2019datashapley
 sort_by: year
 description: >
   Research on data valuation methods, including Data Shapley, semivalue

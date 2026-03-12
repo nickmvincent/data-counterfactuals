@@ -11,6 +11,12 @@ import networkData from "../data/network.json";
   description="Places to discuss, question, and respond to the Data Counterfactuals project."
 >
   <style>
+    .discussion-page {
+      gap: 2.6rem;
+    }
+    .discussion-page .page-header {
+      margin-bottom: 0;
+    }
     .discussion-title {
       margin: 0;
       font-family: var(--font-display);
@@ -21,21 +27,31 @@ import networkData from "../data/network.json";
 
   <Nav />
 
-  <main class="page">
-    <header class="page-header">
-      <span class="page-eyebrow">Conversation</span>
-      <h1 class="page-title">Discussion links</h1>
-      <p class="page-lede">
-        If you want to respond to the project, ask questions, or point out something off, start here.
-        The linked spaces vary in tone, but all of them are meant to keep the work porous.
-      </p>
+  <main class="page essay-page discussion-page">
+    <header class="essay-header page-header">
+      <div>
+        <span class="page-eyebrow">Conversation</span>
+        <h1 class="page-title">Discussion links</h1>
+        <p class="page-lede">
+          If you want to respond to the project, ask a question, or point out where the framing goes wrong, start here.
+          These links are meant to keep the work porous rather than sealed off.
+        </p>
+      </div>
+
+      <aside class="essay-side">
+        <p class="note-label">What helps most</p>
+        <p>
+          Specific feedback tends to be the most useful: a concept that does not track the literature, a missing paper, a bad
+          analogy, or an interface choice that encourages the wrong inference.
+        </p>
+      </aside>
     </header>
 
     <section class="section-card">
       <NetworkDiscussions
         networkData={networkData as NetworkData}
         backLinkHref="/"
-        backLinkLabel="Back to home"
+        backLinkLabel="Back to overview"
         hideProjectLinks={true}
         hideRelatedProjects={true}
         classes={{
@@ -45,15 +61,15 @@ import networkData from "../data/network.json";
         styles={{
           container: "max-width:none; margin:0; padding:0;",
           header: "margin-bottom:1.5rem;",
-          subtitle: "color:var(--muted); margin-bottom:1rem; line-height:1.7;",
+          subtitle: "color:var(--muted); margin-bottom:1rem; line-height:1.75;",
           backLink: "color:var(--ring-thick); font-weight:700;",
-          section: "background:rgba(255, 250, 243, 0.7); border:1px solid var(--border); border-radius:22px; padding:1.2rem; margin-bottom:1rem;",
+          section: "background:rgba(255, 250, 243, 0.62); border:1px solid var(--border); border-radius:22px; padding:1.2rem; margin-bottom:1rem;",
           list: "list-style:none; padding:0; margin:0;",
-          discussionListItem: "margin-bottom:0.75rem;",
+          discussionListItem: "margin-bottom:0.85rem;",
           listItem: "margin-bottom:0.5rem;",
-          description: "color:var(--muted); display:block; font-size:0.95rem; margin-top:0.25rem; line-height:1.6;",
+          description: "color:var(--muted); display:block; font-size:0.95rem; margin-top:0.25rem; line-height:1.65;",
           muted: "color:var(--muted); font-size:0.92rem;",
-          emptySection: "background:rgba(255, 250, 243, 0.7); border:1px solid var(--border); border-radius:22px; padding:1.2rem;",
+          emptySection: "background:rgba(255, 250, 243, 0.62); border:1px solid var(--border); border-radius:22px; padding:1.2rem;",
         }}
       />
     </section>

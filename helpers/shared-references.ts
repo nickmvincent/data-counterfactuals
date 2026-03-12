@@ -18,6 +18,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { parseFrontmatter, slugFromFilename } from './markdown';
+import { isSembleConfigured, loadSembleDataset } from './semble';
 
 export interface Reference {
   citation_key: string;
@@ -83,6 +84,13 @@ let cachedReferences: Map<string, Reference> | null = null;
  * Load all references from shared-references directory
  */
 export async function loadReferences(options: { force?: boolean; basePath?: string } = {}): Promise<Map<string, Reference>> {
+  if (!options.basePath && isSembleConfigured()) {
+    const dataset = await loadSembleDataset({ force: options.force });
+    if (dataset) {
+      return dataset.references as Map<string, Reference>;
+    }
+  }
+
   if (cachedReferences && !options.force && !options.basePath) {
     return cachedReferences;
   }

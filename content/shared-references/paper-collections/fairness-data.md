@@ -3,8 +3,9 @@ type: paper_collection
 title: Fairness via Data Interventions
 slug: fairness-data
 visibility: public
-include_tags:
-  - collection:fairness-data
+citation_keys:
+  - gebru_datasheets_2018
+  - buolamwini_gender_shades_2018
 sort_by: year
 description: >
   Research on fairness through data-centric approaches. Covers dataset

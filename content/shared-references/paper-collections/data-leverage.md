@@ -3,8 +3,9 @@ type: paper_collection
 title: Data Leverage & Collective Action
 slug: data-leverage
 visibility: public
-include_tags:
-  - collection:data-leverage
+citation_keys:
+  - vincent2021dataleverage
+  - vincent2019datastrikes
 sort_by: year
 description: >
   Research on data leverage—using collective action to withhold, poison, or

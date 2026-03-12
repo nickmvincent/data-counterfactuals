@@ -3,6 +3,7 @@ import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseFrontmatter, slugFromFilename } from '../../helpers/markdown';
+import { isSembleConfigured, loadSembleDataset } from '../../helpers/semble';
 import { loadReferencesByKeys, loadReferencesByTags, formatCitation as formatReferenceCitation } from '../../helpers/shared-references';
 
 function resolveProjectPath(...segments: string[]): string {
@@ -77,6 +78,19 @@ async function parsePaperCollection(filePath: string): Promise<PaperCollection |
 }
 
 export async function loadPaperCollections(): Promise<PaperCollection[]> {
+  if (isSembleConfigured()) {
+    const dataset = await loadSembleDataset();
+    if (dataset) {
+      return dataset.collections.map((collection) => ({
+        slug: collection.slug,
+        title: collection.title,
+        citation_keys: [...collection.citation_keys],
+        visibility: collection.visibility,
+        body: collection.body,
+      }));
+    }
+  }
+
   const collections: PaperCollection[] = [];
 
   try {
@@ -144,13 +158,14 @@ export function getPriority(paper: Paper): number {
  */
 export async function loadPapersForCollection(collection: PaperCollection): Promise<Paper[]> {
   const keys = new Set<string>();
+  const referenceOptions = isSembleConfigured() ? {} : { basePath: SHARED_REFS_DIR };
 
   // Add explicit citation keys
   for (const key of collection.citation_keys) keys.add(key);
 
   // Resolve include_tags
   if (collection.include_tags && collection.include_tags.length > 0) {
-    const taggedRefs = await loadReferencesByTags(collection.include_tags, { basePath: SHARED_REFS_DIR });
+    const taggedRefs = await loadReferencesByTags(collection.include_tags, referenceOptions);
     for (const ref of taggedRefs) {
       keys.add(ref.citation_key);
     }
@@ -179,7 +194,8 @@ export async function loadPapersForCollection(collection: PaperCollection): Prom
  * Load papers from shared-references by citation keys
  */
 export async function loadSharedPapers(keys: string[]): Promise<Paper[]> {
-  const refs = await loadReferencesByKeys(keys, { basePath: SHARED_REFS_DIR });
+  const referenceOptions = isSembleConfigured() ? {} : { basePath: SHARED_REFS_DIR };
+  const refs = await loadReferencesByKeys(keys, referenceOptions);
   return refs.map((ref) => ({
     citation_key: ref.citation_key,
     entry_type: ref.entry_type,

@@ -3,8 +3,8 @@ type: paper_collection
 title: Experimental Design & Causal Inference
 slug: causal-inference
 visibility: public
-include_tags:
-  - collection:causal-inference
+citation_keys:
+  - pearl2009causality
 sort_by: year
 description: >
   Foundational research on causal inference and experimental design. Covers

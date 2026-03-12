@@ -3,8 +3,8 @@ type: paper_collection
 title: Active Learning
 slug: active-learning
 visibility: public
-include_tags:
-  - collection:active-learning
+citation_keys:
+  - settles2009activelearning
 sort_by: year
 description: >
   Research on active learning—selecting which data points to label next given

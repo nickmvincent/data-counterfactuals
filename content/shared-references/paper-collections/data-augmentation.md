@@ -3,8 +3,9 @@ type: paper_collection
 title: Data Augmentation & Curriculum Learning
 slug: data-augmentation
 visibility: public
-include_tags:
-  - collection:data-augmentation
+citation_keys:
+  - zhang2018mixup
+  - bengio2009curriculum
 sort_by: year
 description: >
   Research on data augmentation techniques and curriculum learning strategies.

@@ -3,8 +3,9 @@ type: paper_collection
 title: Data Scaling Laws
 slug: scaling-laws
 visibility: public
-include_tags:
-  - collection:scaling-laws
+citation_keys:
+  - kaplan2020scaling
+  - hoffmann2022chinchilla
 sort_by: year
 description: >
   Research on scaling laws describing how model performance changes with

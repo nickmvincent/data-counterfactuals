@@ -3,8 +3,9 @@ type: paper_collection
 title: User-Generated Content & AI Training Data
 slug: ugc-value
 visibility: public
-include_tags:
-  - collection:ugc-value
+citation_keys:
+  - longpre2024dataprovenance
+  - vincent2019ugcinsearch
 sort_by: year
 description: >
   Research on the value of user-generated content (UGC) for AI systems, search

@@ -3,8 +3,8 @@ type: paper_collection
 title: Machine Unlearning
 slug: machine-unlearning
 visibility: public
-include_tags:
-  - collection:machine-unlearning
+citation_keys:
+  - bourtoule2021sisa
 sort_by: year
 description: >
   Research on machine unlearning—efficiently updating models as if specific

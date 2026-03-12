@@ -114,12 +114,14 @@ const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-
 
 <Layout
   title="Glossary"
-  description="A practical glossary for the key terms used throughout the Data Counterfactuals site."
+  description="A working glossary for the key terms used throughout the Data Counterfactuals site."
 >
   <style>
     .glossary-page {
-      display: grid;
-      gap: 1rem;
+      gap: 2.7rem;
+    }
+    .glossary-page .page-header {
+      margin-bottom: 0;
     }
     .glossary-tools {
       display: grid;
@@ -127,7 +129,7 @@ const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-
     }
     .glossary-search {
       width: 100%;
-      min-height: 3rem;
+      min-height: 3.1rem;
       padding: 0.85rem 1rem;
       border-radius: 16px;
       border: 1px solid var(--border);
@@ -139,98 +141,107 @@ const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-
       color: #8b7b6b;
     }
     .glossary-jumps {
+      list-style: none;
+      padding: 0;
+      margin: 0;
       display: flex;
       flex-wrap: wrap;
-      gap: 0.65rem;
+      gap: 0.7rem 1rem;
+    }
+    .glossary-jumps li {
+      padding: 0;
+      border-top: 0;
     }
     .glossary-jumps a {
-      padding: 0.5rem 0.75rem;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: rgba(255, 250, 243, 0.82);
       color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 0.9rem;
       text-decoration: none;
-      font-size: 0.88rem;
+      border-bottom: 1px solid transparent;
     }
     .glossary-jumps a:hover {
       color: var(--fg);
       border-color: rgba(177, 79, 31, 0.24);
     }
-    .glossary-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      gap: 0.9rem;
-    }
     .glossary-item {
-      padding: 1.1rem;
-      border-radius: 22px;
-      background: rgba(255, 250, 243, 0.78);
-      border: 1px solid var(--border);
       scroll-margin-top: 6rem;
     }
-    .glossary-item h2 {
-      margin: 0 0 0.45rem;
-      font-size: 1.08rem;
-    }
-    .glossary-item p {
-      margin: 0;
-      color: var(--muted);
-      line-height: 1.75;
+    .glossary-item[hidden] {
+      display: none;
     }
   </style>
 
   <Nav />
 
-  <main class="page glossary-page">
-    <header class="page-header">
-      <span class="page-eyebrow">Orientation</span>
-      <h1 class="page-title">A working glossary for the site</h1>
-      <p class="page-lede">
-        Use this when you want a quick definition without leaving the thread of the argument.
-        The explanations lean on the grid metaphor whenever it helps, but keep the wording practical.
-      </p>
+  <main class="page essay-page glossary-page">
+    <header class="essay-header page-header">
+      <div>
+        <span class="page-eyebrow">Orientation</span>
+        <h1 class="page-title">A working glossary for the site</h1>
+        <p class="page-lede">
+          Use this when you want a quick definition without leaving the thread of the argument. The entries lean on the grid
+          metaphor when it helps, but try not to become a second, heavier version of the memo.
+        </p>
+      </div>
+
+      <aside class="essay-side">
+        <p class="note-label">How to use it</p>
+        <p>
+          Search if you already know the term. Jump by eye if you only half-remember it. Keep the page nearby while reading the
+          memo or clicking through the explorer.
+        </p>
+      </aside>
     </header>
 
-    <section class="section-card glossary-tools">
-      <div>
-        <p class="section-kicker">Find a term fast</p>
-        <h2 class="section-title">Search or jump</h2>
+    <section class="essay-section">
+      <div class="essay-main">
+        <h2>Search or jump</h2>
+        <div class="glossary-tools">
+          <label>
+            <span class="sr-only">Search glossary terms</span>
+            <input
+              class="glossary-search"
+              type="search"
+              placeholder="Search terms like Shapley, poisoning, leverage, or privacy"
+              data-glossary-search
+            />
+          </label>
+          <div class="page-meta">
+            <span class="pill" data-glossary-count>{terms.length} terms</span>
+          </div>
+          <ul class="glossary-jumps" aria-label="Jump to a term">
+            {terms.map((term) => (
+              <li><a href={`#${slugify(term.term)}`}>{term.term}</a></li>
+            ))}
+          </ul>
+        </div>
       </div>
-      <label>
-        <span class="sr-only">Search glossary terms</span>
-        <input
-          class="glossary-search"
-          type="search"
-          placeholder="Search terms like Shapley, poisoning, leverage, or privacy"
-          data-glossary-search
-        />
-      </label>
-      <div class="page-meta">
-        <span class="pill" data-glossary-count>{terms.length} terms</span>
-      </div>
-      <nav class="glossary-jumps" aria-label="Jump to a term">
-        {terms.map((term) => (
-          <a href={`#${slugify(term.term)}`}>{term.term}</a>
-        ))}
-      </nav>
+
+      <aside class="essay-side">
+        <p class="note-label">Scope</p>
+        <p>
+          These are working definitions for this project. They are meant to make the site easier to navigate, not to settle
+          contested terminology across the entire literature.
+        </p>
+      </aside>
     </section>
 
     <section class="section-card">
-      <ul class="glossary-list">
+      <div class="definition-list">
         {terms.map((term) => (
-          <li
-            class="glossary-item"
+          <article
+            class="definition-item glossary-item"
             id={slugify(term.term)}
             data-glossary-item
             data-search={`${term.term} ${term.definition}`.toLowerCase()}
           >
-            <h2>{term.term}</h2>
-            <p>{term.definition}</p>
-          </li>
+            <div class="definition-term">{term.term}</div>
+            <div class="definition-copy">
+              <p>{term.definition}</p>
+            </div>
+          </article>
         ))}
-      </ul>
+      </div>
 
       <div class="empty-state" data-glossary-empty hidden>No terms match that search yet.</div>
     </section>

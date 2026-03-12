@@ -4,9 +4,9 @@ import Nav from "../components/Nav.astro";
 import Explorer from "../components/Explorer.jsx";
 
 const quickTips = [
-  "Use a guided example first if you want the controls to snap into a meaningful state.",
-  "Pick a baseline train row and an evaluation column before interpreting any summary number.",
-  "Treat edits like poisoning or noise as alternative training worlds, not just cosmetic toggles."
+  "Rows are training worlds and columns are evaluation slices; that is the core mental model for the whole page.",
+  "The focus chips do not choose the row. They choose which point or group the current question is talking about.",
+  "Operator view applies toy edits like poisoning or noise; Real world snaps back to the untouched reference grid."
 ];
 ---
 
@@ -17,28 +17,26 @@ const quickTips = [
   <style is:global>
     .explorer-page {
       display: grid;
-      gap: 1rem;
+      gap: 2.7rem;
     }
-    .explorer-intro {
-      display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.85fr);
-      gap: 1rem;
-      align-items: start;
+    .explorer-page .page-header {
+      margin-bottom: 0;
     }
     .tip-list {
+      margin: 1rem 0 0;
+      padding-left: 1.2rem;
+      display: grid;
+      gap: 0.65rem;
+    }
+    .tip-list li {
+      padding: 0;
+      color: var(--muted);
+      line-height: 1.82;
+    }
+    .explorer-link-list {
       list-style: none;
       padding: 0;
       margin: 1rem 0 0;
-      display: grid;
-      gap: 0.75rem;
-    }
-    .tip-list li {
-      padding: 0.95rem 1rem;
-      border-radius: 18px;
-      background: rgba(255, 250, 243, 0.74);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      line-height: 1.7;
     }
     .explorer-frame {
       padding: 0.35rem;
@@ -57,6 +55,8 @@ const quickTips = [
       --ring-thin: #efb463;
       --ring-thick: #68c6c1;
       --ring-select: #fffaf0;
+      --grid-axis-w: 74px;
+      --grid-cell-w: 46px;
     }
     .explorer-shell .wrap {
       max-width: 1250px;
@@ -123,6 +123,8 @@ const quickTips = [
       border: 1px solid var(--explorer-border);
       border-radius: 16px;
       background: #0e1218;
+      max-width: 100%;
+      scrollbar-gutter: stable both-edges;
     }
     .explorer-shell .rl,
     .explorer-shell .cl,
@@ -131,7 +133,8 @@ const quickTips = [
       border-right: 1px solid #2d3342;
     }
     .explorer-shell .rl {
-      width: 58px;
+      width: var(--grid-axis-w);
+      min-width: var(--grid-axis-w);
       height: 36px;
       display: flex;
       align-items: center;
@@ -144,9 +147,13 @@ const quickTips = [
       background: var(--explorer-card);
       z-index: 2;
       transition: background 0.2s ease, color 0.2s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .explorer-shell .cl {
-      width: 38px;
+      width: var(--grid-cell-w);
+      min-width: var(--grid-cell-w);
       height: 40px;
       display: flex;
       align-items: center;
@@ -158,9 +165,14 @@ const quickTips = [
       background: var(--explorer-card);
       z-index: 3;
       transition: background 0.2s ease, color 0.2s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 0 4px;
     }
     .explorer-shell .cell {
-      width: 38px;
+      width: var(--grid-cell-w);
+      min-width: var(--grid-cell-w);
       height: 36px;
       position: relative;
       cursor: pointer;
@@ -285,6 +297,94 @@ const quickTips = [
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 8px;
+    }
+    .explorer-shell .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .explorer-shell .summary-card {
+      margin-bottom: 0;
+    }
+    .explorer-shell .summary-kicker {
+      display: inline-block;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ring-thick);
+    }
+    .explorer-shell .mental-strip {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .explorer-shell .mental-step {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr);
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: var(--explorer-panel);
+      border: 1px solid var(--explorer-border);
+    }
+    .explorer-shell .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid rgba(104, 198, 193, 0.45);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: #d8faf7;
+      background: rgba(104, 198, 193, 0.14);
+    }
+    .explorer-shell .step-title {
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--explorer-muted);
+    }
+    .explorer-shell .step-value {
+      margin-top: 3px;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--explorer-fg);
+    }
+    .explorer-shell .step-detail {
+      margin-top: 4px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--explorer-muted);
+    }
+    .explorer-shell .status-banner {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(104, 198, 193, 0.12), rgba(104, 198, 193, 0.05));
+      border: 1px solid rgba(104, 198, 193, 0.32);
+      color: var(--explorer-fg);
+      line-height: 1.55;
+      font-size: 13px;
+    }
+    .explorer-shell .answer-block {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 10px 0 0;
+    }
+    .explorer-shell .answer-number {
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 700;
+      color: #fff7eb;
+    }
+    .explorer-shell .summary-inline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
     }
     .explorer-shell .ctrl-block {
       background: var(--explorer-panel);
@@ -453,7 +553,288 @@ const quickTips = [
       font-weight: 600;
       font-size: 14px;
     }
+    .explorer-shell .distill-shell {
+      display: grid;
+      gap: 18px;
+    }
+    .explorer-shell .story-intro {
+      background:
+        linear-gradient(180deg, rgba(39, 46, 57, 0.92), rgba(22, 26, 32, 0.94)),
+        var(--explorer-card);
+      border: 1px solid rgba(104, 198, 193, 0.18);
+      border-radius: 24px;
+      padding: 18px;
+      box-shadow: 0 22px 48px rgba(0, 0, 0, 0.25);
+    }
+    .explorer-shell .story-intro-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 0.85fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .explorer-shell .intro-title {
+      margin: 6px 0 0;
+      font-size: clamp(1.7rem, 2.4vw, 2.4rem);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      color: var(--explorer-fg);
+    }
+    .explorer-shell .intro-panel {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+    .explorer-shell .intro-panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 10px;
+    }
+    .explorer-shell .distill-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(20rem, 0.8fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .explorer-shell .stage-column {
+      position: relative;
+      min-width: 0;
+    }
+    .explorer-shell .stage-frame {
+      position: sticky;
+      top: 1rem;
+      max-height: calc(100vh - 2rem);
+      overflow: auto;
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      background:
+        radial-gradient(circle at top left, rgba(104, 198, 193, 0.08), transparent 28%),
+        linear-gradient(180deg, rgba(25, 29, 36, 0.98), rgba(14, 17, 24, 0.98));
+      border: 1px solid rgba(104, 198, 193, 0.22);
+      border-radius: 24px;
+      box-shadow: 0 24px 52px rgba(0, 0, 0, 0.28);
+    }
+    .explorer-shell .stage-head {
+      display: grid;
+      gap: 10px;
+    }
+    .explorer-shell .stage-head-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .explorer-shell .stage-title {
+      margin: 4px 0 0;
+      font-size: clamp(1.35rem, 2vw, 1.9rem);
+      line-height: 1.12;
+      letter-spacing: -0.03em;
+    }
+    .explorer-shell .stage-copy {
+      margin: 0;
+      color: #efe7dc;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+    .explorer-shell .analysis-switcher {
+      display: grid;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(18, 21, 25, 0.88);
+      border: 1px solid var(--explorer-border);
+    }
+    .explorer-shell .focus-panel {
+      display: grid;
+      gap: 8px;
+    }
+    .explorer-shell .focus-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .explorer-shell .stage-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .explorer-shell .stage-summary {
+      display: grid;
+      gap: 6px;
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid var(--explorer-border);
+      background: rgba(19, 24, 31, 0.92);
+    }
+    .explorer-shell .stage-summary.primary {
+      background: linear-gradient(180deg, rgba(104, 198, 193, 0.16), rgba(104, 198, 193, 0.05));
+    }
+    .explorer-shell .stage-summary.accent {
+      background: linear-gradient(180deg, rgba(239, 180, 99, 0.16), rgba(239, 180, 99, 0.05));
+    }
+    .explorer-shell .stage-summary.quiet {
+      background: rgba(28, 33, 42, 0.95);
+    }
+    .explorer-shell .stage-summary-label {
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--explorer-muted);
+    }
+    .explorer-shell .stage-summary-value {
+      font-size: clamp(1.35rem, 2vw, 2rem);
+      font-weight: 700;
+      line-height: 1;
+      color: #fff7eb;
+    }
+    .explorer-shell .stage-summary-note {
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--explorer-muted);
+    }
+    .explorer-shell .grid-card,
+    .explorer-shell .analysis-card {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 20px;
+      background: rgba(19, 24, 31, 0.94);
+      border: 1px solid var(--explorer-border);
+    }
+    .explorer-shell .grid-card-head,
+    .explorer-shell .analysis-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .explorer-shell .grid-card-title {
+      margin: 4px 0 0;
+      font-size: 1.1rem;
+      line-height: 1.2;
+    }
+    .explorer-shell .grid-card-copy,
+    .explorer-shell .analysis-copy {
+      color: var(--explorer-muted);
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 0;
+    }
+    .explorer-shell .grid-meta-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .explorer-shell .stage-grid {
+      max-height: min(52vh, 44rem);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+    .explorer-shell .comparison-legend {
+      display: grid;
+      gap: 4px;
+      color: var(--explorer-muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .explorer-shell .equation-block {
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(239, 180, 99, 0.22);
+      background: linear-gradient(180deg, rgba(239, 180, 99, 0.1), rgba(239, 180, 99, 0.04));
+      color: #fff1d4;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .explorer-shell .story-column {
+      display: grid;
+      gap: 14px;
+      min-width: 0;
+    }
+    .explorer-shell .story-section {
+      display: grid;
+      grid-template-columns: 40px minmax(0, 1fr);
+      gap: 14px;
+      padding: 16px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(29, 34, 42, 0.92), rgba(18, 22, 29, 0.96));
+      border: 1px solid rgba(104, 198, 193, 0.12);
+      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.2);
+    }
+    .explorer-shell .story-section-single {
+      grid-template-columns: 1fr;
+    }
+    .explorer-shell .story-index {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      border: 1px solid rgba(104, 198, 193, 0.3);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(104, 198, 193, 0.12);
+      color: #d8faf7;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .explorer-shell .story-content {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+    .explorer-shell .story-eyebrow {
+      display: inline-block;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ring-thick);
+      margin-bottom: 6px;
+    }
+    .explorer-shell .story-content h3 {
+      margin: 0;
+      font-size: 1.28rem;
+      line-height: 1.18;
+      letter-spacing: -0.02em;
+    }
+    .explorer-shell .story-copy {
+      margin: 0;
+      color: var(--explorer-muted);
+      line-height: 1.75;
+    }
+    .explorer-shell .story-note {
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(104, 198, 193, 0.08);
+      border: 1px solid rgba(104, 198, 193, 0.16);
+      color: var(--explorer-fg);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .explorer-shell .faq-stack {
+      display: grid;
+      gap: 8px;
+    }
     @media (max-width: 1180px) {
+      .explorer-shell .story-intro-grid,
+      .explorer-shell .distill-layout {
+        grid-template-columns: 1fr;
+      }
+      .explorer-shell .stage-frame {
+        position: static;
+        max-height: none;
+      }
+      .explorer-shell .stage-summary-grid {
+        grid-template-columns: 1fr;
+      }
+      .explorer-shell .story-section {
+        grid-template-columns: 1fr;
+      }
+      .explorer-shell .story-index {
+        display: none;
+      }
       .explorer-shell .layout-shell {
         grid-template-columns: 1fr !important;
       }
@@ -467,52 +848,78 @@ const quickTips = [
         justify-content: flex-end;
       }
     }
-    @media (max-width: 960px) {
-      .explorer-intro {
-        grid-template-columns: 1fr;
+    @media (max-width: 720px) {
+      .explorer-shell {
+        --grid-axis-w: 68px;
+        --grid-cell-w: 42px;
+      }
+      .explorer-shell .wrap {
+        padding: 12px;
+      }
+      .explorer-shell .story-intro,
+      .explorer-shell .stage-frame,
+      .explorer-shell .story-section {
+        border-radius: 20px;
+      }
+      .explorer-shell .stage-grid {
+        max-height: 24rem;
       }
     }
   </style>
 
   <Nav />
 
-  <main class="page explorer-page">
-    <header class="page-header">
-      <span class="page-eyebrow">Interactive lab</span>
-      <h1 class="page-title">The grid explorer</h1>
-      <p class="page-lede">
-        This is a toy environment for comparing training-data worlds. It is deliberately small enough to inspect by eye,
-        but rich enough to show the logic behind leave-one-out, Shapley-style comparisons, scaling summaries, and simple data edits.
-      </p>
-      <div class="page-meta">
-        <span class="pill">Guided examples built in</span>
-        <span class="pill">Train and eval subsets side by side</span>
-        <span class="pill">Poisoning and noise toggles</span>
+  <main class="page essay-page explorer-page">
+    <header class="essay-header page-header">
+      <div>
+        <span class="page-eyebrow">Interactive lab</span>
+        <h1 class="page-title">The grid explorer</h1>
+        <p class="page-lede">
+          This is a toy environment for comparing training-data worlds. It is small enough to inspect by eye, but rich enough
+          to show the logic behind leave-one-out, Shapley-style comparisons, scaling summaries, and simple data edits.
+        </p>
+        <div class="page-meta">
+          <span class="pill">Rows are training worlds</span>
+          <span class="pill">Columns are evaluation slices</span>
+          <span class="pill">Guided examples are built in</span>
+        </div>
       </div>
+
+      <aside class="essay-side">
+        <p class="note-label">Toy, not theorem</p>
+        <p>
+          The explorer is deliberately small. Its job is to make the comparison structure visible, not to stand in for the full
+          complexity of real training pipelines.
+        </p>
+      </aside>
     </header>
 
-    <section class="explorer-intro">
-      <article class="section-card">
-        <p class="section-kicker">Before you start</p>
-        <h2 class="section-title">Three ways to get more out of the toy</h2>
+    <section class="essay-section">
+      <div class="essay-main">
+        <h2>How to read the toy</h2>
+        <p>
+          Start by fixing the mental model: rows are possible training worlds and columns are evaluation slices. Once that is
+          in place, the rest of the interface is about moving between nearby rows, nearby columns, or nearby perturbations and
+          asking what changed.
+        </p>
         <ul class="tip-list">
           {quickTips.map((tip) => (
             <li>{tip}</li>
           ))}
         </ul>
-      </article>
+      </div>
 
-      <aside class="section-card">
-        <p class="section-kicker">Keep a second tab nearby</p>
-        <h2 class="section-title">Useful companions</h2>
-        <div class="section-copy">
-          <p>The memo gives the longer framing. The glossary helps if you hit unfamiliar terms while clicking through the presets.</p>
-        </div>
-        <div class="action-row">
-          <a href="/memo" class="btn">Read memo</a>
-          <a href="/glossary" class="btn ghost">Open glossary</a>
-          <a href="/advanced.html" class="btn ghost">Try 3D view</a>
-        </div>
+      <aside class="essay-side">
+        <p class="note-label">Useful companions</p>
+        <p>
+          Keep the memo or glossary nearby if you want the longer framing or a quick definition while you click through the
+          presets.
+        </p>
+        <ul class="explorer-link-list">
+          <li><a href="/memo">Read the memo for the broader argument</a></li>
+          <li><a href="/glossary">Open the glossary for fast definitions</a></li>
+          <li><a href="/advanced.html">Try the 3D view</a></li>
+        </ul>
       </aside>
     </section>
 
