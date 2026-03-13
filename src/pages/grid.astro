@@ -2,15 +2,11 @@
 import Layout from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
 import Explorer from "../components/Explorer.jsx";
-import { getRequiredPageEntry, getSection, renderMarkdownBlocks, splitMarkdownSections } from "../lib/page-content";
+import { getRequiredPageEntry, getSection, splitMarkdownSections } from "../lib/page-content";
 
 const page = await getRequiredPageEntry("grid");
 const sections = splitMarkdownSections(page.body);
 const introSection = getSection(sections, "how-to-read-the-toy");
-const quickTips: string[] = page.data.quick_tips ?? [];
-const companionLinks: Array<{ title: string; href: string }> = page.data.companion_links ?? [];
-const headerNote = page.data.notes?.header;
-const companionNote = page.data.notes?.companions;
 ---
 
 <Layout
@@ -20,58 +16,71 @@ const companionNote = page.data.notes?.companions;
   <style is:global>
     .explorer-page {
       display: grid;
-      gap: 2.7rem;
+      gap: 1rem;
     }
     .explorer-page .page-header {
       margin-bottom: 0;
-    }
-    .tip-list {
-      margin: 1rem 0 0;
-      padding-left: 1.2rem;
       display: grid;
-      gap: 0.65rem;
+      grid-template-columns: minmax(0, 17rem) minmax(0, 1fr);
+      gap: 1rem;
+      align-items: end;
     }
-    .tip-list li {
-      padding: 0;
+    .explorer-page .page-title {
+      margin-bottom: 0;
+    }
+    .grid-read-note {
+      display: grid;
+      gap: 0.35rem;
+      padding: 0.95rem 1.1rem;
+      border-radius: 18px;
+      border: 1px solid rgba(92, 72, 52, 0.12);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0)),
+        rgba(250, 244, 235, 0.86);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    }
+    .grid-read-note-label {
+      color: var(--accent);
+      font-family: var(--font-ui);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .grid-read-note :where(p) {
+      margin: 0;
       color: var(--muted);
-      line-height: 1.82;
-    }
-    .explorer-link-list {
-      list-style: none;
-      padding: 0;
-      margin: 1rem 0 0;
-      display: grid;
-      gap: 0.55rem;
+      line-height: 1.7;
     }
     .explorer-frame {
-      padding: 0.35rem;
+      padding: 0.22rem;
       background:
         linear-gradient(180deg, rgba(34, 29, 25, 0.08), rgba(34, 29, 25, 0.02)),
         rgba(255, 250, 243, 0.56);
     }
     .explorer-shell {
-      --explorer-surface: rgba(247, 242, 235, 0.96);
-      --explorer-surface-strong: rgba(255, 253, 249, 0.98);
-      --explorer-surface-soft: rgba(237, 227, 214, 0.78);
-      --explorer-border: rgba(92, 72, 52, 0.14);
-      --explorer-border-strong: rgba(92, 72, 52, 0.24);
-      --explorer-fg: #231d18;
-      --explorer-muted: #6f6154;
-      --explorer-accent: #a44a1d;
-      --explorer-accent-soft: rgba(164, 74, 29, 0.11);
-      --explorer-stage-fg: #231d18;
-      --explorer-stage-muted: #726456;
-      --ring-thin: #efb463;
-      --ring-thick: #68c6c1;
-      --ring-select: #fffdf7;
-      --grid-surface: #f7f2ea;
-      --grid-surface-soft: #ece3d5;
-      --grid-axis-w: 80px;
-      --grid-cell-w: 48px;
+      --explorer-surface: rgba(244, 239, 231, 0.96);
+      --explorer-surface-strong: rgba(252, 249, 243, 0.98);
+      --explorer-surface-soft: rgba(229, 220, 206, 0.82);
+      --explorer-border: rgba(84, 65, 47, 0.14);
+      --explorer-border-strong: rgba(84, 65, 47, 0.24);
+      --explorer-fg: #221a14;
+      --explorer-muted: #6a5c50;
+      --explorer-accent: #975735;
+      --explorer-accent-soft: rgba(151, 87, 53, 0.12);
+      --explorer-stage-fg: #221a14;
+      --explorer-stage-muted: #78695b;
+      --ring-thin: #b98951;
+      --ring-thick: #6f968c;
+      --ring-select: #fff9ef;
+      --grid-surface: #f4ede3;
+      --grid-surface-soft: #e7dccd;
+      --grid-axis-w: 96px;
+      --grid-cell-w: 58px;
     }
     .explorer-shell .workspace-shell {
       display: grid;
-      gap: clamp(1.25rem, 2.2vw, 2rem);
+      gap: 1rem;
       max-width: 1180px;
       margin: 0 auto;
     }
@@ -389,97 +398,88 @@ const companionNote = page.data.notes?.companions;
     }
     .explorer-shell .workspace-toolbar {
       display: grid;
-      gap: 0.8rem;
-      padding: 0.95rem 1rem;
-      border-radius: 20px;
-      border: 1px solid var(--explorer-border);
+      gap: 0.85rem;
+      padding: 0.92rem 1rem;
+      border-radius: 22px;
+      border: 1px solid var(--explorer-border-strong);
       background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)),
-        var(--explorer-surface);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0)),
+        linear-gradient(180deg, rgba(245, 240, 233, 0.98), rgba(237, 228, 215, 0.98));
       box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.8),
-        0 14px 26px rgba(88, 64, 42, 0.06);
+        0 16px 30px rgba(88, 64, 42, 0.08);
+      position: sticky;
+      top: 1rem;
+      z-index: 7;
+      max-height: min(23rem, calc(100vh - 1.5rem));
+      overflow: auto;
+      scrollbar-gutter: stable;
     }
     .explorer-shell .toolbar-bar {
       display: flex;
-      align-items: center;
-      gap: 0.8rem;
+      align-items: end;
+      justify-content: space-between;
+      gap: 1rem;
       flex-wrap: wrap;
-      padding-bottom: 0.75rem;
+      padding-bottom: 0.82rem;
       border-bottom: 1px solid rgba(92, 72, 52, 0.1);
     }
-    .explorer-shell .toolbar-lights {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-    }
-    .explorer-shell .toolbar-lights span {
-      width: 0.7rem;
-      height: 0.7rem;
-      border-radius: 999px;
-      display: inline-block;
-      border: 1px solid rgba(92, 72, 52, 0.14);
-    }
-    .explorer-shell .toolbar-lights span:nth-child(1) {
-      background: #f5c26a;
-    }
-    .explorer-shell .toolbar-lights span:nth-child(2) {
-      background: #d9b76e;
-    }
-    .explorer-shell .toolbar-lights span:nth-child(3) {
-      background: #7fc6b7;
-    }
-    .explorer-shell .toolbar-title-group {
+    .explorer-shell .toolbar-guide {
       display: grid;
-      gap: 0.08rem;
-      flex: 1 1 auto;
+      gap: 0.22rem;
+      flex: 1 1 30rem;
       min-width: 0;
     }
-    .explorer-shell .toolbar-title {
-      color: var(--explorer-fg);
-      font-family: var(--font-ui);
-      font-size: 0.9rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
+    .explorer-shell .toolbar-guide-copy {
+      margin: 0;
+      color: var(--explorer-muted);
+      font-size: 0.86rem;
+      line-height: 1.55;
+      max-width: 46rem;
     }
-    .explorer-shell .toolbar-subtitle {
+    .explorer-shell .toolbar-status-row {
+      justify-content: flex-end;
+      flex: 0 1 auto;
+    }
+    .explorer-shell .toolbar-summary-label {
       color: var(--explorer-muted);
       font-family: var(--font-ui);
-      font-size: 0.72rem;
+      font-size: 0.68rem;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
-    .explorer-shell .toolbar-status {
-      padding: 0.34rem 0.68rem;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.76);
-      border: 1px solid rgba(92, 72, 52, 0.12);
-      color: var(--explorer-muted);
+    .explorer-shell .toolbar-summary-title {
+      color: var(--explorer-fg);
       font-family: var(--font-ui);
-      font-size: 0.72rem;
-      white-space: nowrap;
+      font-size: 0.92rem;
+      font-weight: 650;
+      line-height: 1.35;
     }
     .explorer-shell .toolbar-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 0.75rem;
+      align-items: start;
     }
     .explorer-shell .toolbar-group {
       display: grid;
       gap: 0.6rem;
-      padding: 0.88rem;
-      border-radius: 16px;
+      padding: 0.82rem 0.88rem;
+      border-radius: 18px;
       border: 1px solid rgba(92, 72, 52, 0.1);
       background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0)),
-        rgba(255, 253, 249, 0.7);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0)),
+        rgba(255, 252, 247, 0.76);
       min-width: 0;
+      align-content: start;
+    }
+    .explorer-shell details.toolbar-group {
+      padding: 0.82rem 0.88rem;
+      margin: 0;
     }
     .explorer-shell .toolbar-group-actions {
       align-content: start;
-    }
-    .explorer-shell .toolbar-group-note {
-      grid-column: 1 / -1;
     }
     .explorer-shell .toolbar-label {
       display: flex;
@@ -500,6 +500,55 @@ const companionNote = page.data.notes?.companions;
     }
     .explorer-shell .toolbar-pills {
       margin-top: 0.1rem;
+    }
+    .explorer-shell .toolbar-summary {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      min-width: 0;
+    }
+    .explorer-shell .toolbar-summary::-webkit-details-marker {
+      display: none;
+    }
+    .explorer-shell .toolbar-summary-copy {
+      display: grid;
+      gap: 0.12rem;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+    .explorer-shell .toolbar-summary-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      flex: 0 0 auto;
+    }
+    .explorer-shell .toolbar-summary-caret {
+      width: 0.55rem;
+      height: 0.55rem;
+      border-right: 1.5px solid var(--explorer-muted);
+      border-bottom: 1.5px solid var(--explorer-muted);
+      transform: rotate(45deg);
+      transition: transform 160ms ease;
+    }
+    .explorer-shell details[open] > .toolbar-summary .toolbar-summary-caret {
+      transform: rotate(225deg);
+    }
+    .explorer-shell .toolbar-expanded {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+    }
+    .explorer-shell .toolbar-question-line {
+      margin: 0;
+      color: var(--explorer-fg);
+      font-size: 0.93rem;
+      line-height: 1.48;
+    }
+    .explorer-shell .toolbar-fact-grid,
+    .explorer-shell .toolbar-readout-grid {
+      margin-top: 0.05rem;
     }
     .explorer-shell .toolbar-drawer {
       padding: 0.8rem 0.9rem;
@@ -581,7 +630,7 @@ const companionNote = page.data.notes?.companions;
       border-radius: 18px;
       padding: 0.85rem 1rem;
     }
-    .explorer-shell details + details {
+    .explorer-shell .faq-stack details + details {
       margin-top: 0.75rem;
     }
     .explorer-shell details summary {
@@ -701,10 +750,10 @@ const companionNote = page.data.notes?.companions;
       background: rgba(255, 255, 255, 0.58);
     }
     .explorer-shell .stage-summary.primary {
-      background: linear-gradient(180deg, rgba(104, 198, 193, 0.18), rgba(104, 198, 193, 0.06));
+      background: linear-gradient(180deg, rgba(111, 150, 140, 0.18), rgba(111, 150, 140, 0.06));
     }
     .explorer-shell .stage-summary.accent {
-      background: linear-gradient(180deg, rgba(239, 180, 99, 0.22), rgba(239, 180, 99, 0.06));
+      background: linear-gradient(180deg, rgba(185, 137, 81, 0.22), rgba(185, 137, 81, 0.06));
     }
     .explorer-shell .stage-summary.quiet {
       background: rgba(255, 255, 255, 0.48);
@@ -742,43 +791,70 @@ const companionNote = page.data.notes?.companions;
     .explorer-shell .rl {
       width: var(--grid-axis-w);
       min-width: var(--grid-axis-w);
-      height: 36px;
+      height: 46px;
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      padding-right: 6px;
-      font-size: 11px;
+      padding: 0.3rem 0.4rem 0.3rem 0.2rem;
       cursor: pointer;
       position: sticky;
       left: 0;
       z-index: 2;
-      background: linear-gradient(180deg, rgba(244, 237, 227, 0.96), rgba(234, 224, 210, 0.96));
+      background: linear-gradient(180deg, rgba(241, 233, 221, 0.98), rgba(230, 219, 203, 0.98));
       color: var(--explorer-fg);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
       transition: background 0.2s ease, color 0.2s ease;
     }
     .explorer-shell .cl {
       width: var(--grid-cell-w);
       min-width: var(--grid-cell-w);
-      height: 40px;
+      height: 54px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0 4px;
+      padding: 0.28rem 0.15rem;
       font-size: 11px;
       font-variant-numeric: tabular-nums;
       cursor: pointer;
       position: sticky;
       top: 0;
       z-index: 3;
-      background: linear-gradient(180deg, rgba(244, 237, 227, 0.96), rgba(234, 224, 210, 0.96));
+      background: linear-gradient(180deg, rgba(241, 233, 221, 0.98), rgba(230, 219, 203, 0.98));
       color: var(--explorer-fg);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
       transition: background 0.2s ease, color 0.2s ease;
+    }
+    .explorer-shell .axis-corner {
+      background: linear-gradient(180deg, rgba(241, 233, 221, 0.98), rgba(230, 219, 203, 0.98));
+      cursor: default;
+    }
+    .explorer-shell .axis-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.08rem;
+      width: 100%;
+      line-height: 1.05;
+    }
+    .explorer-shell .axis-label-row {
+      align-items: flex-end;
+      text-align: right;
+    }
+    .explorer-shell .axis-index {
+      color: var(--explorer-stage-muted);
+      font-family: var(--font-ui);
+      font-size: 0.56rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .explorer-shell .axis-set {
+      color: var(--explorer-fg);
+      font-family: var(--font-ui);
+      font-size: 0.64rem;
+      font-weight: 650;
+      max-width: 100%;
+      text-wrap: balance;
+      word-break: break-all;
     }
     .explorer-shell .cell {
       width: var(--grid-cell-w);
@@ -821,12 +897,12 @@ const companionNote = page.data.notes?.companions;
       box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22) inset;
     }
     .explorer-shell .ring-thin {
-      box-shadow: 0 0 0 1px rgba(239, 180, 99, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.22) inset;
+      box-shadow: 0 0 0 1px rgba(185, 137, 81, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.22) inset;
       outline-color: var(--ring-thin);
     }
     .explorer-shell .ring-thick {
       inset: 4px;
-      box-shadow: 0 0 0 2px rgba(104, 198, 193, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.22) inset;
+      box-shadow: 0 0 0 2px rgba(111, 150, 140, 0.36), 0 0 0 1px rgba(255, 255, 255, 0.22) inset;
       outline-color: var(--ring-thick);
     }
     .explorer-shell .edit-flag {
@@ -856,11 +932,11 @@ const companionNote = page.data.notes?.companions;
       100% { opacity: 0; transform: scale(1.12); }
     }
     .explorer-shell .axis-active {
-      background: linear-gradient(180deg, rgba(204, 189, 168, 0.98), rgba(190, 173, 149, 0.98));
+      background: linear-gradient(180deg, rgba(208, 191, 165, 0.98), rgba(193, 173, 144, 0.98));
       color: var(--explorer-fg);
     }
     .explorer-shell .stage-grid {
-      max-height: min(58vh, 42rem);
+      max-height: min(72vh, 48rem);
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
     }
     .explorer-shell .comparison-legend {
@@ -1041,8 +1117,14 @@ const companionNote = page.data.notes?.companions;
     }
     .explorer-shell .inspector-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
       gap: 1rem;
+    }
+    .explorer-shell .support-drawer {
+      align-content: start;
+    }
+    .explorer-shell .support-drawer[open] summary {
+      margin-bottom: 0.8rem;
     }
     .explorer-shell table.small {
       width: 100%;
@@ -1075,26 +1157,28 @@ const companionNote = page.data.notes?.companions;
       40% { box-shadow: 0 0 0 12px rgba(239, 180, 99, 0.12); }
       100% { box-shadow: 0 0 0 0 rgba(239, 180, 99, 0); }
     }
+    @media (min-width: 1100px) {
+      .explorer-shell .toolbar-group-question,
+      .explorer-shell .toolbar-group-scene,
+      .explorer-shell .toolbar-group-question-readout {
+        grid-column: span 2;
+      }
+    }
     @media (max-width: 1080px) {
-      .explorer-shell .workspace-header,
-      .explorer-shell .workspace-layout,
+      .explorer-page .page-header,
       .explorer-shell .inspector-grid {
         grid-template-columns: 1fr;
       }
-      .explorer-shell .toolbar-group-note {
-        grid-column: auto;
-      }
-      .explorer-shell .workspace-main {
-        order: 1;
-      }
-      .explorer-shell .control-column {
-        order: 2;
+      .explorer-shell .workspace-toolbar {
+        position: static;
+        max-height: none;
+        overflow: visible;
       }
     }
     @media (max-width: 720px) {
       .explorer-shell {
-        --grid-axis-w: 68px;
-        --grid-cell-w: 42px;
+        --grid-axis-w: 76px;
+        --grid-cell-w: 52px;
       }
       .explorer-shell .hero-card,
       .explorer-shell .panel-card,
@@ -1113,7 +1197,7 @@ const companionNote = page.data.notes?.companions;
         grid-template-columns: 1fr;
       }
       .explorer-shell .stage-grid {
-        max-height: 22rem;
+        max-height: min(60vh, 24rem);
       }
     }
   </style>
@@ -1125,45 +1209,12 @@ const companionNote = page.data.notes?.companions;
       <div>
         {page.data.eyebrow && <span class="page-eyebrow">{page.data.eyebrow}</span>}
         <h1 class="page-title">{page.data.title}</h1>
-        {page.data.lede && <p class="page-lede">{page.data.lede}</p>}
-        <div class="page-meta">
-          <span class="pill">Rows are training worlds</span>
-          <span class="pill">Columns are evaluation slices</span>
-          <span class="pill">Guided examples are built in</span>
-        </div>
       </div>
-
-      <aside class="essay-side">
-        {headerNote?.label && <p class="note-label">{headerNote.label}</p>}
-        {renderMarkdownBlocks(headerNote?.body ?? []).map((html) => (
-          <div set:html={html}></div>
-        ))}
-      </aside>
-    </header>
-
-    <section class="essay-section">
-      <div class="essay-main">
-        <h2>{introSection.title}</h2>
+      <div class="grid-read-note">
+        <span class="grid-read-note-label">{introSection.title}</span>
         <div set:html={introSection.html}></div>
-        <ul class="tip-list">
-          {quickTips.map((tip) => (
-            <li>{tip}</li>
-          ))}
-        </ul>
       </div>
-
-      <aside class="essay-side">
-        {companionNote?.label && <p class="note-label">{companionNote.label}</p>}
-        {renderMarkdownBlocks(companionNote?.body ?? []).map((html) => (
-          <div set:html={html}></div>
-        ))}
-        <ul class="explorer-link-list">
-          {companionLinks.map((link) => (
-            <li><a href={link.href}>{link.title}</a></li>
-          ))}
-        </ul>
-      </aside>
-    </section>
+    </header>
 
     <section class="section-card explorer-frame" id="explore" aria-label="Explore">
       <div class="explorer-shell">

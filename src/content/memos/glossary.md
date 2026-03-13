@@ -1,7 +1,7 @@
 ---
 order: 3
 title: "Glossary"
-summary: "Working definitions for the key terms used across the memo, explorer, and reading lists."
+summary: "Working definitions for the key terms used across the memo, explorer, and related areas and papers page."
 date: "2026-03-12T00:00:00.000Z"
 visibility: public
 type: glossary

@@ -15,7 +15,8 @@
     "check": "astro check",
     "semble:status": "node scripts/semble-status.mjs",
     "semble:manage": "node scripts/semble-client.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "test:e2e": "playwright test"
   },
   "keywords": [],
   "author": "",
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.7",
     "@astrojs/preact": "^4.1.3",
+    "@playwright/test": "^1.58.2",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.10.1",
     "astro": "^4.16.19",

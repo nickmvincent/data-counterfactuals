@@ -27,9 +27,9 @@ reading_paths:
   - title: Open the explorer
     href: /grid
     body: A toy environment for inspecting the grid metaphor directly.
-  - title: Browse references
+  - title: Related areas and papers
     href: /collections
-    body: Reading lists and the glossary for when you want papers or definitions instead of narrative.
+    body: A compact shelf of neighboring literatures, representative papers, and quick context.
 figures:
   leave_one_out:
     label: Leave-one-out toy example
