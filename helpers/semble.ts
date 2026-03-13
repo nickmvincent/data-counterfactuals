@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -6,6 +6,7 @@ import { parseFrontmatter } from './markdown';
 
 const DEFAULT_SEMBLE_API_BASE = 'https://api.semble.so';
 const DEFAULT_SEMBLE_CACHE_PATH = 'tmp/semble-cache.json';
+const DEFAULT_SEMBLE_CONFIG_FILE = 'semble.config.json';
 const PAGE_LIMIT = 100;
 
 type SembleCachePolicy = 'network-first' | 'cache-only' | 'refresh' | 'off';
@@ -22,6 +23,15 @@ interface SembleConfig {
   profileIdentifier?: string;
   collectionAtUris: string[];
   collectionNamePrefix?: string;
+}
+
+interface SembleProjectConfig {
+  apiBase?: string;
+  profileIdentifier?: string;
+  collectionAtUris: string[];
+  collectionNamePrefix?: string;
+  cachePath?: string;
+  cachePolicy?: SembleCachePolicy;
 }
 
 interface SemblePagination {
@@ -149,6 +159,7 @@ let datasetCache:
       value: Promise<SembleDataset>;
     }
   | null = null;
+let projectConfigCache: SembleProjectConfig | null | undefined;
 
 function splitEnvList(value: string | undefined): string[] {
   if (!value) return [];
@@ -208,6 +219,39 @@ function normalizeAuthors(value: unknown): string[] {
   }
 
   return [trimmed];
+}
+
+function readSembleProjectConfig(): SembleProjectConfig | null {
+  if (projectConfigCache !== undefined) {
+    return projectConfigCache;
+  }
+
+  const configPath = path.resolve(process.cwd(), DEFAULT_SEMBLE_CONFIG_FILE);
+  if (!existsSync(configPath)) {
+    projectConfigCache = null;
+    return projectConfigCache;
+  }
+
+  try {
+    const raw = readFileSync(configPath, 'utf8');
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const cachePolicyValue = asOptionalString(parsed.cachePolicy);
+    projectConfigCache = {
+      apiBase: asOptionalString(parsed.apiBase),
+      profileIdentifier: asOptionalString(parsed.profileIdentifier),
+      collectionAtUris: normalizeStringArray(parsed.collectionAtUris),
+      collectionNamePrefix: asOptionalString(parsed.collectionNamePrefix),
+      cachePath: asOptionalString(parsed.cachePath),
+      cachePolicy: cachePolicyValue && CACHE_POLICIES.has(cachePolicyValue as SembleCachePolicy)
+        ? (cachePolicyValue as SembleCachePolicy)
+        : undefined,
+    };
+    return projectConfigCache;
+  } catch (error) {
+    console.warn(`[semble] Failed to parse ${DEFAULT_SEMBLE_CONFIG_FILE}:`, error);
+    projectConfigCache = null;
+    return projectConfigCache;
+  }
 }
 
 function pickFirst<T>(...values: Array<T | undefined>): T | undefined {
@@ -280,18 +324,27 @@ function shouldIncludeCollection(collection: SembleCollectionSummary, config: Se
 }
 
 function getSembleConfig(): SembleConfig | null {
-  const profileIdentifier = asOptionalString(process.env.SEMBLE_PROFILE_IDENTIFIER);
-  const collectionAtUris = splitEnvList(process.env.SEMBLE_COLLECTION_AT_URIS);
+  const projectConfig = readSembleProjectConfig();
+  const profileIdentifier =
+    asOptionalString(process.env.SEMBLE_PROFILE_IDENTIFIER) ?? projectConfig?.profileIdentifier;
+  const envCollectionAtUris = splitEnvList(process.env.SEMBLE_COLLECTION_AT_URIS);
+  const collectionAtUris = envCollectionAtUris.length
+    ? envCollectionAtUris
+    : projectConfig?.collectionAtUris ?? [];
 
   if (!profileIdentifier && collectionAtUris.length === 0) {
     return null;
   }
 
   return {
-    apiBase: asOptionalString(process.env.SEMBLE_API_BASE) || DEFAULT_SEMBLE_API_BASE,
+    apiBase: asOptionalString(process.env.SEMBLE_API_BASE)
+      || projectConfig?.apiBase
+      || DEFAULT_SEMBLE_API_BASE,
     profileIdentifier,
     collectionAtUris,
-    collectionNamePrefix: asOptionalString(process.env.SEMBLE_COLLECTION_NAME_PREFIX),
+    collectionNamePrefix:
+      asOptionalString(process.env.SEMBLE_COLLECTION_NAME_PREFIX)
+      ?? projectConfig?.collectionNamePrefix,
   };
 }
 
@@ -313,6 +366,11 @@ function getSembleCachePolicy(override?: SembleCachePolicy): SembleCachePolicy {
     return envValue as SembleCachePolicy;
   }
 
+  const projectConfig = readSembleProjectConfig();
+  if (projectConfig?.cachePolicy && CACHE_POLICIES.has(projectConfig.cachePolicy)) {
+    return projectConfig.cachePolicy;
+  }
+
   return 'network-first';
 }
 
@@ -321,7 +379,10 @@ function buildRuntimeCacheKey(config: SembleConfig, cachePolicy: SembleCachePoli
 }
 
 export function getSembleCachePath(): string {
-  const configuredPath = asOptionalString(process.env.SEMBLE_CACHE_PATH) || DEFAULT_SEMBLE_CACHE_PATH;
+  const projectConfig = readSembleProjectConfig();
+  const configuredPath = asOptionalString(process.env.SEMBLE_CACHE_PATH)
+    || projectConfig?.cachePath
+    || DEFAULT_SEMBLE_CACHE_PATH;
   return path.isAbsolute(configuredPath)
     ? configuredPath
     : path.resolve(process.cwd(), configuredPath);

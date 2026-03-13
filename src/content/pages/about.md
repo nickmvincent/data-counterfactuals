@@ -1,6 +1,6 @@
 ---
 title: Why this site exists
-description: Why Data Counterfactuals exists, what it is trying to clarify, and where to respond or contribute.
+description: Why Data Counterfactuals exists and what it is trying to clarify.
 eyebrow: Project notes
 lede: Data Counterfactuals is an attempt to make training-data questions easier to see and easier to compare across literatures that do not usually sit on the same shelf.
 intro:
@@ -18,16 +18,6 @@ notes:
     body:
       - |
         The claim is not that valuation, poisoning, distillation, privacy, and collective action are all secretly the same. The claim is that they become easier to line up once you keep the data intervention itself in view.
-  contributing:
-    label: Contributing
-    body:
-      - |
-        Precise complaints are especially helpful here: a misleading comparison, an omitted paper, an awkward phrase, or an interaction that encourages the wrong takeaway.
-  related:
-    label: Related work
-    body:
-      - |
-        The site sits near a broader conversation about data leverage, data labor, provenance, and model behavior. These links are there to make that neighborhood easier to traverse.
 site_parts:
   - title: Overview
     href: /
@@ -50,11 +40,3 @@ A lot of machine-learning writing moves quickly from methods to benchmarks to th
 This site uses the phrase **data counterfactuals** and the grid metaphor as teaching tools. They are meant to connect several areas of work without pretending the existing literature already uses exactly this language.
 
 The hope is modest but useful: if the common operation becomes easier to see, then it also becomes easier to compare technical methods with questions about bargaining power, data labor, or strategic intervention.
-
-## Ways to respond
-
-If something here feels misleading, if a literature is missing, or if the interface gets in the way of the argument, that is worth hearing. Feedback is useful precisely because the site is trying to hold several neighboring ideas in one frame without overclaiming.
-
-## Projects in the same orbit
-
-These projects are not the same thing as this site, and they do not all use the same vocabulary. They are here because they touch nearby questions about data leverage, provenance, governance, labor, and model behavior.

@@ -7,8 +7,8 @@ import { getRequiredPageEntry, getSection, renderMarkdownBlocks, splitMarkdownSe
 const page = await getRequiredPageEntry("grid");
 const sections = splitMarkdownSections(page.body);
 const introSection = getSection(sections, "how-to-read-the-toy");
-const quickTips = page.data.quick_tips ?? [];
-const companionLinks = page.data.companion_links ?? [];
+const quickTips: string[] = page.data.quick_tips ?? [];
+const companionLinks: Array<{ title: string; href: string }> = page.data.companion_links ?? [];
 const headerNote = page.data.notes?.header;
 const companionNote = page.data.notes?.companions;
 ---
@@ -40,6 +40,8 @@ const companionNote = page.data.notes?.companions;
       list-style: none;
       padding: 0;
       margin: 1rem 0 0;
+      display: grid;
+      gap: 0.55rem;
     }
     .explorer-frame {
       padding: 0.35rem;
@@ -48,92 +50,630 @@ const companionNote = page.data.notes?.companions;
         rgba(255, 250, 243, 0.56);
     }
     .explorer-shell {
-      --explorer-bg: #181516;
-      --explorer-panel: #121519;
-      --explorer-card: #1b2027;
-      --explorer-card-soft: #232833;
-      --explorer-border: #313948;
-      --explorer-fg: #f6f0e8;
-      --explorer-muted: #b8aea5;
+      --explorer-surface: rgba(247, 242, 235, 0.96);
+      --explorer-surface-strong: rgba(255, 253, 249, 0.98);
+      --explorer-surface-soft: rgba(237, 227, 214, 0.78);
+      --explorer-border: rgba(92, 72, 52, 0.14);
+      --explorer-border-strong: rgba(92, 72, 52, 0.24);
+      --explorer-fg: #231d18;
+      --explorer-muted: #6f6154;
+      --explorer-accent: #a44a1d;
+      --explorer-accent-soft: rgba(164, 74, 29, 0.11);
+      --explorer-stage-fg: #231d18;
+      --explorer-stage-muted: #726456;
       --ring-thin: #efb463;
       --ring-thick: #68c6c1;
-      --ring-select: #fffaf0;
-      --grid-axis-w: 74px;
-      --grid-cell-w: 46px;
+      --ring-select: #fffdf7;
+      --grid-surface: #f7f2ea;
+      --grid-surface-soft: #ece3d5;
+      --grid-axis-w: 80px;
+      --grid-cell-w: 48px;
     }
-    .explorer-shell .wrap {
-      max-width: 1250px;
-      margin: 0 auto;
-      padding: 16px;
-    }
-    .explorer-shell .section {
-      margin: 14px auto;
-    }
-    .explorer-shell .lede {
-      color: var(--explorer-muted);
-      margin: 6px 0 16px;
-      max-width: 70ch;
-    }
-    .explorer-shell .card {
-      background: var(--explorer-card);
-      border: 1px solid var(--explorer-border);
-      border-radius: 18px;
-      padding: 12px;
-      margin-bottom: 12px;
-      color: var(--explorer-fg);
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
-    }
-    .explorer-shell .row {
+    .explorer-shell .workspace-shell {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 12px;
+      gap: clamp(1.25rem, 2.2vw, 2rem);
+      max-width: 1180px;
+      margin: 0 auto;
     }
-    .explorer-shell .ctrl {
+    .explorer-shell .explorer-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(20rem, 0.82fr);
+      gap: clamp(1rem, 2vw, 1.6rem);
+      padding: clamp(1.25rem, 2vw, 1.7rem);
+      border-radius: 26px;
+      border: 1px solid var(--explorer-border-strong);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0) 18%),
+        radial-gradient(circle at top right, rgba(164, 74, 29, 0.08), transparent 30%),
+        linear-gradient(180deg, rgba(247, 242, 235, 0.98), rgba(238, 229, 216, 0.96));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.82),
+        0 22px 42px rgba(88, 64, 42, 0.08);
+    }
+    .explorer-shell .hero-copy,
+    .explorer-shell .hero-stack,
+    .explorer-shell .control-column,
+    .explorer-shell .workspace-main {
+      display: grid;
+      gap: 1rem;
+      min-width: 0;
+    }
+    .explorer-shell .summary-kicker {
+      display: inline-block;
+      color: var(--explorer-accent);
+      font-family: var(--font-ui);
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .explorer-shell .hero-title,
+    .explorer-shell .card-title,
+    .explorer-shell .panel-title,
+    .explorer-shell .stage-title,
+    .explorer-shell .grid-card-title {
+      font-family: var(--font-ui);
+      font-weight: 650;
+    }
+    .explorer-shell .hero-title {
+      margin: 0;
+      color: var(--explorer-fg);
+      font-size: clamp(1.85rem, 3vw, 2.7rem);
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+    }
+    .explorer-shell .hero-lede {
+      margin: 0;
+      max-width: 38rem;
+      color: var(--explorer-muted);
+      font-size: 0.96rem;
+      line-height: 1.72;
+    }
+    .explorer-shell .hero-card,
+    .explorer-shell .panel-card,
+    .explorer-shell .support-card {
+      display: grid;
+      gap: 0.9rem;
+      padding: 1.1rem;
+      border-radius: 20px;
+      border: 1px solid var(--explorer-border);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0)),
+        var(--explorer-surface);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.82),
+        0 14px 26px rgba(88, 64, 42, 0.06);
+    }
+    .explorer-shell .card-head,
+    .explorer-shell .panel-head,
+    .explorer-shell .grid-card-head,
+    .explorer-shell .analysis-head,
+    .explorer-shell .stage-head {
       display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 6px 0 10px;
       flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.8rem;
+    }
+    .explorer-shell .card-title,
+    .explorer-shell .panel-title,
+    .explorer-shell .grid-card-title {
+      margin: 0.2rem 0 0;
+      font-size: 1.08rem;
+      line-height: 1.16;
+      letter-spacing: -0.03em;
+    }
+    .explorer-shell .panel-copy,
+    .explorer-shell .grid-card-copy,
+    .explorer-shell .analysis-copy {
+      margin: 0;
+      color: var(--explorer-muted);
+      font-size: 0.87rem;
+      line-height: 1.62;
+    }
+    .explorer-shell .status-banner,
+    .explorer-shell .inline-note,
+    .explorer-shell .story-note {
+      padding: 0.85rem 1rem;
+      border-radius: 14px;
+      border: 1px solid rgba(164, 74, 29, 0.14);
+      background: linear-gradient(180deg, rgba(164, 74, 29, 0.07), rgba(164, 74, 29, 0.03));
+      color: var(--explorer-fg);
+      font-family: var(--font-ui);
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+    .explorer-shell .summary-inline,
+    .explorer-shell .segmented-row,
+    .explorer-shell .mode-toggle,
+    .explorer-shell .grid-meta-strip,
+    .explorer-shell .export-actions,
+    .explorer-shell .focus-chip-row,
+    .explorer-shell .question-button-row,
+    .explorer-shell .slider-row,
+    .explorer-shell .checkbox-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.55rem;
+      min-width: 0;
+    }
+    .explorer-shell .pill {
+      display: inline-block;
+      padding: 0.28rem 0.65rem;
+      border: 1px solid rgba(92, 72, 52, 0.12);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--explorer-muted);
+      font-family: var(--font-ui);
+      font-size: 0.71rem;
     }
     .explorer-shell .btn {
       border: 1px solid var(--explorer-border);
-      background: #202632;
+      background: var(--explorer-surface-strong);
       color: var(--explorer-fg);
-      padding: 6px 10px;
-      border-radius: 10px;
+      padding: 0.58rem 0.84rem;
+      border-radius: 12px;
       cursor: pointer;
-      font-size: 12px;
-      box-shadow: none;
-      min-height: auto;
+      font-family: var(--font-ui);
+      font-size: 0.8rem;
+      line-height: 1.2;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    }
+    .explorer-shell .btn:hover,
+    .explorer-shell .btn:focus-visible,
+    .explorer-shell .tutorial-btn:hover,
+    .explorer-shell .tutorial-btn:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(164, 74, 29, 0.28);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.72),
+        0 10px 18px rgba(88, 64, 42, 0.08);
     }
     .explorer-shell .btn[aria-pressed="true"] {
-      outline: 2px solid rgba(104, 198, 193, 0.55);
+      border-color: rgba(164, 74, 29, 0.34);
+      background: var(--explorer-accent-soft);
+      box-shadow: inset 0 0 0 1px rgba(177, 79, 31, 0.14);
     }
     .explorer-shell .btn.ghost {
       background: transparent;
     }
+    .explorer-shell .btn.mini {
+      padding: 0.48rem 0.74rem;
+      font-size: 0.76rem;
+    }
     .explorer-shell input[type="range"],
     .explorer-shell select,
     .explorer-shell input[type="checkbox"] {
-      background: #1a1f28;
+      background: var(--explorer-surface-strong);
       color: var(--explorer-fg);
       border: 1px solid var(--explorer-border);
-      border-radius: 10px;
-      padding: 6px 10px;
+      border-radius: 12px;
+      padding: 0.68rem 0.86rem;
+      font: inherit;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+    }
+    .explorer-shell .slider-row input[type="range"] {
+      flex: 1 1 11rem;
+      min-width: 8rem;
+    }
+    .explorer-shell .checkbox-row {
+      color: var(--explorer-fg);
+      font-size: 0.88rem;
+    }
+    .explorer-shell .checkbox-row input[type="checkbox"] {
+      width: auto;
+      padding: 0;
+    }
+    .explorer-shell .tutorials {
+      display: grid;
+      gap: 0.65rem;
+    }
+    .explorer-shell .tutorial-btn {
+      border: 1px solid var(--explorer-border);
+      background: rgba(255, 255, 255, 0.76);
+      color: var(--explorer-fg);
+      text-align: left;
+      padding: 0.85rem 0.95rem;
+      border-radius: 14px;
+      cursor: pointer;
+      font-size: 0.84rem;
+      line-height: 1.35;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+    .explorer-shell .tutorial-btn.active {
+      border-color: rgba(177, 79, 31, 0.34);
+      box-shadow: inset 0 0 0 1px rgba(177, 79, 31, 0.18);
+      background: rgba(177, 79, 31, 0.08);
+    }
+    .explorer-shell .tutorial-title {
+      display: block;
+      font-weight: 600;
+    }
+    .explorer-shell .tutorial-desc {
+      display: block;
+      margin-top: 0.2rem;
+      color: var(--explorer-muted);
+      font-size: 0.82rem;
+    }
+    .explorer-shell .tutorial-note {
+      padding: 0.9rem 1rem;
+      border-radius: 14px;
+      border: 1px solid var(--explorer-border);
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--explorer-muted);
+      font-size: 0.82rem;
+      line-height: 1.6;
+    }
+    .explorer-shell .workspace-layout {
+      display: grid;
+      grid-template-columns: minmax(18rem, 23rem) minmax(0, 1fr);
+      gap: clamp(1rem, 2vw, 1.6rem);
+      align-items: start;
+      padding: 1rem;
+      border-radius: 28px;
+      border: 1px solid var(--explorer-border-strong);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0) 15%),
+        linear-gradient(180deg, rgba(243, 236, 227, 0.98), rgba(235, 226, 212, 0.98));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.78),
+        0 28px 50px rgba(88, 64, 42, 0.09);
+    }
+    .explorer-shell .control-column {
+      align-content: start;
+    }
+    .explorer-shell .workspace-toolbar {
+      display: grid;
+      gap: 0.8rem;
+      padding: 0.95rem 1rem;
+      border-radius: 20px;
+      border: 1px solid var(--explorer-border);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)),
+        var(--explorer-surface);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        0 14px 26px rgba(88, 64, 42, 0.06);
+    }
+    .explorer-shell .toolbar-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(92, 72, 52, 0.1);
+    }
+    .explorer-shell .toolbar-lights {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .explorer-shell .toolbar-lights span {
+      width: 0.7rem;
+      height: 0.7rem;
+      border-radius: 999px;
+      display: inline-block;
+      border: 1px solid rgba(92, 72, 52, 0.14);
+    }
+    .explorer-shell .toolbar-lights span:nth-child(1) {
+      background: #f5c26a;
+    }
+    .explorer-shell .toolbar-lights span:nth-child(2) {
+      background: #d9b76e;
+    }
+    .explorer-shell .toolbar-lights span:nth-child(3) {
+      background: #7fc6b7;
+    }
+    .explorer-shell .toolbar-title-group {
+      display: grid;
+      gap: 0.08rem;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .explorer-shell .toolbar-title {
+      color: var(--explorer-fg);
+      font-family: var(--font-ui);
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .explorer-shell .toolbar-subtitle {
+      color: var(--explorer-muted);
+      font-family: var(--font-ui);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .explorer-shell .toolbar-status {
+      padding: 0.34rem 0.68rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.76);
+      border: 1px solid rgba(92, 72, 52, 0.12);
+      color: var(--explorer-muted);
+      font-family: var(--font-ui);
+      font-size: 0.72rem;
+      white-space: nowrap;
+    }
+    .explorer-shell .toolbar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.75rem;
+    }
+    .explorer-shell .toolbar-group {
+      display: grid;
+      gap: 0.6rem;
+      padding: 0.88rem;
+      border-radius: 16px;
+      border: 1px solid rgba(92, 72, 52, 0.1);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0)),
+        rgba(255, 253, 249, 0.7);
+      min-width: 0;
+    }
+    .explorer-shell .toolbar-group-actions {
+      align-content: start;
+    }
+    .explorer-shell .toolbar-group-note {
+      grid-column: 1 / -1;
+    }
+    .explorer-shell .toolbar-label {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      color: var(--explorer-muted);
+      font-family: var(--font-ui);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .explorer-shell .toolbar-note {
+      color: var(--explorer-muted);
+      font-family: var(--font-ui);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+    .explorer-shell .toolbar-pills {
+      margin-top: 0.1rem;
+    }
+    .explorer-shell .toolbar-drawer {
+      padding: 0.8rem 0.9rem;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.6);
+    }
+    .explorer-shell .control-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+    .explorer-shell .control-field,
+    .explorer-shell .control-cluster {
+      display: grid;
+      gap: 0.6rem;
+      padding: 0.95rem;
+      border-radius: 16px;
+      border: 1px solid var(--explorer-border);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)),
+        var(--explorer-surface-strong);
+      min-width: 0;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+    }
+    .explorer-shell .control-field-full {
+      grid-column: 1 / -1;
+    }
+    .explorer-shell .control-label,
+    .explorer-shell .control-head {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      color: var(--explorer-fg);
+      font-family: var(--font-ui);
+      font-size: 0.79rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .explorer-shell .control-note,
+    .explorer-shell .ctrl-note {
+      color: var(--explorer-muted);
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+    .explorer-shell .control-field select,
+    .explorer-shell .control-cluster select {
+      width: 100%;
+    }
+    .explorer-shell .panel-step {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(177, 79, 31, 0.22);
+      background: rgba(177, 79, 31, 0.08);
+      color: var(--explorer-accent);
+      font-family: var(--font-ui);
+      font-size: 0.78rem;
+      font-weight: 700;
+      flex: 0 0 auto;
+    }
+    .explorer-shell .info-tip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border: 1px solid var(--explorer-border);
+      border-radius: 50%;
+      color: var(--explorer-muted);
+      font-size: 11px;
+      cursor: help;
+    }
+    .explorer-shell details {
+      background: var(--explorer-surface-strong);
+      border: 1px solid var(--explorer-border);
+      border-radius: 18px;
+      padding: 0.85rem 1rem;
+    }
+    .explorer-shell details + details {
+      margin-top: 0.75rem;
+    }
+    .explorer-shell details summary {
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--explorer-fg);
+    }
+    .explorer-shell .guide-details .ctrl-note,
+    .explorer-shell .faq-stack .control-note {
+      margin-top: 0.7rem;
+    }
+    .explorer-shell .json-block {
+      background: #fbf8f4;
+      border: 1px solid rgba(92, 72, 52, 0.12);
+      border-radius: 14px;
+      padding: 0.8rem;
+      color: #5f554c;
+      font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+      font-size: 12px;
+      overflow: auto;
+      line-height: 1.4;
+    }
+    .explorer-shell .stage-panel,
+    .explorer-shell .grid-card,
+    .explorer-shell .analysis-card {
+      display: grid;
+      gap: 0.95rem;
+      padding: 1.15rem;
+      border-radius: 20px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0)),
+        linear-gradient(180deg, rgba(249, 245, 239, 0.98), rgba(242, 235, 225, 0.98));
+      border: 1px solid rgba(92, 72, 52, 0.12);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        0 16px 30px rgba(88, 64, 42, 0.07);
+      color: var(--explorer-stage-fg);
+    }
+    .explorer-shell .stage-panel .summary-kicker,
+    .explorer-shell .grid-card .summary-kicker,
+    .explorer-shell .analysis-card .summary-kicker {
+      color: var(--explorer-accent);
+    }
+    .explorer-shell .stage-panel .pill,
+    .explorer-shell .grid-card .pill,
+    .explorer-shell .analysis-card .pill {
+      background: rgba(255, 255, 255, 0.78);
+      border-color: rgba(92, 72, 52, 0.12);
+      color: var(--explorer-muted);
+    }
+    .explorer-shell .stage-panel .story-note,
+    .explorer-shell .analysis-card .story-note {
+      background: linear-gradient(180deg, rgba(164, 74, 29, 0.05), rgba(164, 74, 29, 0.02));
+      border-color: rgba(164, 74, 29, 0.12);
+      color: var(--explorer-fg);
+    }
+    .explorer-shell .grid-card-title,
+    .explorer-shell .analysis-card .card-title {
+      color: var(--explorer-fg);
+    }
+    .explorer-shell .stage-title {
+      margin: 0.25rem 0 0;
+      font-size: clamp(1.25rem, 2.2vw, 1.8rem);
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+    }
+    .explorer-shell .stage-copy {
+      margin: 0;
+      color: var(--explorer-muted);
+      font-size: 0.88rem;
+      line-height: 1.65;
+    }
+    .explorer-shell .grid-card-copy,
+    .explorer-shell .analysis-copy,
+    .explorer-shell .analysis-note {
+      color: var(--explorer-stage-muted);
+    }
+    .explorer-shell .scene-fact-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+      gap: 0.75rem;
+    }
+    .explorer-shell .scene-fact {
+      display: grid;
+      gap: 0.25rem;
+      padding: 0.85rem 0.9rem;
+      border-radius: 14px;
+      border: 1px solid rgba(92, 72, 52, 0.1);
+      background: rgba(255, 255, 255, 0.54);
+    }
+    .explorer-shell .scene-fact-label,
+    .explorer-shell .stage-summary-label {
+      color: var(--explorer-stage-muted);
+      font-family: var(--font-ui);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .explorer-shell .scene-fact-value {
+      color: var(--explorer-fg);
+      font-size: 0.92rem;
+      line-height: 1.35;
+    }
+    .explorer-shell .stage-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 0.75rem;
+    }
+    .explorer-shell .stage-summary {
+      display: grid;
+      gap: 0.45rem;
+      padding: 0.95rem;
+      border-radius: 14px;
+      border: 1px solid rgba(92, 72, 52, 0.1);
+      background: rgba(255, 255, 255, 0.58);
+    }
+    .explorer-shell .stage-summary.primary {
+      background: linear-gradient(180deg, rgba(104, 198, 193, 0.18), rgba(104, 198, 193, 0.06));
+    }
+    .explorer-shell .stage-summary.accent {
+      background: linear-gradient(180deg, rgba(239, 180, 99, 0.22), rgba(239, 180, 99, 0.06));
+    }
+    .explorer-shell .stage-summary.quiet {
+      background: rgba(255, 255, 255, 0.48);
+    }
+    .explorer-shell .stage-summary-value {
+      color: var(--explorer-fg);
+      font-size: clamp(1.16rem, 1.8vw, 1.55rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+    .explorer-shell .stage-summary-note {
+      color: var(--explorer-stage-muted);
+      font-size: 0.8rem;
+      line-height: 1.55;
     }
     .explorer-shell .grid-wrap {
       overflow: auto;
-      border: 1px solid var(--explorer-border);
-      border-radius: 16px;
-      background: #0e1218;
       max-width: 100%;
+      border: 1px solid rgba(92, 72, 52, 0.12);
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)),
+        var(--grid-surface);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.84),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.35);
       scrollbar-gutter: stable both-edges;
     }
     .explorer-shell .rl,
     .explorer-shell .cl,
     .explorer-shell .cell {
-      border-bottom: 1px solid #2d3342;
-      border-right: 1px solid #2d3342;
+      border-right: 1px solid rgba(92, 72, 52, 0.1);
+      border-bottom: 1px solid rgba(92, 72, 52, 0.1);
     }
     .explorer-shell .rl {
       width: var(--grid-axis-w);
@@ -147,12 +687,13 @@ const companionNote = page.data.notes?.companions;
       cursor: pointer;
       position: sticky;
       left: 0;
-      background: var(--explorer-card);
       z-index: 2;
-      transition: background 0.2s ease, color 0.2s ease;
+      background: linear-gradient(180deg, rgba(244, 237, 227, 0.96), rgba(234, 224, 210, 0.96));
+      color: var(--explorer-fg);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      transition: background 0.2s ease, color 0.2s ease;
     }
     .explorer-shell .cl {
       width: var(--grid-cell-w);
@@ -161,18 +702,19 @@ const companionNote = page.data.notes?.companions;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 0 4px;
       font-size: 11px;
+      font-variant-numeric: tabular-nums;
       cursor: pointer;
       position: sticky;
       top: 0;
-      background: var(--explorer-card);
       z-index: 3;
-      transition: background 0.2s ease, color 0.2s ease;
+      background: linear-gradient(180deg, rgba(244, 237, 227, 0.96), rgba(234, 224, 210, 0.96));
+      color: var(--explorer-fg);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      padding: 0 4px;
-      font-variant-numeric: tabular-nums;
+      transition: background 0.2s ease, color 0.2s ease;
     }
     .explorer-shell .cell {
       width: var(--grid-cell-w);
@@ -185,7 +727,7 @@ const companionNote = page.data.notes?.companions;
     .explorer-shell .sel {
       outline: 2px solid var(--ring-select);
       outline-offset: -2px;
-      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4) inset;
+      box-shadow: 0 0 0 1px rgba(164, 74, 29, 0.45) inset, 0 0 0 2px rgba(255, 255, 255, 0.4) inset;
     }
     .explorer-shell .num {
       position: absolute;
@@ -195,33 +737,33 @@ const companionNote = page.data.notes?.companions;
       justify-content: center;
       font-size: 10px;
       font-weight: 700;
-      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
+      text-shadow: 0 1px 1px rgba(255, 255, 255, 0.28);
     }
     .explorer-shell .cell-emph {
-      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset, 0 0 0 1px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.26) inset, 0 0 0 1px rgba(92, 72, 52, 0.18);
     }
     .explorer-shell .cell-edited {
       box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.2) inset,
-        0 0 0 1px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(255, 255, 255, 0.22) inset,
+        0 0 0 1px rgba(92, 72, 52, 0.18),
         0 0 0 1px rgba(255, 118, 98, 0.35);
     }
     .explorer-shell .ring {
       position: absolute;
       inset: 2px;
+      border-radius: 5px;
       outline: 2px solid var(--ring-thin);
       outline-offset: -2px;
-      border-radius: 5px;
-      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45) inset;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22) inset;
     }
     .explorer-shell .ring-thin {
+      box-shadow: 0 0 0 1px rgba(239, 180, 99, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.22) inset;
       outline-color: var(--ring-thin);
-      box-shadow: 0 0 0 1px rgba(239, 180, 99, 0.35), 0 0 0 2px rgba(0, 0, 0, 0.45) inset;
     }
     .explorer-shell .ring-thick {
       inset: 4px;
+      box-shadow: 0 0 0 2px rgba(104, 198, 193, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.22) inset;
       outline-color: var(--ring-thick);
-      box-shadow: 0 0 0 2px rgba(104, 198, 193, 0.35), 0 0 0 2px rgba(0, 0, 0, 0.45) inset;
     }
     .explorer-shell .edit-flag {
       position: absolute;
@@ -250,304 +792,102 @@ const companionNote = page.data.notes?.companions;
       100% { opacity: 0; transform: scale(1.12); }
     }
     .explorer-shell .axis-active {
-      background: #232a33;
-      color: #fff;
+      background: linear-gradient(180deg, rgba(204, 189, 168, 0.98), rgba(190, 173, 149, 0.98));
+      color: var(--explorer-fg);
     }
-    .explorer-shell details {
-      background: var(--explorer-panel);
-      border: 1px solid var(--explorer-border);
-      border-radius: 12px;
-      padding: 10px 12px;
+    .explorer-shell .stage-grid {
+      max-height: min(58vh, 42rem);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
     }
-    .explorer-shell details + details {
-      margin-top: 8px;
-    }
-    .explorer-shell code {
-      background: #0d1116;
-      border: 1px solid var(--explorer-border);
-      padding: 2px 5px;
-      border-radius: 6px;
-    }
-    .explorer-shell table.small {
-      border-collapse: collapse;
-      width: 100%;
-      font-size: 12px;
-    }
-    .explorer-shell table.small th,
-    .explorer-shell table.small td {
-      border: 1px solid #2d3342;
-      padding: 4px 6px;
-      text-align: right;
-    }
-    .explorer-shell table.small th:first-child,
-    .explorer-shell table.small td:first-child {
-      text-align: left;
-    }
-    .explorer-shell .pill {
-      display: inline-block;
-      padding: 2px 8px;
-      border: 1px solid var(--explorer-border);
-      border-radius: 999px;
-      font-size: 11px;
+    .explorer-shell .comparison-legend {
+      display: grid;
+      gap: 0.35rem;
       color: var(--explorer-muted);
-      background: transparent;
+      font-size: 0.8rem;
+      line-height: 1.6;
+    }
+    .explorer-shell .equation-block {
+      padding: 0.85rem 1rem;
+      border-radius: 14px;
+      border: 1px solid rgba(239, 180, 99, 0.22);
+      background: linear-gradient(180deg, rgba(239, 180, 99, 0.1), rgba(239, 180, 99, 0.04));
+      color: #6c4a18;
+      font-size: 0.82rem;
+      line-height: 1.6;
+    }
+    .explorer-shell .analysis-stack,
+    .explorer-shell .guide-list,
+    .explorer-shell .faq-stack {
+      display: grid;
+      gap: 0.75rem;
+    }
+    .explorer-shell .guide-item {
+      display: grid;
+      grid-template-columns: 2rem minmax(0, 1fr);
+      gap: 0.75rem;
+      align-items: start;
+      padding: 0.9rem;
+      border-radius: 14px;
+      border: 1px solid rgba(92, 72, 52, 0.1);
+      background: rgba(255, 255, 255, 0.6);
+    }
+    .explorer-shell .guide-item-label {
+      color: var(--explorer-stage-muted);
+      font-family: var(--font-ui);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .explorer-shell .guide-item-value {
+      margin-top: 0.25rem;
+      color: var(--explorer-fg);
+      font-size: 1.02rem;
+      line-height: 1.3;
+    }
+    .explorer-shell .guide-item-note {
+      margin-top: 0.28rem;
+      color: var(--explorer-stage-muted);
+      font-size: 0.82rem;
+      line-height: 1.58;
+    }
+    .explorer-shell .spark-wrap {
+      padding: 0.7rem 0.8rem;
+      border-radius: 14px;
+      border: 1px solid rgba(92, 72, 52, 0.1);
+      background: rgba(255, 255, 255, 0.56);
+      overflow-x: auto;
     }
     .explorer-shell .spark {
       width: 260px;
       height: 50px;
       display: block;
     }
-    .explorer-shell .blog {
-      line-height: 1.6;
-    }
-    .explorer-shell .blog h2 {
-      margin: 0 0 10px;
-    }
-    .explorer-shell .blog p {
-      margin: 10px 0;
-    }
-    .explorer-shell .blog ul {
-      padding-left: 20px;
-      margin: 10px 0 10px 18px;
-      color: var(--explorer-muted);
-    }
-    .explorer-shell .blog li {
-      margin-bottom: 6px;
-    }
-    .explorer-shell .controls-grid {
+    .explorer-shell .inspector-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 8px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
     }
-    .explorer-shell .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 12px;
-    }
-    .explorer-shell .summary-card {
-      margin-bottom: 0;
-    }
-    .explorer-shell .summary-kicker {
-      display: inline-block;
-      font-size: 10px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--ring-thick);
-    }
-    .explorer-shell .mental-strip {
-      display: grid;
-      gap: 8px;
-      margin-top: 12px;
-    }
-    .explorer-shell .mental-step {
-      display: grid;
-      grid-template-columns: 28px minmax(0, 1fr);
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: var(--explorer-panel);
-      border: 1px solid var(--explorer-border);
-    }
-    .explorer-shell .step-num {
-      width: 28px;
-      height: 28px;
-      border-radius: 999px;
-      border: 1px solid rgba(104, 198, 193, 0.45);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+    .explorer-shell table.small {
+      width: 100%;
+      border-collapse: collapse;
       font-size: 12px;
-      color: #d8faf7;
-      background: rgba(104, 198, 193, 0.14);
     }
-    .explorer-shell .step-title {
-      font-size: 12px;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--explorer-muted);
+    .explorer-shell table.small th,
+    .explorer-shell table.small td {
+      border: 1px solid rgba(92, 72, 52, 0.1);
+      padding: 0.42rem 0.52rem;
+      text-align: right;
     }
-    .explorer-shell .step-value {
-      margin-top: 3px;
-      font-size: 17px;
-      font-weight: 700;
-      color: var(--explorer-fg);
-    }
-    .explorer-shell .step-detail {
-      margin-top: 4px;
-      font-size: 12px;
-      line-height: 1.5;
-      color: var(--explorer-muted);
-    }
-    .explorer-shell .status-banner {
-      margin-top: 12px;
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: linear-gradient(180deg, rgba(104, 198, 193, 0.12), rgba(104, 198, 193, 0.05));
-      border: 1px solid rgba(104, 198, 193, 0.32);
-      color: var(--explorer-fg);
-      line-height: 1.55;
-      font-size: 13px;
-    }
-    .explorer-shell .answer-block {
-      display: flex;
-      align-items: baseline;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin: 10px 0 0;
-    }
-    .explorer-shell .answer-number {
-      font-size: 28px;
-      line-height: 1;
-      font-weight: 700;
-      color: #fff7eb;
-    }
-    .explorer-shell .summary-inline {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 10px;
-    }
-    .explorer-shell .ctrl-block {
-      background: var(--explorer-panel);
-      border: 1px solid var(--explorer-border);
-      border-radius: 12px;
-      padding: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .explorer-shell .ctrl-title {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--explorer-muted);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .explorer-shell .ctrl-content {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      align-items: center;
-    }
-    .explorer-shell .ctrl-content select,
-    .explorer-shell .ctrl-content input[type="range"],
-    .explorer-shell .ctrl-content input[type="checkbox"] {
-      flex: 1;
-    }
-    .explorer-shell .ctrl-note {
-      font-size: 10px;
-      color: var(--explorer-muted);
-    }
-    .explorer-shell .tutorials {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 8px;
-    }
-    .explorer-shell .tutorial-btn {
-      border: 1px solid var(--explorer-border);
-      background: #1a2028;
-      color: var(--explorer-fg);
+    .explorer-shell table.small th:first-child,
+    .explorer-shell table.small td:first-child {
       text-align: left;
-      padding: 8px 10px;
-      border-radius: 12px;
-      cursor: pointer;
-      font-size: 13px;
-      line-height: 1.3;
-    }
-    .explorer-shell .tutorial-btn.active {
-      border-color: var(--ring-thick);
-      box-shadow: 0 0 0 1px var(--ring-thick) inset;
-      background: #1f2d34;
-    }
-    .explorer-shell .tutorial-title {
-      font-weight: 600;
-      display: block;
-    }
-    .explorer-shell .tutorial-desc {
-      display: block;
-      font-size: 12px;
-      color: var(--explorer-muted);
-      margin-top: 2px;
-    }
-    .explorer-shell .tutorial-note {
-      margin-top: 10px;
-      font-size: 13px;
-      color: var(--explorer-muted);
-      background: var(--explorer-panel);
-      border: 1px solid var(--explorer-border);
-      border-radius: 12px;
-      padding: 10px 12px;
-      line-height: 1.5;
-    }
-    .explorer-shell .info-tip {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 16px;
-      height: 16px;
-      border: 1px solid var(--explorer-border);
-      border-radius: 50%;
-      font-size: 11px;
-      color: var(--explorer-muted);
-      cursor: help;
-    }
-    .explorer-shell .btn.mini {
-      padding: 4px 8px;
-      font-size: 11px;
-    }
-    .explorer-shell .layout-shell {
-      display: grid;
-      grid-template-columns: var(--layout-cols, 320px minmax(420px, 1fr) 320px);
-      gap: 14px;
-      align-items: start;
-    }
-    .explorer-shell .side-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      transition: width 0.22s ease, opacity 0.22s ease;
-      min-width: 0;
-    }
-    .explorer-shell .side-panel.closed {
-      width: 0;
-      opacity: 0;
-      pointer-events: none;
-    }
-    .explorer-shell .side-panel .card {
-      background: var(--explorer-card-soft);
-    }
-    .explorer-shell .grid-center {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      position: relative;
-    }
-    .explorer-shell .panel-toggles {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .explorer-shell .edge-toggle {
-      font-size: 12px;
-      border: 1px dashed var(--explorer-border);
-      background: var(--explorer-panel);
-      color: var(--explorer-muted);
-      border-radius: 10px;
-      padding: 6px 10px;
-      cursor: pointer;
-    }
-    .explorer-shell .col-stack > .card + .card {
-      margin-top: 14px;
     }
     .explorer-shell .preset-flash {
       animation: presetFlash 0.8s ease;
     }
     @keyframes presetFlash {
-      0% { box-shadow: 0 0 0 0 rgba(104, 198, 193, 0.35); }
-      50% { box-shadow: 0 0 0 14px rgba(104, 198, 193, 0.12); }
+      0% { box-shadow: 0 0 0 0 rgba(104, 198, 193, 0.28); }
+      50% { box-shadow: 0 0 0 16px rgba(104, 198, 193, 0.1); }
       100% { box-shadow: 0 0 0 0 rgba(104, 198, 193, 0); }
     }
     .explorer-shell .computed-flash {
@@ -558,312 +898,20 @@ const companionNote = page.data.notes?.companions;
       40% { box-shadow: 0 0 0 12px rgba(239, 180, 99, 0.12); }
       100% { box-shadow: 0 0 0 0 rgba(239, 180, 99, 0); }
     }
-    .explorer-shell .json-block {
-      background: #0d1116;
-      border: 1px solid var(--explorer-border);
-      border-radius: 10px;
-      padding: 8px;
-      font-family: "SFMono-Regular", Consolas, Menlo, monospace;
-      font-size: 12px;
-      color: var(--explorer-muted);
-      overflow: auto;
-      line-height: 1.35;
-    }
-    .explorer-shell .guide-details summary {
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 14px;
-    }
-    .explorer-shell .distill-shell {
-      display: grid;
-      gap: 18px;
-    }
-    .explorer-shell .story-intro {
-      background:
-        linear-gradient(180deg, rgba(39, 46, 57, 0.92), rgba(22, 26, 32, 0.94)),
-        var(--explorer-card);
-      border: 1px solid rgba(104, 198, 193, 0.18);
-      border-radius: 24px;
-      padding: 18px;
-      box-shadow: 0 22px 48px rgba(0, 0, 0, 0.25);
-    }
-    .explorer-shell .story-intro-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 0.85fr);
-      gap: 18px;
-      align-items: start;
-    }
-    .explorer-shell .intro-title {
-      margin: 6px 0 0;
-      font-size: clamp(1.7rem, 2.4vw, 2.4rem);
-      line-height: 1.08;
-      letter-spacing: -0.03em;
-      color: var(--explorer-fg);
-    }
-    .explorer-shell .intro-panel {
-      display: grid;
-      gap: 10px;
-      align-content: start;
-    }
-    .explorer-shell .intro-panel-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: start;
-      gap: 10px;
-    }
-    .explorer-shell .distill-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1.2fr) minmax(20rem, 0.8fr);
-      gap: 18px;
-      align-items: start;
-    }
-    .explorer-shell .stage-column {
-      position: relative;
-      min-width: 0;
-    }
-    .explorer-shell .stage-frame {
-      position: sticky;
-      top: 1rem;
-      display: grid;
-      gap: 14px;
-      padding: 18px;
-      background:
-        radial-gradient(circle at top left, rgba(104, 198, 193, 0.08), transparent 28%),
-        linear-gradient(180deg, rgba(25, 29, 36, 0.98), rgba(14, 17, 24, 0.98));
-      border: 1px solid rgba(104, 198, 193, 0.22);
-      border-radius: 24px;
-      box-shadow: 0 24px 52px rgba(0, 0, 0, 0.28);
-    }
-    .explorer-shell .stage-head {
-      display: grid;
-      gap: 10px;
-    }
-    .explorer-shell .stage-head-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: start;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .explorer-shell .stage-title {
-      margin: 4px 0 0;
-      font-size: clamp(1.35rem, 2vw, 1.9rem);
-      line-height: 1.12;
-      letter-spacing: -0.03em;
-    }
-    .explorer-shell .stage-copy {
-      margin: 0;
-      color: #efe7dc;
-      font-size: 1rem;
-      line-height: 1.6;
-    }
-    .explorer-shell .analysis-switcher {
-      display: grid;
-      gap: 12px;
-      padding: 12px;
-      border-radius: 18px;
-      background: rgba(18, 21, 25, 0.88);
-      border: 1px solid var(--explorer-border);
-    }
-    .explorer-shell .focus-panel {
-      display: grid;
-      gap: 8px;
-    }
-    .explorer-shell .focus-chip-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .explorer-shell .stage-summary-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-    }
-    .explorer-shell .stage-summary {
-      display: grid;
-      gap: 6px;
-      padding: 12px;
-      border-radius: 18px;
-      border: 1px solid var(--explorer-border);
-      background: rgba(19, 24, 31, 0.92);
-    }
-    .explorer-shell .stage-summary.primary {
-      background: linear-gradient(180deg, rgba(104, 198, 193, 0.16), rgba(104, 198, 193, 0.05));
-    }
-    .explorer-shell .stage-summary.accent {
-      background: linear-gradient(180deg, rgba(239, 180, 99, 0.16), rgba(239, 180, 99, 0.05));
-    }
-    .explorer-shell .stage-summary.quiet {
-      background: rgba(28, 33, 42, 0.95);
-    }
-    .explorer-shell .stage-summary-label {
-      font-size: 10px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--explorer-muted);
-    }
-    .explorer-shell .stage-summary-value {
-      font-size: clamp(1.35rem, 2vw, 2rem);
-      font-weight: 700;
-      line-height: 1;
-      color: #fff7eb;
-    }
-    .explorer-shell .stage-summary-note {
-      font-size: 12px;
-      line-height: 1.55;
-      color: var(--explorer-muted);
-    }
-    .explorer-shell .grid-card,
-    .explorer-shell .analysis-card {
-      display: grid;
-      gap: 12px;
-      padding: 14px;
-      border-radius: 20px;
-      background: rgba(19, 24, 31, 0.94);
-      border: 1px solid var(--explorer-border);
-    }
-    .explorer-shell .grid-card-head,
-    .explorer-shell .analysis-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: start;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .explorer-shell .grid-card-title {
-      margin: 4px 0 0;
-      font-size: 1.1rem;
-      line-height: 1.2;
-    }
-    .explorer-shell .grid-card-copy,
-    .explorer-shell .analysis-copy {
-      color: var(--explorer-muted);
-      font-size: 13px;
-      line-height: 1.6;
-      margin: 0;
-    }
-    .explorer-shell .grid-meta-strip {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      align-items: center;
-    }
-    .explorer-shell .stage-grid {
-      max-height: min(48vh, 38rem);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-    }
-    .explorer-shell .comparison-legend {
-      display: grid;
-      gap: 4px;
-      color: var(--explorer-muted);
-      font-size: 12px;
-      line-height: 1.6;
-    }
-    .explorer-shell .equation-block {
-      padding: 10px 12px;
-      border-radius: 14px;
-      border: 1px solid rgba(239, 180, 99, 0.22);
-      background: linear-gradient(180deg, rgba(239, 180, 99, 0.1), rgba(239, 180, 99, 0.04));
-      color: #fff1d4;
-      font-size: 12px;
-      line-height: 1.55;
-    }
-    .explorer-shell .story-column {
-      display: grid;
-      gap: 14px;
-      min-width: 0;
-    }
-    .explorer-shell .story-section {
-      display: grid;
-      grid-template-columns: 40px minmax(0, 1fr);
-      gap: 14px;
-      padding: 16px;
-      border-radius: 22px;
-      background: linear-gradient(180deg, rgba(29, 34, 42, 0.92), rgba(18, 22, 29, 0.96));
-      border: 1px solid rgba(104, 198, 193, 0.12);
-      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.2);
-    }
-    .explorer-shell .story-section-single {
-      grid-template-columns: 1fr;
-    }
-    .explorer-shell .story-index {
-      width: 36px;
-      height: 36px;
-      border-radius: 999px;
-      border: 1px solid rgba(104, 198, 193, 0.3);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(104, 198, 193, 0.12);
-      color: #d8faf7;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .explorer-shell .story-content {
-      display: grid;
-      gap: 12px;
-      min-width: 0;
-    }
-    .explorer-shell .story-eyebrow {
-      display: inline-block;
-      font-size: 10px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--ring-thick);
-      margin-bottom: 6px;
-    }
-    .explorer-shell .story-content h3 {
-      margin: 0;
-      font-size: 1.28rem;
-      line-height: 1.18;
-      letter-spacing: -0.02em;
-    }
-    .explorer-shell .story-copy {
-      margin: 0;
-      color: var(--explorer-muted);
-      line-height: 1.75;
-    }
-    .explorer-shell .story-note {
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: rgba(104, 198, 193, 0.08);
-      border: 1px solid rgba(104, 198, 193, 0.16);
-      color: var(--explorer-fg);
-      font-size: 13px;
-      line-height: 1.6;
-    }
-    .explorer-shell .faq-stack {
-      display: grid;
-      gap: 8px;
-    }
-    @media (max-width: 980px) {
-      .explorer-shell .story-intro-grid,
-      .explorer-shell .distill-layout {
+    @media (max-width: 1080px) {
+      .explorer-shell .explorer-hero,
+      .explorer-shell .workspace-layout,
+      .explorer-shell .inspector-grid {
         grid-template-columns: 1fr;
       }
-      .explorer-shell .stage-frame {
-        position: static;
+      .explorer-shell .toolbar-group-note {
+        grid-column: auto;
       }
-      .explorer-shell .stage-summary-grid {
-        grid-template-columns: 1fr;
+      .explorer-shell .workspace-main {
+        order: 1;
       }
-      .explorer-shell .story-section {
-        grid-template-columns: 1fr;
-      }
-      .explorer-shell .story-index {
-        display: none;
-      }
-      .explorer-shell .layout-shell {
-        grid-template-columns: 1fr !important;
-      }
-      .explorer-shell .side-panel,
-      .explorer-shell .side-panel.closed {
-        width: 100%;
-        opacity: 1;
-        pointer-events: auto;
-      }
-      .explorer-shell .panel-toggles {
-        justify-content: flex-end;
+      .explorer-shell .control-column {
+        order: 2;
       }
     }
     @media (max-width: 720px) {
@@ -871,13 +919,24 @@ const companionNote = page.data.notes?.companions;
         --grid-axis-w: 68px;
         --grid-cell-w: 42px;
       }
-      .explorer-shell .wrap {
-        padding: 12px;
+      .explorer-shell .hero-title {
+        font-size: clamp(1.55rem, 8vw, 2.15rem);
       }
-      .explorer-shell .story-intro,
-      .explorer-shell .stage-frame,
-      .explorer-shell .story-section {
-        border-radius: 20px;
+      .explorer-shell .hero-card,
+      .explorer-shell .panel-card,
+      .explorer-shell .support-card,
+      .explorer-shell .workspace-toolbar,
+      .explorer-shell .stage-panel,
+      .explorer-shell .grid-card,
+      .explorer-shell .analysis-card {
+        padding: 0.95rem;
+        border-radius: 18px;
+      }
+      .explorer-shell .control-grid,
+      .explorer-shell .toolbar-grid,
+      .explorer-shell .scene-fact-grid,
+      .explorer-shell .stage-summary-grid {
+        grid-template-columns: 1fr;
       }
       .explorer-shell .stage-grid {
         max-height: 22rem;

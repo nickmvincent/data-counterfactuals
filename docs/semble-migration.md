@@ -42,7 +42,12 @@ If a field is missing, the loader falls back to Semble card metadata when possib
 
 ## Build-time config
 
-Set one of these:
+The repo now supports two layers of Semble config:
+
+1. Checked-in public defaults in `semble.config.json`
+2. Optional per-machine overrides via environment variables or `.env.local`
+
+Set one of these in either place:
 
 - `SEMBLE_PROFILE_IDENTIFIER`
   Example: `nickmvincent.bsky.social`
@@ -60,6 +65,8 @@ Optional filters:
   Defaults to `tmp/semble-cache.json`.
 - `SEMBLE_CACHE_POLICY`
   Defaults to `network-first`. Other useful values are `refresh` and `cache-only`.
+
+If you use `SEMBLE_PROFILE_IDENTIFIER`, you do not need to maintain a second list of collection names in the repo. The site imports every public collection for that profile unless you deliberately narrow the source with `SEMBLE_COLLECTION_AT_URIS` or `SEMBLE_COLLECTION_NAME_PREFIX`.
 
 ## Local cache
 
@@ -80,19 +87,30 @@ This is useful for two things:
 Examples:
 
 ```bash
+# Inspect the resolved Semble source and cache
+npm run semble:status
+
+# Inspect or reorganize Semble collections from this repo
+npm run semble:manage -- list-collections
+npm run semble:manage -- show-collection 1
+npm run semble:manage -- update-collection 1 --name "Data Governance"
+npm run semble:manage -- move-card --from 1 --to 2 --card 3
+
 # Refresh the cache from live Semble data
-SEMBLE_PROFILE_IDENTIFIER=nickmvincent.bsky.social SEMBLE_CACHE_POLICY=refresh npm run build
+npm run build:refresh
 
 # Use the cached snapshot while offline
-SEMBLE_PROFILE_IDENTIFIER=nickmvincent.bsky.social SEMBLE_CACHE_POLICY=cache-only npm run dev
+npm run dev:offline
 ```
 
 ## Ongoing workflow
 
 1. Edit papers, tags, and collection membership in Semble.
-2. Keep the build env pointed at Semble with `SEMBLE_PROFILE_IDENTIFIER` or `SEMBLE_COLLECTION_AT_URIS`.
-3. Run a normal build/dev session, or use `SEMBLE_CACHE_POLICY=refresh`, to update the local cache snapshot.
-4. Rebuild and redeploy this site whenever you want those Semble edits reflected here.
+2. Keep the repo default source in `semble.config.json`, and only use env vars when you need local overrides.
+3. Run `npm run build:refresh` to update the local cache snapshot after live Semble edits.
+4. Use plain `npm run dev` / `npm run build` for normal work. They will use the configured source and fall back to cache if the live fetch fails.
+5. Use `npm run dev:offline` or `npm run build:offline` when you want deterministic cache-only work for travel, CI debugging, or AI agents.
+6. Rebuild and redeploy this site whenever you want those Semble edits reflected here.
 
 The repo-local markdown bibliography and paper-collection files have been removed so Semble stays the only source of truth.
 

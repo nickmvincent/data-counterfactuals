@@ -28,7 +28,7 @@ export interface Reference {
  */
 export async function loadReferences(options: { force?: boolean } = {}): Promise<Map<string, Reference>> {
   if (!isSembleConfigured()) {
-    throw new Error('Semble is not configured. Set SEMBLE_PROFILE_IDENTIFIER or SEMBLE_COLLECTION_AT_URIS.');
+    throw new Error('Semble is not configured. Set SEMBLE_PROFILE_IDENTIFIER or SEMBLE_COLLECTION_AT_URIS, or add defaults in semble.config.json.');
   }
 
   const dataset = await loadSembleDataset({ force: options.force });

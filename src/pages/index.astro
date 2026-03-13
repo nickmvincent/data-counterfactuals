@@ -21,78 +21,129 @@ const figures = page.data.figures ?? {};
   description={page.data.description}
 >
   <style is:global>
+    body:has(.start-page) {
+      background: linear-gradient(180deg, #fbf8f2 0%, #f4ede3 56%, #eee4d6 100%);
+    }
+    body:has(.start-page) .top-nav {
+      background: rgba(251, 247, 240, 0.84);
+      border-bottom-color: rgba(92, 72, 52, 0.08);
+      backdrop-filter: blur(10px);
+    }
     .start-page {
+      width: min(calc(100% - 2rem), calc(var(--measure) + 8rem));
       display: grid;
-      gap: 2.8rem;
+      gap: clamp(3rem, 5vw, 4.4rem);
+      padding-top: clamp(2rem, 4vw, 3.4rem);
     }
     .start-intro,
     .start-section {
-      max-width: var(--measure);
+      width: min(100%, var(--measure));
+      margin-inline: auto;
     }
     .start-intro {
       display: grid;
-      gap: 1rem;
+      gap: 1.15rem;
+      margin-bottom: 0;
+    }
+    .start-intro .page-eyebrow {
+      color: rgba(101, 90, 79, 0.86);
+    }
+    .start-intro .page-title {
+      max-width: 11ch;
+      font-size: clamp(2.55rem, 5.6vw, 4.3rem);
+      line-height: 0.98;
+      letter-spacing: -0.035em;
+    }
+    .start-intro .page-lede {
+      max-width: 40rem;
+      color: rgba(32, 26, 22, 0.84);
+      font-size: clamp(1.12rem, 1.5vw, 1.28rem);
+      line-height: 1.84;
+    }
+    .start-intro .intro-block {
+      max-width: 38rem;
     }
     .start-intro .intro-block p {
       margin: 0;
       color: var(--muted);
-      font-size: 1.02rem;
-      line-height: 1.82;
+      font-size: 1.04rem;
+      line-height: 1.92;
+    }
+    .start-section {
+      padding-top: 2.35rem;
+      border-top: 1px solid rgba(92, 72, 52, 0.14);
     }
     .start-section h2 {
-      margin: 0 0 0.9rem;
+      margin: 0 0 1rem;
       color: var(--fg);
       font-family: var(--font-display);
-      font-size: clamp(1.75rem, 2vw, 2.2rem);
-      line-height: 1.04;
+      font-size: clamp(1.6rem, 2vw, 1.98rem);
+      line-height: 1.12;
       letter-spacing: -0.02em;
     }
     .start-section p {
-      margin: 0 0 1.1rem;
+      margin: 0 0 1.15rem;
       color: var(--muted);
-      font-size: 1.04rem;
-      line-height: 1.86;
+      font-size: 1.05rem;
+      line-height: 1.92;
     }
     .start-section p:last-child {
       margin-bottom: 0;
     }
+    .start-page .essay-figure {
+      margin: 1.65rem 0 0;
+      padding: 1rem 0 0.15rem;
+      border: 0;
+      border-top: 1px solid rgba(92, 72, 52, 0.14);
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+    .start-page .note-label {
+      margin-bottom: 0.55rem;
+      color: rgba(101, 90, 79, 0.82);
+    }
     .start-page .mini-grid-wrap {
       display: grid;
-      gap: 0.85rem;
+      gap: 0.75rem;
       align-items: start;
+      width: 100%;
+      overflow-x: auto;
+      padding-bottom: 0.25rem;
     }
     .start-page .mini-grid {
-      gap: 4px;
-      width: fit-content;
+      gap: 3px;
+      width: max-content;
+      margin-inline: 0;
     }
     .start-page .mini-corner,
     .start-page .mini-row-label,
     .start-page .mini-col-label,
     .start-page .mini-cell {
-      border-radius: 14px;
+      border-radius: 10px;
     }
     .start-page .mini-corner {
       width: 58px;
       height: 42px;
-      background: rgba(255, 250, 243, 0.72);
-      border: 1px solid var(--border);
+      background: rgba(255, 250, 243, 0.5);
+      border: 1px solid rgba(92, 72, 52, 0.12);
     }
     .start-page .mini-col-label {
       min-width: 58px;
-      height: 42px;
+      height: 40px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: var(--font-ui);
-      font-size: 0.76rem;
-      color: var(--muted);
-      background: rgba(255, 250, 243, 0.88);
-      border: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: rgba(101, 90, 79, 0.9);
+      background: rgba(255, 250, 243, 0.56);
+      border: 1px solid rgba(92, 72, 52, 0.12);
     }
     .start-page .mini-col-label.active {
       color: var(--fg);
-      background: rgba(177, 79, 31, 0.12);
-      border-color: rgba(177, 79, 31, 0.22);
+      background: rgba(177, 79, 31, 0.08);
+      border-color: rgba(177, 79, 31, 0.16);
     }
     .start-page .mini-row-label {
       width: 58px;
@@ -100,17 +151,17 @@ const figures = page.data.figures ?? {};
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      padding-right: 0.9rem;
+      padding-right: 0.8rem;
       font-family: var(--font-ui);
-      font-size: 0.76rem;
-      color: var(--muted);
-      background: rgba(255, 250, 243, 0.88);
-      border: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: rgba(101, 90, 79, 0.9);
+      background: rgba(255, 250, 243, 0.56);
+      border: 1px solid rgba(92, 72, 52, 0.12);
     }
     .start-page .mini-row-label.active {
       color: var(--fg);
-      background: rgba(47, 107, 111, 0.1);
-      border-color: rgba(47, 107, 111, 0.22);
+      background: rgba(47, 107, 111, 0.08);
+      border-color: rgba(47, 107, 111, 0.16);
     }
     .start-page .mini-cell {
       width: 58px;
@@ -118,15 +169,13 @@ const figures = page.data.figures ?? {};
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
+      cursor: default;
       position: relative;
-      transition: transform 180ms ease, box-shadow 180ms ease;
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      transition: filter 180ms ease, opacity 180ms ease;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
     }
     .start-page .mini-cell:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 18px rgba(62, 45, 28, 0.12);
-      z-index: 2;
+      filter: saturate(0.94);
     }
     .start-page .mini-cell.ring-highlight {
       outline: 2px solid var(--ring-thick);
@@ -142,7 +191,7 @@ const figures = page.data.figures ?? {};
     }
     .start-page .mini-val {
       font-family: var(--font-ui);
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 700;
       color: #fff;
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -151,44 +200,69 @@ const figures = page.data.figures ?? {};
     .start-page .mini-tooltip {
       color: var(--muted);
       font-family: var(--font-ui);
-      font-size: 0.92rem;
-      line-height: 1.6;
+      font-size: 0.85rem;
+      line-height: 1.64;
     }
     .start-page .mini-tooltip {
       margin-top: 0;
-      padding: 0.8rem 0.95rem;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      background: rgba(255, 250, 243, 0.8);
+      padding: 0.72rem 0.9rem;
+      border-radius: 12px;
+      border: 1px solid rgba(92, 72, 52, 0.12);
+      background: rgba(255, 250, 243, 0.92);
+      max-width: min(100%, 34rem);
     }
     .family-list {
       list-style: none;
       padding: 0;
-      margin: 1.25rem 0 0;
+      margin: 1.45rem 0 0;
       display: grid;
-      gap: 0.15rem;
+      gap: 0;
     }
     .family-item {
       padding: 1rem 0;
-      border-top: 1px solid var(--border);
+      border-top: 1px solid rgba(92, 72, 52, 0.12);
     }
     .family-item:first-child {
       padding-top: 0;
       border-top: 0;
     }
     .family-item h3 {
-      margin: 0 0 0.35rem;
-      font-family: var(--font-display);
-      font-size: 1.24rem;
-      line-height: 1.16;
+      margin: 0 0 0.3rem;
+      font-family: var(--font-ui);
+      font-size: 0.95rem;
+      line-height: 1.4;
+      letter-spacing: 0.02em;
       color: var(--fg);
     }
     .family-item p {
       margin: 0;
       color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.82;
     }
     .start-links {
-      margin-top: 1.2rem;
+      margin-top: 1.45rem;
+    }
+    .start-links a {
+      font-family: var(--font-body);
+      font-size: 1.08rem;
+      line-height: 1.38;
+    }
+    .start-links p {
+      font-family: var(--font-body);
+      font-size: 0.98rem;
+      line-height: 1.78;
+    }
+
+    @media (max-width: 780px) {
+      .start-page {
+        width: min(calc(100% - 1.25rem), calc(var(--measure) + 8rem));
+        padding-top: 1.25rem;
+        gap: 3rem;
+      }
+      .start-section {
+        padding-top: 2rem;
+      }
     }
   </style>
 
@@ -220,6 +294,7 @@ const figures = page.data.figures ?? {};
           ]}
           highlightRow={0}
           compareRow={1}
+          interactive={false}
           caption={figures.leave_one_out?.caption}
         />
       </div>
@@ -241,6 +316,7 @@ const figures = page.data.figures ?? {};
             [0.92, 0.88, 0.85, 0.82],
             [0.78, 0.55, 0.82, 0.8]
           ]}
+          interactive={false}
           caption={figures.grid?.caption}
         />
       </div>

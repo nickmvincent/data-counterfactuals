@@ -28,7 +28,7 @@ export interface PaperCollection {
 
 export async function loadPaperCollections(): Promise<PaperCollection[]> {
   if (!isSembleConfigured()) {
-    throw new Error('Semble is not configured. Set SEMBLE_PROFILE_IDENTIFIER or SEMBLE_COLLECTION_AT_URIS.');
+    throw new Error('Semble is not configured. Set SEMBLE_PROFILE_IDENTIFIER or SEMBLE_COLLECTION_AT_URIS, or add defaults in semble.config.json.');
   }
 
   const dataset = await loadSembleDataset();

@@ -1,23 +1,15 @@
 ---
 import Layout from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
-import networkData from "../data/network.json";
 import { getRequiredPageEntry, getSection, renderMarkdownBlocks, splitMarkdownSections } from "../lib/page-content";
 
 const page = await getRequiredPageEntry("about");
 const sections = splitMarkdownSections(page.body);
 const introBlocks = renderMarkdownBlocks(page.data.intro ?? []);
-const githubUrl = networkData.links?.github;
-const discussions = networkData.discussions ?? [];
-const relatedProjects = networkData.relatedProjects ?? [];
 const siteParts = page.data.site_parts ?? [];
 const headerNote = page.data.notes?.header;
 const claimNote = page.data.notes?.claim;
-const contributingNote = page.data.notes?.contributing;
-const relatedNote = page.data.notes?.related;
 const firstSection = getSection(sections, "what-the-project-is-trying-to-make-easier");
-const responseSection = getSection(sections, "ways-to-respond");
-const projectsSection = getSection(sections, "projects-in-the-same-orbit");
 ---
 
 <Layout
@@ -43,7 +35,6 @@ const projectsSection = getSection(sections, "projects-in-the-same-orbit");
         {renderMarkdownBlocks(headerNote?.body ?? []).map((html) => (
           <div set:html={html}></div>
         ))}
-        {githubUrl && <p><a href={githubUrl}>Follow the project on GitHub</a></p>}
       </aside>
     </header>
 
@@ -66,58 +57,6 @@ const projectsSection = getSection(sections, "projects-in-the-same-orbit");
       <aside class="essay-side">
         {claimNote?.label && <p class="note-label">{claimNote.label}</p>}
         {renderMarkdownBlocks(claimNote?.body ?? []).map((html) => (
-          <div set:html={html}></div>
-        ))}
-      </aside>
-    </section>
-
-    <section class="essay-section">
-      <div class="essay-main">
-        <h2>{responseSection.title}</h2>
-        <div set:html={responseSection.html}></div>
-
-        {discussions.length ? (
-          <div class="reference-grid">
-            {discussions.map((discussion) => (
-              <article class="reference-card">
-                <h3><a href={discussion.url} target="_blank" rel="noopener">{discussion.label}</a></h3>
-                <p>{discussion.description}</p>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div class="empty-state">Discussion links have not been added yet.</div>
-        )}
-      </div>
-
-      <aside class="essay-side">
-        {contributingNote?.label && <p class="note-label">{contributingNote.label}</p>}
-        {renderMarkdownBlocks(contributingNote?.body ?? []).map((html) => (
-          <div set:html={html}></div>
-        ))}
-      </aside>
-    </section>
-
-    <section class="essay-section">
-      <div class="essay-main">
-        <h2>{projectsSection.title}</h2>
-        {relatedProjects.length ? (
-          <div class="reference-grid">
-            {relatedProjects.map((project) => (
-              <article class="reference-card">
-                <h3><a href={project.website} target="_blank" rel="noopener">{project.title}</a></h3>
-                <p>{project.name === project.title ? "A neighboring project with overlapping concerns." : project.name}</p>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div class="empty-state">No related projects have been listed yet.</div>
-        )}
-      </div>
-
-      <aside class="essay-side">
-        {relatedNote?.label && <p class="note-label">{relatedNote.label}</p>}
-        {renderMarkdownBlocks(relatedNote?.body ?? []).map((html) => (
           <div set:html={html}></div>
         ))}
       </aside>

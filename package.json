@@ -6,10 +6,15 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
+    "dev:offline": "node scripts/semble-run.mjs dev cache-only",
     "start": "astro dev",
     "build": "astro build",
+    "build:offline": "node scripts/semble-run.mjs build cache-only",
+    "build:refresh": "node scripts/semble-run.mjs build refresh",
     "preview": "astro preview",
     "check": "astro check",
+    "semble:status": "node scripts/semble-status.mjs",
+    "semble:manage": "node scripts/semble-client.mjs",
     "test": "node --test"
   },
   "keywords": [],
@@ -24,6 +29,8 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@atproto/identity": "^0.4.12",
+    "@cosmik.network/semble-pds-client": "^0.0.9",
     "gray-matter": "^4.0.3",
     "htm": "^3.1.1",
     "js-yaml": "^4.1.1",
