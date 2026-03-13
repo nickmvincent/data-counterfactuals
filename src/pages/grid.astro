@@ -75,7 +75,7 @@ const companionNote = page.data.notes?.companions;
       max-width: 1180px;
       margin: 0 auto;
     }
-    .explorer-shell .explorer-hero {
+    .explorer-shell .workspace-header {
       display: grid;
       grid-template-columns: minmax(0, 1.18fr) minmax(20rem, 0.82fr);
       gap: clamp(1rem, 2vw, 1.6rem);
@@ -90,13 +90,85 @@ const companionNote = page.data.notes?.companions;
         inset 0 1px 0 rgba(255, 255, 255, 0.82),
         0 22px 42px rgba(88, 64, 42, 0.08);
     }
-    .explorer-shell .hero-copy,
-    .explorer-shell .hero-stack,
+    .explorer-shell .header-main,
+    .explorer-shell .preset-dock,
     .explorer-shell .control-column,
     .explorer-shell .workspace-main {
       display: grid;
       gap: 1rem;
       min-width: 0;
+    }
+    .explorer-shell .header-main {
+      align-content: start;
+    }
+    .explorer-shell .header-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+    .explorer-shell .header-command {
+      display: grid;
+      gap: 0.45rem;
+      padding: 1rem 1.05rem;
+      border-radius: 16px;
+      border: 1px solid rgba(92, 72, 52, 0.12);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0)),
+        rgba(255, 252, 248, 0.74);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+    }
+    .explorer-shell .header-command-label,
+    .explorer-shell .header-status-label {
+      color: var(--explorer-muted);
+      font-family: var(--font-ui);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .explorer-shell .header-command-line {
+      color: var(--explorer-fg);
+      font-family: var(--font-ui);
+      font-size: clamp(1rem, 1.8vw, 1.35rem);
+      font-weight: 650;
+      line-height: 1.28;
+      letter-spacing: -0.03em;
+    }
+    .explorer-shell .header-command-trace {
+      color: var(--explorer-muted);
+      font-family: var(--font-ui);
+      font-size: 0.82rem;
+      line-height: 1.55;
+    }
+    .explorer-shell .header-status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.7rem;
+    }
+    .explorer-shell .header-status {
+      display: grid;
+      gap: 0.22rem;
+      padding: 0.88rem 0.92rem;
+      border-radius: 14px;
+      border: 1px solid rgba(92, 72, 52, 0.1);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)),
+        rgba(255, 252, 247, 0.7);
+    }
+    .explorer-shell .header-status-accent {
+      background:
+        linear-gradient(180deg, rgba(239, 180, 99, 0.18), rgba(239, 180, 99, 0.04)),
+        rgba(255, 250, 240, 0.78);
+      border-color: rgba(239, 180, 99, 0.24);
+    }
+    .explorer-shell .header-status-value {
+      color: var(--explorer-fg);
+      font-family: var(--font-ui);
+      font-size: 0.96rem;
+      font-weight: 650;
+      line-height: 1.3;
     }
     .explorer-shell .summary-kicker {
       display: inline-block;
@@ -106,27 +178,12 @@ const companionNote = page.data.notes?.companions;
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
-    .explorer-shell .hero-title,
     .explorer-shell .card-title,
     .explorer-shell .panel-title,
     .explorer-shell .stage-title,
     .explorer-shell .grid-card-title {
       font-family: var(--font-ui);
       font-weight: 650;
-    }
-    .explorer-shell .hero-title {
-      margin: 0;
-      color: var(--explorer-fg);
-      font-size: clamp(1.85rem, 3vw, 2.7rem);
-      line-height: 1.02;
-      letter-spacing: -0.04em;
-    }
-    .explorer-shell .hero-lede {
-      margin: 0;
-      max-width: 38rem;
-      color: var(--explorer-muted);
-      font-size: 0.96rem;
-      line-height: 1.72;
     }
     .explorer-shell .hero-card,
     .explorer-shell .panel-card,
@@ -142,6 +199,13 @@ const companionNote = page.data.notes?.companions;
       box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.82),
         0 14px 26px rgba(88, 64, 42, 0.06);
+    }
+    .explorer-shell .preset-card {
+      align-content: start;
+      min-height: 100%;
+    }
+    .explorer-shell .preset-card-head {
+      align-items: center;
     }
     .explorer-shell .card-head,
     .explorer-shell .panel-head,
@@ -815,11 +879,124 @@ const companionNote = page.data.notes?.companions;
       font-size: 0.82rem;
       line-height: 1.6;
     }
-    .explorer-shell .analysis-stack,
-    .explorer-shell .guide-list,
+    .explorer-shell .inspector-stack,
+    .explorer-shell .dock-list,
     .explorer-shell .faq-stack {
       display: grid;
       gap: 0.75rem;
+    }
+    .explorer-shell .inspector-banner {
+      display: grid;
+      gap: 0.28rem;
+      padding: 0.9rem 0.95rem;
+      border-radius: 14px;
+      border: 1px solid rgba(92, 72, 52, 0.1);
+      background: rgba(255, 255, 255, 0.56);
+    }
+    .explorer-shell .inspector-banner-title {
+      color: var(--explorer-fg);
+      font-family: var(--font-ui);
+      font-size: 0.92rem;
+      font-weight: 650;
+    }
+    .explorer-shell .inspector-banner-copy {
+      color: var(--explorer-muted);
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+    .explorer-shell .inspector-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.72rem 0.82rem;
+      border-radius: 12px;
+      border: 1px solid rgba(92, 72, 52, 0.1);
+      background: rgba(255, 255, 255, 0.56);
+    }
+    .explorer-shell .inspector-key {
+      color: var(--explorer-muted);
+      font-family: var(--font-ui);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .explorer-shell .inspector-value {
+      color: var(--explorer-fg);
+      font-family: var(--font-ui);
+      font-size: 0.88rem;
+      font-weight: 600;
+      text-align: right;
+    }
+    .explorer-shell .dock-row {
+      display: grid;
+      gap: 0.45rem;
+      padding: 0.85rem 0.9rem;
+      border-radius: 14px;
+      border: 1px solid rgba(92, 72, 52, 0.1);
+      background: rgba(255, 255, 255, 0.56);
+    }
+    .explorer-shell .dock-row-head {
+      display: grid;
+      grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+      gap: 0.6rem;
+      align-items: center;
+    }
+    .explorer-shell .dock-row-index {
+      width: 1.5rem;
+      height: 1.5rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      background: rgba(164, 74, 29, 0.08);
+      border: 1px solid rgba(164, 74, 29, 0.14);
+      color: var(--explorer-accent);
+      font-family: var(--font-ui);
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .explorer-shell .dock-row-label {
+      color: var(--explorer-muted);
+      font-family: var(--font-ui);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .explorer-shell .dock-row-value {
+      color: var(--explorer-fg);
+      font-family: var(--font-ui);
+      font-size: 0.86rem;
+      font-weight: 600;
+      text-align: right;
+    }
+    .explorer-shell .dock-row-note {
+      color: var(--explorer-muted);
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+    .explorer-shell .dock-footer {
+      display: grid;
+      gap: 0.3rem;
+      padding: 0.9rem 0.95rem;
+      border-radius: 14px;
+      border: 1px solid rgba(164, 74, 29, 0.12);
+      background: linear-gradient(180deg, rgba(164, 74, 29, 0.05), rgba(164, 74, 29, 0.02));
+    }
+    .explorer-shell .dock-footer-label {
+      color: var(--explorer-muted);
+      font-family: var(--font-ui);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .explorer-shell .dock-footer-copy {
+      color: var(--explorer-fg);
+      font-size: 0.82rem;
+      line-height: 1.58;
     }
     .explorer-shell .guide-item {
       display: grid;
@@ -899,7 +1076,7 @@ const companionNote = page.data.notes?.companions;
       100% { box-shadow: 0 0 0 0 rgba(239, 180, 99, 0); }
     }
     @media (max-width: 1080px) {
-      .explorer-shell .explorer-hero,
+      .explorer-shell .workspace-header,
       .explorer-shell .workspace-layout,
       .explorer-shell .inspector-grid {
         grid-template-columns: 1fr;
@@ -918,9 +1095,6 @@ const companionNote = page.data.notes?.companions;
       .explorer-shell {
         --grid-axis-w: 68px;
         --grid-cell-w: 42px;
-      }
-      .explorer-shell .hero-title {
-        font-size: clamp(1.55rem, 8vw, 2.15rem);
       }
       .explorer-shell .hero-card,
       .explorer-shell .panel-card,

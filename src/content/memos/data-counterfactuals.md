@@ -1,5 +1,6 @@
 ---
-title: "Exploring Data Counterfactuals"
+order: 1
+title: "Introducing Data Counterfactuals"
 summary: "Many data-centric techniques in machine learning can be unified under the concept of 'data counterfactuals': how does changing data  affect model outcomes."
 date: '2024-01-01T00:00:00.000Z'
 visibility: public

@@ -15,6 +15,14 @@ const collectionsWithPapers = await Promise.all(
 
 const totalPapers = collectionsWithPapers.reduce((sum, collection) => sum + collection.papers.length, 0);
 const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const featuredCollectionSlugs = new Set([
+  "collective-action",
+  "influence",
+  "semivalues",
+  "scaling-laws",
+]);
+const isFeaturedCollection = (title: string) =>
+  featuredCollectionSlugs.has(slugify(title.replace(/^dc:\s*/i, "")));
 const page = await getRequiredPageEntry("collections");
 const sections = splitMarkdownSections(page.body);
 const introSection = getSection(sections, "start-broad-then-follow-the-thread-you-need");
@@ -76,6 +84,12 @@ const sectionNote = page.data.notes?.section;
       color: var(--muted);
       line-height: 1.82;
       font-size: 1.03rem;
+    }
+    .collection-flags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.55rem;
     }
     .paper-list {
       list-style: none;
@@ -173,6 +187,11 @@ const sectionNote = page.data.notes?.section;
             <div>
               <p class="section-kicker">Collection</p>
               <h2 class="section-title">{collection.title}</h2>
+              {isFeaturedCollection(collection.title) && (
+                <div class="collection-flags">
+                  <span class="pill">Most directly connected</span>
+                </div>
+              )}
             </div>
             <span class="pill">{collection.papers.length} papers</span>
           </div>

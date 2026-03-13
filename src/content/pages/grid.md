@@ -8,8 +8,8 @@ quick_tips:
   - The focus chips do not choose the row. They choose which point or group the current question is talking about.
   - Operator view applies toy edits like poisoning or noise; Real world snaps back to the untouched reference grid.
 companion_links:
-  - title: Read the memo for the broader argument
-    href: /memo
+  - title: Read the main memo for the broader argument
+    href: /memo/data-counterfactuals
   - title: Open the glossary for fast definitions
     href: /glossary
   - title: Try the 3D view
@@ -24,7 +24,7 @@ notes:
     label: Useful companions
     body:
       - |
-        Keep the memo or glossary nearby if you want the longer framing or a quick definition while you click through the presets.
+        Keep the main memo or glossary nearby if you want the longer framing or a quick definition while you click through the presets.
 ---
 
 ## How to read the toy

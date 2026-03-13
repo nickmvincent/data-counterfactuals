@@ -1,5 +1,6 @@
 ---
-title: "Data Counterfactual Formalisms, Side by Side"
+order: 2
+title: "Formalisms"
 summary: "A draft memo lining up several tasks that fit the data counterfactuals frame: influence, valuation, active learning, distillation, unlearning, privacy, and poisoning."
 date: '2026-03-12T00:00:00.000Z'
 visibility: public

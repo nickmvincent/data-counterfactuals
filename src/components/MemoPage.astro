@@ -1,0 +1,64 @@
+---
+import type { CollectionEntry } from "astro:content";
+import Layout from "../layouts/Base.astro";
+import Nav from "./Nav.astro";
+import { countWords, estimateReadMinutes, numberedMemoTitle } from "../lib/memos";
+
+interface Props {
+  memo: CollectionEntry<"memos">;
+  Content: any;
+  eyebrow?: string;
+}
+
+const { memo, Content, eyebrow = "Memo" } = Astro.props;
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+
+const wordCount = countWords(memo.body);
+const readMinutes = estimateReadMinutes(wordCount);
+const pageTitle = numberedMemoTitle(memo.data.title, memo.data.order);
+---
+
+<Layout
+  title={memo.data.title}
+  description={memo.data.summary || "A memo in the Data Counterfactuals project."}
+>
+  <style>
+    .memo-page {
+      display: grid;
+      gap: 2rem;
+    }
+    .memo-page .page-header {
+      margin-bottom: 0;
+    }
+    .memo-article {
+      max-width: var(--measure);
+      padding-top: 0.25rem;
+    }
+  </style>
+
+  <Nav />
+
+  <main class="page memo-page">
+    <header class="page-header">
+      <div>
+        <span class="page-eyebrow">{eyebrow}</span>
+        <h1 class="page-title">{pageTitle}</h1>
+        {memo.data.summary && <p class="page-lede">{memo.data.summary}</p>}
+        <div class="page-meta">
+          {memo.data.date && <span class="pill">{dateFormatter.format(memo.data.date)}</span>}
+          <span class="pill">{readMinutes} minute read</span>
+          <span class="pill">{wordCount} words</span>
+        </div>
+      </div>
+    </header>
+
+    <article class="prose memo-article">
+      <Content />
+    </article>
+  </main>
+</Layout>

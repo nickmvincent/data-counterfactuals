@@ -1,6 +1,7 @@
 {
   "profileIdentifier": "nickmvincent.bsky.social",
   "collectionAtUris": [],
+  "collectionNamePrefix": "dc:",
   "apiBase": "https://api.semble.so",
   "cachePath": "tmp/semble-cache.json",
   "cachePolicy": "network-first"

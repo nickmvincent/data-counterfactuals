@@ -1,94 +1,127 @@
 ---
 import Layout from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
-import { getCollection, render } from "astro:content";
-import networkData from "../data/network.json";
+import {
+  countWords,
+  estimateReadMinutes,
+  getPublicMemos,
+  memoHref,
+  numberedMemoTitle,
+} from "../lib/memos";
 
-const PRIMARY_MEMO_SLUG = "data-counterfactuals";
-const memos = (await getCollection("memos"))
-  .filter((memo) => memo.data.visibility !== "private")
-  .sort((a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0));
-const memo = memos.find((entry) => entry.slug === PRIMARY_MEMO_SLUG);
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
 
-if (!memo) {
-  throw new Error(`Missing primary memo '${PRIMARY_MEMO_SLUG}'.`);
-}
+const memos = (await getPublicMemos()).map((memo) => {
+  const wordCount = countWords(memo.body);
 
-const { Content } = await render(memo);
-const githubUrl = networkData.links?.github;
-const wordCount = memo.body.split(/\s+/).filter(Boolean).length;
-const readMinutes = Math.max(1, Math.round(wordCount / 220));
-const memoHref = (slug: string) => slug === PRIMARY_MEMO_SLUG ? "/memo" : `/memo/${slug}`;
-const otherMemos = memos.filter((entry) => entry.id !== memo.id);
+  return {
+    ...memo,
+    numberedTitle: numberedMemoTitle(memo.data.title, memo.data.order),
+    wordCount,
+    readMinutes: estimateReadMinutes(wordCount),
+  };
+});
 ---
 
 <Layout
-  title={memo.data.title}
-  description={memo.data.summary || "A longer essay introducing data counterfactuals as a way to compare how changes in training data affect model behavior."}
+  title="Memos"
+  description="Project memos, drafts, and longer notes from Data Counterfactuals."
 >
   <style>
-    .memo-page {
-      gap: 2.75rem;
+    .memo-index-page {
+      display: grid;
+      gap: 2rem;
     }
-    .memo-page .page-header {
+    .memo-index-page .page-header {
       margin-bottom: 0;
     }
-    .memo-article {
-      padding-top: 0.25rem;
+    .memo-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 0;
+    }
+    .memo-item {
+      padding: 1.5rem 0;
+      border-top: 1px solid var(--border);
+    }
+    .memo-item:first-child {
+      padding-top: 0;
+      border-top: 0;
+    }
+    .memo-link {
+      display: block;
+      color: inherit;
+      text-decoration: none;
+    }
+    .memo-link:hover .memo-title,
+    .memo-link:focus-visible .memo-title {
+      color: var(--ring-thick);
+    }
+    .memo-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem 1rem;
+      margin-bottom: 0.55rem;
+      color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 0.84rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .memo-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: clamp(1.5rem, 2.4vw, 2.2rem);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      transition: color 160ms ease;
+    }
+    .memo-summary {
+      margin: 0.7rem 0 0;
+      max-width: var(--measure);
+      color: var(--muted);
+      font-size: 1.02rem;
+      line-height: 1.8;
     }
   </style>
 
   <Nav />
 
-  <main class="page essay-page memo-page">
-    <header class="essay-header page-header">
+  <main class="page memo-index-page">
+    <header class="page-header">
       <div>
-        <span class="page-eyebrow">Core memo</span>
-        <h1 class="page-title">{memo.data.title}</h1>
-        {memo.data.summary && <p class="page-lede">{memo.data.summary}</p>}
+        <span class="page-eyebrow">Memo archive</span>
+        <h1 class="page-title">Memos</h1>
         <div class="page-meta">
-          <span class="pill">{readMinutes} minute read</span>
-          <span class="pill">{wordCount} words</span>
+          <span class="pill">{memos.length} memos</span>
         </div>
       </div>
-
-      <aside class="essay-side">
-        <p class="note-label">How this page fits</p>
-        <p>
-          This is the longer written argument that the rest of the site grows out of. The overview page compresses it; the
-          explorer turns the grid metaphor into a toy you can inspect; the reading lists point outward to the literature.
-        </p>
-        <ul>
-          <li><a href="/">Return to the overview</a></li>
-          <li><a href="/grid">Open the explorer alongside the memo</a></li>
-          <li><a href="/collections">Browse the related literatures</a></li>
-          {githubUrl && <li><a href={githubUrl}>View the source on GitHub</a></li>}
-        </ul>
-        {otherMemos.length > 0 && (
-          <>
-            <p class="note-label">Other memos</p>
-            <ul>
-              {otherMemos.map((otherMemo) => (
-                <li><a href={memoHref(otherMemo.slug)}>{otherMemo.data.title}</a></li>
-              ))}
-            </ul>
-          </>
-        )}
-      </aside>
     </header>
 
-    <section class="essay-section">
-      <article class="essay-main prose memo-article">
-        <Content />
-      </article>
-
-      <aside class="essay-side">
-        <p class="note-label">Reading note</p>
-        <p>
-          The memo deliberately treats the grid as a conceptual scaffold rather than a literal engineering recipe. It is there
-          to make comparisons legible, not to claim that real systems enumerate every possible training world.
-        </p>
-      </aside>
-    </section>
+    {memos.length ? (
+      <ul class="memo-list">
+        {memos.map((memo) => (
+          <li class="memo-item">
+            <a href={memoHref(memo.slug)} class="memo-link">
+              <div class="memo-meta">
+                {memo.data.date && <span>{dateFormatter.format(memo.data.date)}</span>}
+                <span>{memo.readMinutes} minute read</span>
+                <span>{memo.wordCount} words</span>
+              </div>
+              <h2 class="memo-title">{memo.numberedTitle}</h2>
+              {memo.data.summary && <p class="memo-summary">{memo.data.summary}</p>}
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <div class="empty-state">No memos are published yet.</div>
+    )}
   </main>
 </Layout>

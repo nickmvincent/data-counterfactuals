@@ -41,6 +41,7 @@ interface SemblePagination {
 }
 
 interface SembleCollectionSummary {
+  id?: string;
   uri?: string;
   name?: string;
   description?: string | null;
@@ -65,9 +66,11 @@ interface SembleUrlCard {
   cardContent?: SembleCardContent | null;
 }
 
-interface SembleCollectionPageItem {
+interface SembleCollectionPageItemWrapper {
   urlCard?: SembleUrlCard | null;
 }
+
+type SembleCollectionPageItem = SembleUrlCard | SembleCollectionPageItemWrapper;
 
 interface SembleApiEnvelope<T> {
   data?: T;
@@ -305,6 +308,18 @@ function extractFrontmatter(rawNote: string | undefined): { data: Record<string,
   return { data: {}, body: text };
 }
 
+function normalizeCollectionPageItem(item: SembleCollectionPageItem): SembleUrlCard | null {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  if ('urlCard' in item) {
+    return item.urlCard || null;
+  }
+
+  return item;
+}
+
 function normalizeCollectionTitle(name: string | undefined, config: SembleConfig): string {
   const rawName = name?.trim() || 'Untitled collection';
   const prefix = config.collectionNamePrefix;
@@ -535,7 +550,7 @@ function getNextPage(pagination: SemblePagination | undefined, page: number): nu
 }
 
 async function listCollections(config: SembleConfig): Promise<SembleCollectionSummary[]> {
-  if (config.collectionAtUris.length > 0 || !config.profileIdentifier) {
+  if (!config.profileIdentifier) {
     return [];
   }
 
@@ -562,16 +577,25 @@ async function listCollections(config: SembleConfig): Promise<SembleCollectionSu
 
 async function loadCollectionPage(
   config: SembleConfig,
-  collectionAtUri: string,
+  collectionSummary: SembleCollectionSummary,
 ): Promise<{ collection: SembleCollectionSummary; cards: SembleUrlCard[] }> {
   const cards: SembleUrlCard[] = [];
   let page = 1;
   let collection: SembleCollectionSummary | undefined;
+  const collectionIdentifier = collectionSummary.id || collectionSummary.uri;
+
+  if (!collectionIdentifier) {
+    throw new Error('Semble collection lookup requires an id or at:// URI.');
+  }
+
+  const collectionPath = collectionSummary.id
+    ? `/api/collections/${encodeURIComponent(collectionSummary.id)}`
+    : `/api/collections/at/${encodeURIComponent(collectionSummary.uri!)}`;
 
   while (true) {
     const data = await fetchSemble<SembleCollectionPageResponse>(
       config,
-      `/api/collections/at/${encodeURIComponent(collectionAtUri)}`,
+      collectionPath,
       { page, limit: PAGE_LIMIT },
     );
 
@@ -581,7 +605,7 @@ async function loadCollectionPage(
 
     const pageCards = Array.isArray(data.urlCards)
       ? data.urlCards
-          .map((item) => item.urlCard || undefined)
+          .map((item) => normalizeCollectionPageItem(item) || undefined)
           .filter((item): item is SembleUrlCard => Boolean(item))
       : [];
     cards.push(...pageCards);
@@ -592,7 +616,7 @@ async function loadCollectionPage(
   }
 
   return {
-    collection: collection || { uri: collectionAtUri },
+    collection: collection || collectionSummary,
     cards,
   };
 }
@@ -700,19 +724,39 @@ function normalizeReference(
 async function buildSembleDataset(config: SembleConfig): Promise<SembleDataset> {
   const explicitUris = config.collectionAtUris;
   const discoveredCollections = await listCollections(config);
-  const collectionUris = unique([
-    ...explicitUris,
-    ...discoveredCollections.map((collection) => asString(collection.uri)).filter(Boolean),
-  ]);
+  const discoveredCollectionsByUri = new Map(
+    discoveredCollections
+      .map((collection) => [asOptionalString(collection.uri), collection] as const)
+      .filter((entry): entry is [string, SembleCollectionSummary] => Boolean(entry[0])),
+  );
+
+  const collectionSummaries: SembleCollectionSummary[] = [];
+  const seenCollections = new Set<string>();
+  const addCollectionSummary = (collection: SembleCollectionSummary) => {
+    const key = collection.id ? `id:${collection.id}` : collection.uri ? `uri:${collection.uri}` : null;
+    if (!key || seenCollections.has(key)) return;
+    seenCollections.add(key);
+    collectionSummaries.push(collection);
+  };
+
+  for (const collectionAtUri of explicitUris) {
+    addCollectionSummary(discoveredCollectionsByUri.get(collectionAtUri) || { uri: collectionAtUri });
+  }
+
+  for (const collection of discoveredCollections) {
+    addCollectionSummary(collection);
+  }
 
   const collectionPages = (
     await Promise.all(
-      collectionUris.map(async (collectionAtUri) => {
+      collectionSummaries.map(async (collectionSummary) => {
         try {
-          return await loadCollectionPage(config, collectionAtUri);
+          return await loadCollectionPage(config, collectionSummary);
         } catch (error) {
           if (error instanceof SembleHttpError && error.status === 404) {
-            console.warn(`[semble] Skipping missing collection ${collectionAtUri}.`);
+            console.warn(
+              `[semble] Skipping missing collection ${collectionSummary.id || collectionSummary.uri}.`,
+            );
             return null;
           }
 

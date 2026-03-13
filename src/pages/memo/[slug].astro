@@ -1,21 +1,15 @@
 ---
-import Layout from "../../layouts/Base.astro";
-import Nav from "../../components/Nav.astro";
-import { getCollection, render } from "astro:content";
-import networkData from "../../data/network.json";
-
-const PRIMARY_MEMO_SLUG = "data-counterfactuals";
+import { render } from "astro:content";
+import MemoPage from "../../components/MemoPage.astro";
+import { getPublicMemoBySlug, getPublicMemos, hasDirectMemoRoute } from "../../lib/memos";
 
 export async function getStaticPaths() {
-  const primaryMemoSlug = "data-counterfactuals";
-  const memos = (await getCollection("memos"))
-    .filter((memo) => memo.data.visibility !== "private")
-    .sort((a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0));
+  const memos = await getPublicMemos();
 
   return memos
-    .filter((memo) => memo.slug !== primaryMemoSlug)
+    .filter((memo) => !hasDirectMemoRoute(memo.slug))
     .map((memo) => ({
-      params: { slug: memo.slug }
+      params: { slug: memo.slug },
     }));
 }
 
@@ -24,90 +18,13 @@ if (!slug) {
   throw new Error("Missing memo slug.");
 }
 
-const memos = (await getCollection("memos"))
-  .filter((memo) => memo.data.visibility !== "private")
-  .sort((a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0));
-const memo = memos.find((entry) => entry.slug === slug);
+const memo = await getPublicMemoBySlug(slug);
 
 if (!memo) {
   throw new Error(`Missing memo '${slug}'.`);
 }
 
 const { Content } = await render(memo);
-const githubUrl = networkData.links?.github;
-const wordCount = memo.body.split(/\s+/).filter(Boolean).length;
-const readMinutes = Math.max(1, Math.round(wordCount / 220));
-const memoHref = (slug: string) => slug === PRIMARY_MEMO_SLUG ? "/memo" : `/memo/${slug}`;
-const otherMemos = memos.filter((entry) => entry.id !== memo.id);
 ---
 
-<Layout
-  title={memo.data.title}
-  description={memo.data.summary || "An additional memo in the Data Counterfactuals project."}
->
-  <style>
-    .memo-page {
-      gap: 2.75rem;
-    }
-    .memo-page .page-header {
-      margin-bottom: 0;
-    }
-    .memo-article {
-      padding-top: 0.25rem;
-    }
-  </style>
-
-  <Nav />
-
-  <main class="page essay-page memo-page">
-    <header class="essay-header page-header">
-      <div>
-        <span class="page-eyebrow">Working memo</span>
-        <h1 class="page-title">{memo.data.title}</h1>
-        {memo.data.summary && <p class="page-lede">{memo.data.summary}</p>}
-        <div class="page-meta">
-          <span class="pill">{readMinutes} minute read</span>
-          <span class="pill">{wordCount} words</span>
-        </div>
-      </div>
-
-      <aside class="essay-side">
-        <p class="note-label">How this page fits</p>
-        <p>
-          This is an additional memo in the same project. The main memo introduces the broad concept; this page follows one
-          narrower thread further.
-        </p>
-        <ul>
-          <li><a href="/memo">Return to the main memo</a></li>
-          <li><a href="/">Return to the overview</a></li>
-          <li><a href="/collections">Browse the related literatures</a></li>
-          {githubUrl && <li><a href={githubUrl}>View the source on GitHub</a></li>}
-        </ul>
-        {otherMemos.length > 0 && (
-          <>
-            <p class="note-label">Other memos</p>
-            <ul>
-              {otherMemos.map((otherMemo) => (
-                <li><a href={memoHref(otherMemo.slug)}>{otherMemo.data.title}</a></li>
-              ))}
-            </ul>
-          </>
-        )}
-      </aside>
-    </header>
-
-    <section class="essay-section">
-      <article class="essay-main prose memo-article">
-        <Content />
-      </article>
-
-      <aside class="essay-side">
-        <p class="note-label">Draft note</p>
-        <p>
-          This memo is meant to line up neighboring formalisms rather than settle notation. Where the literature uses different
-          symbols, I have preferred a common schematic template over paper-specific typography.
-        </p>
-      </aside>
-    </section>
-  </main>
-</Layout>
+<MemoPage memo={memo} Content={Content} />

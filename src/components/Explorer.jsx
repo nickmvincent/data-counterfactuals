@@ -20,18 +20,47 @@ const html = htm.bind(h);
 
 const InfoTip = (text) => html`<span class="info-tip" title=${text}>i</span>`;
 
+function clamp01(value) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function hexToRgb(hex) {
+  const normalized = hex.replace("#", "");
+  const value = normalized.length === 3
+    ? normalized.split("").map((char) => `${char}${char}`).join("")
+    : normalized;
+  return {
+    r: Number.parseInt(value.slice(0, 2), 16),
+    g: Number.parseInt(value.slice(2, 4), 16),
+    b: Number.parseInt(value.slice(4, 6), 16),
+  };
+}
+
+function rgbToCss({ r, g, b }) {
+  return `rgb(${Math.round(r)} ${Math.round(g)} ${Math.round(b)})`;
+}
+
+function createPalette(stops) {
+  const colors = stops.map(hexToRgb);
+  return (input) => {
+    const t = clamp01(input);
+    const scaled = t * (colors.length - 1);
+    const index = Math.min(colors.length - 2, Math.floor(scaled));
+    const localT = scaled - index;
+    const start = colors[index];
+    const end = colors[index + 1];
+    return rgbToCss({
+      r: start.r + (end.r - start.r) * localT,
+      g: start.g + (end.g - start.g) * localT,
+      b: start.b + (end.b - start.b) * localT,
+    });
+  };
+}
+
 const palettes = {
-  "Blue->Yellow": (t) => `hsl(${210 - 150 * t} 90% ${48 + 14 * (t - 0.5)}%)`,
-  "Viridis-ish": (t) => {
-    const hue = 260 - 160 * t;
-    const saturation = 65 + 25 * t;
-    const lightness = 30 + 35 * t;
-    return `hsl(${hue} ${saturation}% ${lightness}%)`;
-  },
-  Greys: (t) => {
-    const lightness = 18 + 64 * t;
-    return `hsl(220 10% ${lightness}%)`;
-  },
+  "Studio ember": createPalette(["#2a1f1a", "#5f4738", "#a66a43", "#d9a56a", "#f3debf"]),
+  "Moss signal": createPalette(["#1e2624", "#36544e", "#617d75", "#a2baaa", "#ebe4d6"]),
+  "Graphite paper": createPalette(["#211d1a", "#4d463f", "#81786f", "#b9b0a6", "#f4ece0"]),
 };
 
 const metricMeta = {
@@ -114,14 +143,22 @@ function sparkPath(values, width = 260, height = 50, pad = 4) {
   return { d: path, min, max };
 }
 
-function formatColumnHeader(index) {
-  return `${index}`;
+function formatColumnHeader(index, subset) {
+  return html`
+    <span class="axis-label">
+      <span class="axis-index">${index}</span>
+      <span class="axis-set">${label(subset)}</span>
+    </span>
+  `;
 }
 
 function formatRowHeader(index, subset) {
-  const full = label(subset);
-  if (full.length <= 2) return `${index}:${full}`;
-  return `${index}:${full.slice(0, 2)}...`;
+  return html`
+    <span class="axis-label axis-label-row">
+      <span class="axis-index">${index}</span>
+      <span class="axis-set">${label(subset)}</span>
+    </span>
+  `;
 }
 
 function csvEscape(value) {
@@ -159,7 +196,7 @@ function App() {
   const base = useMemo(() => alphabet.slice(0, count), [count]);
 
   const [metric, setMetric] = useState("jaccard");
-  const [paletteName, setPaletteName] = useState("Blue->Yellow");
+  const [paletteName, setPaletteName] = useState("Studio ember");
   const palette = palettes[paletteName];
 
   const [uiMode, setUiMode] = useState("simple");
@@ -255,6 +292,7 @@ function App() {
       }),
     [],
   );
+  const activeTutorial = tutorialPresets.find((entry) => entry.id === tutorialKind) || null;
 
   const runTutorial = (id) => {
     const preset = tutorialPresets.find((entry) => entry.id === id);
@@ -549,37 +587,6 @@ function App() {
     scalingBucket.n,
   ]);
 
-  const sceneSteps = [
-    {
-      step: "1",
-      title: "Training world",
-      value: label(Srow),
-      detail: "Rows enumerate possible training sets. Click a row label or any cell to switch worlds.",
-    },
-    {
-      step: "2",
-      title: "Evaluation slice",
-      value: label(evalSet),
-      detail: "Columns are what you test the model on after training on the chosen row.",
-    },
-    {
-      step: "3",
-      title: "Point or group in focus",
-      value: computed === "group" ? (groupSet.length ? label(groupSet) : "Pick 2+") : focusPrimary,
-      detail:
-        computed === "group"
-          ? "The focus chips define the group the question talks about. They do not choose the row."
-          : "The focus chip chooses the member the question talks about. It does not choose the row.",
-    },
-    {
-      step: "4",
-      title: "World assumptions",
-      value:
-        effectiveGridView === "operator" ? "Operator view" : uiMode === "advanced" ? "Real world" : "Reference grid",
-      detail: worldModeSummary,
-    },
-  ];
-
   const compareRowIndex = computed === "group" ? strikeMinusIdx : looMinusIdx;
   const compareRowSet = compareRowIndex >= 0 ? subs[compareRowIndex] || [] : [];
   const compareValue = compareRowIndex >= 0 ? (displayMatrix[compareRowIndex]?.[safeColIdx] ?? selectedValue) : selectedValue;
@@ -778,23 +785,24 @@ function App() {
     <section class=${`analysis-card ${computedFlash ? "computed-flash" : ""}`}>
       <div class="analysis-head">
         <div>
-          <span class="summary-kicker">Read the statistic</span>
-          <h3 class="card-title">${lensGuide.title}</h3>
+          <span class="summary-kicker">Inspector</span>
+          <h3 class="card-title">Statistic details</h3>
         </div>
         <span class="pill">${questionMeta[computed]}</span>
       </div>
-      <p class="analysis-copy">${lensGuide.body}</p>
+      <div class="inspector-banner">
+        <div class="inspector-banner-title">${lensGuide.title}</div>
+        <div class="inspector-banner-copy">${lensGuide.body}</div>
+      </div>
       <div class="equation-block">${formulaLine}</div>
 
       ${computed === "shapley"
         ? html`
-            <div class="analysis-stack">
-              <div class="analysis-note">
-                <b>Shapley value</b> averages how much adding ${focusPrimary} changes the score on eval ${label(evalSet)}.
-              </div>
-              <div class="analysis-note">
-                <b>phi</b> = <b>${shapleyStats.phi.toFixed(4)}</b> from <b>${shapleyStats.cnt}</b> paired training worlds.
-              </div>
+            <div class="inspector-stack">
+              <div class="inspector-row"><span class="inspector-key">Focus point</span><span class="inspector-value">${focusPrimary}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Evaluation slice</span><span class="inspector-value">${label(evalSet)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">phi</span><span class="inspector-value">${shapleyStats.phi.toFixed(4)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Paired worlds</span><span class="inspector-value">${shapleyStats.cnt}</span></div>
               ${shapleyStats.rows.length > 0
                 ? html`
                     <table class="small">
@@ -815,34 +823,33 @@ function App() {
 
       ${computed === "loo"
         ? html`
-            <div class="analysis-stack">
-              <div class="analysis-note">
-                <b>Leave-one-out</b> compares the selected training world with the nearest world that drops ${focusPrimary}.
-              </div>
-              <div class="analysis-note">S = <b>${label(Srow)}</b>; S\\{${focusPrimary}} = <b>${label(looMinus)}</b>; E = <b>${label(evalSet)}</b></div>
-              <div class="analysis-note">Delta = <b>${looDelta.toFixed(4)}</b></div>
+            <div class="inspector-stack">
+              <div class="inspector-row"><span class="inspector-key">Selected row</span><span class="inspector-value">${label(Srow)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Comparison row</span><span class="inspector-value">${label(looMinus)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Evaluation slice</span><span class="inspector-value">${label(evalSet)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Delta</span><span class="inspector-value">${looDelta.toFixed(4)}</span></div>
             </div>
           `
         : null}
 
       ${computed === "group"
         ? html`
-            <div class="analysis-stack">
-              <div class="analysis-note">
-                <b>Group leave-one-out</b> removes the chosen coalition together instead of one member at a time.
-              </div>
-              <div class="analysis-note">G = <b>${groupSet.length ? label(groupSet) : "choose a group"}</b>; S\\G = <b>${label(strikeMinus)}</b>; E = <b>${label(evalSet)}</b></div>
-              <div class="analysis-note">Delta = <b>${looDelta.toFixed(4)}</b></div>
+            <div class="inspector-stack">
+              <div class="inspector-row"><span class="inspector-key">Selected row</span><span class="inspector-value">${label(Srow)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Focus group</span><span class="inspector-value">${groupSet.length ? label(groupSet) : "Choose a group"}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Row without group</span><span class="inspector-value">${label(strikeMinus)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Delta</span><span class="inspector-value">${looDelta.toFixed(4)}</span></div>
             </div>
           `
         : null}
 
       ${computed === "scaling"
         ? html`
-            <div class="analysis-stack">
-              <div class="analysis-note">
-                <b>Scaling</b> ignores the selected row for the headline and averages every row with <b>|S| = ${k}</b>.
-              </div>
+            <div class="inspector-stack">
+              <div class="inspector-row"><span class="inspector-key">Evaluation slice</span><span class="inspector-value">${label(evalSet)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Bucket size</span><span class="inspector-value">|S| = ${k}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Rows in bucket</span><span class="inspector-value">${scalingBucket.n}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Average</span><span class="inspector-value">${scalingBucket.avg.toFixed(4)}</span></div>
               <div class="spark-wrap">
                 <svg class="spark" viewBox="0 0 260 50">
                   <path d=${spark.d} fill="none" stroke="#FFD166" stroke-width="2" />
@@ -902,31 +909,47 @@ function App() {
 
   return html`
     <div class="workspace-shell">
-      <section class=${`explorer-hero ${presetFlash ? "preset-flash" : ""}`}>
-        <div class="hero-copy">
-          <span class="summary-kicker">Interactive workspace</span>
-          <h2 class="hero-title">Keep one counterfactual scene in view while the question changes.</h2>
-          <p class="hero-lede">
-            Rows are training worlds and columns are evaluation slices. Start by choosing the question, lock in the scene, then use
-            the highlights in the grid to see exactly which comparison the statistic is making.
-          </p>
-          <div class="summary-inline">
-            <span class="pill">Rows = training worlds</span>
-            <span class="pill">Columns = evaluation slices</span>
-            <span class="pill">Click any cell to move row and column together</span>
+      <section class=${`workspace-header ${presetFlash ? "preset-flash" : ""}`}>
+        <div class="header-main">
+          <div class="header-topline">
+            <span class="summary-kicker">Counterfactual Grid Explorer</span>
+            <div class="summary-inline">
+              <span class="pill">${modeLabel}</span>
+              <span class="pill">${currentWorldLabel}</span>
+              <span class="pill">${questionMeta[computed]}</span>
+            </div>
           </div>
-          <div class="status-banner">
-            <b>Current scene:</b> ${questionSummary.question}
+
+          <div class="header-command">
+            <div class="header-command-label">Active question</div>
+            <div class="header-command-line">${questionSummary.question}</div>
+            <div class="header-command-trace">${questionSummary.trace}</div>
+          </div>
+
+          <div class="header-status-grid">
+            ${sceneFacts.map(
+              (entry) => html`
+                <div key=${`header-${entry.label}`} class="header-status">
+                  <div class="header-status-label">${entry.label}</div>
+                  <div class="header-status-value">${entry.value}</div>
+                </div>
+              `,
+            )}
+            <div class="header-status header-status-accent">
+              <div class="header-status-label">${questionSummary.answerLabel}</div>
+              <div class="header-status-value">${questionSummary.answerValue}</div>
+            </div>
           </div>
         </div>
 
-        <div class="hero-stack">
-          <section class="hero-card">
-            <div class="card-head">
+        <aside class="preset-dock">
+          <section class="hero-card preset-card">
+            <div class="card-head preset-card-head">
               <div>
                 <span class="summary-kicker">Guided starts</span>
-                <h3 class="card-title">Jump to a recognizable example</h3>
+                <h3 class="card-title">Presets</h3>
               </div>
+              <span class="pill">Click to load</span>
             </div>
             <div class="tutorials">
               ${tutorialPresets.map(
@@ -947,14 +970,14 @@ function App() {
                 ? html`
                     <div>
                       <div><b>Goal</b>: ${tutorialInfo.goal}</div>
-                      <div><b>What we do</b>: ${tutorialInfo.how}</div>
-                      <div><b>Concept</b>: ${tutorialInfo.concept}</div>
+                      <div><b>Action</b>: ${tutorialInfo.how}</div>
+                      <div><b>Why it matters</b>: ${tutorialInfo.concept}</div>
                     </div>
                   `
-                : "Pick a preset and the explorer will move to a meaningful configuration instead of starting from a blank control state."}
+                : "Load a preset to jump straight to a useful scene instead of building one from scratch."}
             </div>
           </section>
-        </div>
+        </aside>
       </section>
 
       <section class="workspace-layout">
@@ -1340,28 +1363,31 @@ function App() {
           <div class="inspector-grid">
             ${analysisDetailBlock}
 
-            <section class="analysis-card">
+            <section class="analysis-card dock-card">
               <div class="analysis-head">
                 <div>
-                  <span class="summary-kicker">Reading guide</span>
-                  <h3 class="card-title">Use the figure in a steady order.</h3>
+                  <span class="summary-kicker">Dock</span>
+                  <h3 class="card-title">Scene guide</h3>
                 </div>
               </div>
-              <div class="guide-list">
+              <div class="dock-list">
                 ${sceneSteps.map(
                   (entry) => html`
-                    <div class="guide-item" key=${entry.step}>
-                      <span class="panel-step">${entry.step}</span>
-                      <div>
-                        <div class="guide-item-label">${entry.title}</div>
-                        <div class="guide-item-value">${entry.value}</div>
-                        <div class="guide-item-note">${entry.detail}</div>
+                    <div class="dock-row" key=${entry.step}>
+                      <div class="dock-row-head">
+                        <span class="dock-row-index">${entry.step}</span>
+                        <div class="dock-row-label">${entry.title}</div>
+                        <div class="dock-row-value">${entry.value}</div>
                       </div>
+                      <div class="dock-row-note">${entry.detail}</div>
                     </div>
                   `,
                 )}
               </div>
-              <div class="story-note">${highlightSummary}</div>
+              <div class="dock-footer">
+                <div class="dock-footer-label">Current highlight</div>
+                <div class="dock-footer-copy">${highlightSummary}</div>
+              </div>
             </section>
           </div>
         </div>

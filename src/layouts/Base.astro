@@ -613,43 +613,12 @@ const fullTitle = title === "Data Counterfactuals" ? title : `${title} | Data Co
     font-family: var(--font-ui);
     font-size: 0.95rem;
   }
-  .definition-list {
-    display: grid;
-    gap: 0;
-  }
-  .definition-item {
-    display: grid;
-    grid-template-columns: minmax(11rem, 14rem) minmax(0, 1fr);
-    gap: 1.3rem;
-    padding: 1rem 0;
-    border-top: 1px solid var(--border);
-  }
-  .definition-item:first-child {
-    border-top: 0;
-    padding-top: 0;
-  }
-  .definition-term {
-    color: var(--fg);
-    font-family: var(--font-ui);
-    font-size: 0.94rem;
-    font-weight: 700;
-    line-height: 1.45;
-  }
-  .definition-copy {
-    color: var(--muted);
-    line-height: 1.78;
-  }
-  .definition-copy p {
-    margin: 0;
-  }
-
   @media (max-width: 960px) {
     .page-grid.cols-2,
     .page-grid.cols-3,
     .stat-grid,
     .essay-header,
-    .essay-section,
-    .definition-item {
+    .essay-section {
       grid-template-columns: 1fr;
     }
     .essay-side {

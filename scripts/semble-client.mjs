@@ -6,6 +6,7 @@ import process from 'node:process';
 import { parseArgs } from 'node:util';
 
 import matter from 'gray-matter';
+import { dump as dumpYaml, load as loadYaml } from 'js-yaml';
 import { SemblePDSClient } from '@cosmik.network/semble-pds-client';
 
 const DEFAULT_PDS_SERVICE = 'https://bsky.social';
@@ -19,6 +20,8 @@ Usage:
   npm run semble:manage -- create-collection --name "Reading List" [--description "..." ] [--access open|closed]
   npm run semble:manage -- update-collection <selector> [--name "New Name"] [--description "..."] [--clear-description] [--access open|closed]
   npm run semble:manage -- rename-collection <selector> --name "New Name"
+  npm run semble:manage -- create-paper --to <collection> --url <url> [--citation-key <key>] [--title "Paper title"] [--author "Author Name"]...
+  npm run semble:manage -- import-papers --file tmp/papers.json [--to <collection>] [--replace-note] [--dry-run]
   npm run semble:manage -- add-card --to <collection> --card <selector>
   npm run semble:manage -- remove-card --from <collection> --card <selector>
   npm run semble:manage -- move-card --from <collection> --to <collection> --card <selector> [--keep-source]
@@ -38,6 +41,7 @@ Auth:
 Notes:
   This repo does not need collection names listed anywhere when semble.config.json uses a profile identifier.
   New collections default to OPEN so they are importable by the site.
+  create-paper/import-papers attach YAML frontmatter notes so the Reading Lists page can render citation metadata.
   After changes, run npm run build:refresh to refresh tmp/semble-cache.json.
 `;
 
@@ -77,6 +81,12 @@ async function main() {
     case 'update-collection':
     case 'rename-collection':
       await handleUpdateCollection(client, repo, config, rest);
+      return;
+    case 'create-paper':
+      await handleCreatePaper(client, repo, config, rest);
+      return;
+    case 'import-papers':
+      await handleImportPapers(client, repo, config, rest);
       return;
     case 'add-card':
       await handleAddCard(client, repo, config, rest);
@@ -325,6 +335,129 @@ async function handleAddCard(client, repo, config, args) {
   const result = await client.addCardToCollection(toStrongRef(cardItem.card), toStrongRef(destination));
   console.log(`Added "${cardItem.displayTitle}" to "${destination.value?.name || destination.uri}"`);
   console.log(result.uri);
+}
+
+async function handleCreatePaper(client, repo, config, args) {
+  const { values, positionals } = parseArgs({
+    args,
+    options: {
+      to: { type: 'string' },
+      url: { type: 'string' },
+      'citation-key': { type: 'string' },
+      'entry-type': { type: 'string' },
+      title: { type: 'string' },
+      author: { type: 'string', multiple: true },
+      year: { type: 'string' },
+      venue: { type: 'string' },
+      doi: { type: 'string' },
+      tag: { type: 'string', multiple: true },
+      abstract: { type: 'string' },
+      body: { type: 'string' },
+      note: { type: 'string' },
+      'semantic-scholar-url': { type: 'string' },
+      'google-scholar-url': { type: 'string' },
+      'replace-note': { type: 'boolean' },
+      'dry-run': { type: 'boolean' },
+    },
+    allowPositionals: true,
+  });
+  assertNoPositionals('create-paper', positionals);
+
+  const collectionSelector = values.to?.trim();
+  const url = values.url?.trim();
+  if (!collectionSelector || !url) {
+    throw new Error('create-paper requires --to <collection> and --url <url>.');
+  }
+
+  const paper = normalizePaperSpec({
+    collection: collectionSelector,
+    url,
+    citation_key: values['citation-key'],
+    entry_type: values['entry-type'],
+    title: values.title,
+    authors: values.author,
+    year: values.year,
+    venue: values.venue,
+    doi: values.doi,
+    tags: values.tag,
+    abstract: values.abstract,
+    body: values.body,
+    note: values.note,
+    semantic_scholar_url: values['semantic-scholar-url'],
+    google_scholar_url: values['google-scholar-url'],
+  });
+
+  const state = await loadState(client, repo, config);
+  const result = await ensurePaperInCollection(client, state, paper, {
+    replaceNote: Boolean(values['replace-note']),
+    dryRun: Boolean(values['dry-run']),
+  });
+
+  printPaperMutationResult(result);
+}
+
+async function handleImportPapers(client, repo, config, args) {
+  const { values, positionals } = parseArgs({
+    args,
+    options: {
+      file: { type: 'string' },
+      to: { type: 'string' },
+      'replace-note': { type: 'boolean' },
+      'dry-run': { type: 'boolean' },
+    },
+    allowPositionals: true,
+  });
+  assertNoPositionals('import-papers', positionals);
+
+  const file = values.file?.trim();
+  if (!file) {
+    throw new Error('import-papers requires --file <path>.');
+  }
+
+  const defaultCollection = values.to?.trim() || '';
+  const papers = loadPaperSpecsFromFile(path.resolve(process.cwd(), file), defaultCollection);
+  if (!papers.length) {
+    console.log('No papers found in import file.');
+    return;
+  }
+
+  const state = await loadState(client, repo, config);
+  const results = [];
+
+  for (const paper of papers) {
+    const result = await ensurePaperInCollection(client, state, paper, {
+      replaceNote: Boolean(values['replace-note']),
+      dryRun: Boolean(values['dry-run']),
+    });
+    results.push(result);
+    printPaperMutationResult(result);
+  }
+
+  const summary = {
+    createdCards: 0,
+    reusedCards: 0,
+    addedNotes: 0,
+    updatedNotes: 0,
+    linkedCards: 0,
+    alreadyLinked: 0,
+  };
+
+  for (const result of results) {
+    if (result.createdCard) summary.createdCards += 1;
+    if (result.reusedExistingCard) summary.reusedCards += 1;
+    if (result.addedNote) summary.addedNotes += 1;
+    if (result.updatedNote) summary.updatedNotes += 1;
+    if (result.linkedToCollection) summary.linkedCards += 1;
+    if (result.alreadyInCollection) summary.alreadyLinked += 1;
+  }
+
+  console.log(`Processed ${results.length} papers${values['dry-run'] ? ' (dry run)' : ''}.`);
+  console.log(`Created cards: ${summary.createdCards}`);
+  console.log(`Reused existing cards: ${summary.reusedCards}`);
+  console.log(`Added notes: ${summary.addedNotes}`);
+  console.log(`Updated notes: ${summary.updatedNotes}`);
+  console.log(`Linked to collections: ${summary.linkedCards}`);
+  console.log(`Already linked: ${summary.alreadyLinked}`);
 }
 
 async function handleRemoveCard(client, repo, config, args) {
@@ -611,6 +744,24 @@ function resolveCard(items, selector) {
   });
 }
 
+function findExistingPaperItem(cards, paper) {
+  const items = buildAllUrlCardItems(cards);
+  const citationKey = normalizeToken(paper.citation_key);
+  if (citationKey) {
+    const citationMatches = items.filter((item) => getCitationKeyFromNote(item.note) === citationKey);
+    if (citationMatches.length === 1) {
+      return citationMatches[0];
+    }
+  }
+
+  const normalizedUrl = normalizeComparableUrl(paper.url);
+  if (!normalizedUrl) {
+    return null;
+  }
+
+  return items.find((item) => normalizeComparableUrl(item.url) === normalizedUrl) || null;
+}
+
 function resolveBySelector(items, selector, options) {
   const trimmed = selector?.trim();
   if (!trimmed) {
@@ -677,6 +828,20 @@ function parseNoteCard(noteCard) {
   }
 }
 
+function getCitationKeyFromNote(noteCard) {
+  const text = asString(noteCard?.value?.content?.text).trim();
+  if (!text.startsWith('---')) {
+    return '';
+  }
+
+  try {
+    const parsed = matter(text);
+    return normalizeToken(parsed.data?.citation_key);
+  } catch {
+    return '';
+  }
+}
+
 function getDisplayTitle(card, noteInfo) {
   const metadataTitle = asString(card.value?.content?.metadata?.title).trim();
   return noteInfo.title || metadataTitle || getCardUrl(card) || card.uri;
@@ -684,6 +849,22 @@ function getDisplayTitle(card, noteInfo) {
 
 function getCardUrl(card) {
   return asString(card.value?.url || card.value?.content?.url).trim();
+}
+
+function normalizeComparableUrl(value) {
+  const text = asString(value).trim();
+  if (!text) {
+    return '';
+  }
+
+  try {
+    const url = new URL(text);
+    const pathname = url.pathname.replace(/\/+$/, '') || '/';
+    const search = url.search || '';
+    return `${url.protocol}//${url.host}${pathname}${search}`;
+  } catch {
+    return text.replace(/\/+$/, '');
+  }
 }
 
 function countLinksByCollection(links) {
@@ -723,6 +904,283 @@ function normalizeAccessType(value, fallback) {
   }
 
   throw new Error(`Unknown access type "${value}". Expected "open" or "closed".`);
+}
+
+function normalizePaperSpec(candidate) {
+  if (!candidate || typeof candidate !== 'object') {
+    throw new Error('Expected a paper spec object.');
+  }
+
+  const url = asString(candidate.url).trim();
+  if (!url) {
+    throw new Error('Each paper spec requires a non-empty url.');
+  }
+
+  return {
+    collection: asString(candidate.collection).trim() || undefined,
+    url,
+    citation_key: asString(candidate.citation_key).trim() || undefined,
+    entry_type: asString(candidate.entry_type).trim() || undefined,
+    title: asString(candidate.title).trim() || undefined,
+    authors: normalizeStringList(candidate.authors),
+    year: normalizeScalarString(candidate.year),
+    venue: asString(candidate.venue).trim() || undefined,
+    doi: asString(candidate.doi).trim() || undefined,
+    tags: normalizeStringList(candidate.tags),
+    abstract: asString(candidate.abstract).trim() || undefined,
+    body: asString(candidate.body).trim() || undefined,
+    note: asString(candidate.note).trim() || undefined,
+    semantic_scholar_url: asString(candidate.semantic_scholar_url).trim() || undefined,
+    google_scholar_url: asString(candidate.google_scholar_url).trim() || undefined,
+  };
+}
+
+function normalizeScalarString(value) {
+  if (typeof value === 'number') {
+    return String(value);
+  }
+  const text = asString(value).trim();
+  return text || undefined;
+}
+
+function normalizeStringList(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => asString(item).trim())
+      .filter(Boolean);
+  }
+
+  const text = asString(value).trim();
+  if (!text) {
+    return [];
+  }
+
+  const separator = text.includes('|') ? '|' : ',';
+  return text
+    .split(separator)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function loadPaperSpecsFromFile(filePath, defaultCollection = '') {
+  if (!existsSync(filePath)) {
+    throw new Error(`Import file does not exist: ${filePath}`);
+  }
+
+  const text = readFileSync(filePath, 'utf8');
+  const ext = path.extname(filePath).toLowerCase();
+  let payload;
+
+  if (ext === '.json') {
+    payload = JSON.parse(text);
+  } else if (ext === '.yaml' || ext === '.yml') {
+    payload = loadYaml(text);
+  } else {
+    throw new Error(`Unsupported import file extension "${ext}". Use .json, .yaml, or .yml.`);
+  }
+
+  const items = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.papers)
+      ? payload.papers
+      : null;
+
+  if (!items) {
+    throw new Error('Import file must contain an array or an object with a "papers" array.');
+  }
+
+  return items.map((item) => normalizePaperSpec({
+    ...item,
+    collection: item?.collection || defaultCollection,
+  }));
+}
+
+function buildPaperNote(paper) {
+  if (paper.note) {
+    return paper.note;
+  }
+
+  const frontmatter = {};
+
+  if (paper.citation_key) frontmatter.citation_key = paper.citation_key;
+  if (paper.entry_type || paper.citation_key) frontmatter.entry_type = paper.entry_type || 'misc';
+  if (paper.title) frontmatter.title = paper.title;
+  if (paper.authors.length) frontmatter.authors = paper.authors;
+  if (paper.year) frontmatter.year = paper.year;
+  if (paper.venue) frontmatter.venue = paper.venue;
+  if (paper.url) frontmatter.url = paper.url;
+  if (paper.doi) frontmatter.doi = paper.doi;
+  if (paper.tags.length) frontmatter.tags = paper.tags;
+  if (paper.abstract) frontmatter.abstract = paper.abstract;
+  if (paper.semantic_scholar_url) frontmatter.semantic_scholar_url = paper.semantic_scholar_url;
+  if (paper.google_scholar_url) frontmatter.google_scholar_url = paper.google_scholar_url;
+
+  const yaml = dumpYaml(frontmatter, {
+    lineWidth: 0,
+    noRefs: true,
+    sortKeys: false,
+  }).trimEnd();
+  const body = paper.body ? paper.body.trim() : '';
+
+  if (!yaml) {
+    return body;
+  }
+
+  return `---\n${yaml}\n---${body ? `\n${body}\n` : '\n'}`;
+}
+
+async function ensurePaperInCollection(client, state, paper, options) {
+  const collectionSelector = paper.collection?.trim();
+  if (!collectionSelector) {
+    throw new Error(`Missing collection for paper "${paper.title || paper.url}".`);
+  }
+
+  const destination = resolveCollection(state.collections, collectionSelector);
+  const noteText = buildPaperNote(paper);
+  const existingItem = findExistingPaperItem(state.cards, paper);
+
+  const result = {
+    paperTitle: paper.title || paper.url,
+    collectionName: destination.value?.name || destination.uri,
+    createdCard: false,
+    reusedExistingCard: false,
+    addedNote: false,
+    updatedNote: false,
+    linkedToCollection: false,
+    alreadyInCollection: false,
+    dryRun: options.dryRun,
+  };
+
+  if (existingItem) {
+    result.reusedExistingCard = true;
+
+    if (noteText) {
+      if (existingItem.note) {
+        if (options.replaceNote) {
+          if (!options.dryRun) {
+            await client.updateNote(toStrongRef(existingItem.note), noteText);
+            existingItem.note.value = {
+              ...existingItem.note.value,
+              content: {
+                ...(existingItem.note.value?.content || {}),
+                text: noteText,
+              },
+            };
+          }
+          result.updatedNote = true;
+        }
+      } else {
+        if (!options.dryRun) {
+          const noteRef = await client.addNoteToCard(toStrongRef(existingItem.card), noteText);
+          state.cards.push({
+            uri: noteRef.uri,
+            cid: noteRef.cid,
+            value: {
+              type: 'NOTE',
+              content: { text: noteText },
+              parentCard: toStrongRef(existingItem.card),
+              createdAt: new Date().toISOString(),
+            },
+          });
+        }
+        result.addedNote = true;
+      }
+    }
+
+    const linkExists = state.links.some((link) =>
+      link.value?.collection?.uri === destination.uri
+      && link.value?.card?.uri === existingItem.card.uri,
+    );
+
+    if (linkExists) {
+      result.alreadyInCollection = true;
+      return result;
+    }
+
+    if (!options.dryRun) {
+      const linkRef = await client.addCardToCollection(toStrongRef(existingItem.card), toStrongRef(destination));
+      state.links.push({
+        uri: linkRef.uri,
+        cid: linkRef.cid,
+        value: {
+          collection: toStrongRef(destination),
+          card: toStrongRef(existingItem.card),
+          createdAt: new Date().toISOString(),
+        },
+      });
+    }
+
+    result.linkedToCollection = true;
+    return result;
+  }
+
+  result.createdCard = true;
+  result.linkedToCollection = true;
+  result.addedNote = Boolean(noteText);
+
+  if (options.dryRun) {
+    return result;
+  }
+
+  const created = await client.createCard({
+    url: paper.url,
+    ...(noteText ? { note: noteText } : {}),
+  });
+
+  state.cards.push({
+    uri: created.urlCard.uri,
+    cid: created.urlCard.cid,
+    value: {
+      type: 'URL',
+      url: paper.url,
+      content: {
+        url: paper.url,
+        metadata: {
+          title: paper.title,
+        },
+      },
+      createdAt: new Date().toISOString(),
+    },
+  });
+
+  if (created.noteCard) {
+    state.cards.push({
+      uri: created.noteCard.uri,
+      cid: created.noteCard.cid,
+      value: {
+        type: 'NOTE',
+        content: { text: noteText },
+        parentCard: created.urlCard,
+        createdAt: new Date().toISOString(),
+      },
+    });
+  }
+
+  const linkRef = await client.addCardToCollection(created.urlCard, toStrongRef(destination));
+  state.links.push({
+    uri: linkRef.uri,
+    cid: linkRef.cid,
+    value: {
+      collection: toStrongRef(destination),
+      card: created.urlCard,
+      createdAt: new Date().toISOString(),
+    },
+  });
+
+  return result;
+}
+
+function printPaperMutationResult(result) {
+  const actions = [];
+  if (result.createdCard) actions.push('created card');
+  if (result.reusedExistingCard) actions.push('reused card');
+  if (result.addedNote) actions.push('added note');
+  if (result.updatedNote) actions.push('updated note');
+  if (result.linkedToCollection) actions.push('linked to collection');
+  if (result.alreadyInCollection) actions.push('already in collection');
+  const actionText = actions.length ? actions.join(', ') : 'no changes';
+  console.log(`${result.dryRun ? '[dry-run] ' : ''}${result.paperTitle} -> ${result.collectionName}`);
+  console.log(`  ${actionText}`);
 }
 
 function getRecordTimestamp(record) {

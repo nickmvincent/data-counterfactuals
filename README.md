@@ -1,5 +1,7 @@
 # Data Counterfactuals
 
+Data Counterfactuals is an interactive explainer, toy lab, and reading map for a simple question: what changes when the training data changes? The project is meant to make training-data questions easier to see and compare across areas like data valuation, privacy, poisoning, unlearning, and collective action.
+
 Standalone Astro + Preact repo for `datacounterfactuals.org`.
 
 ## What's here

@@ -19,7 +19,7 @@ method_families:
     body: Data strikes, contribution campaigns, and bargaining interventions change the data-generating process itself. They are not just analytical transformations of a dataset; they are sociotechnical conflicts over power, consent, and leverage.
 reading_paths:
   - title: Read the main memo
-    href: /memo
+    href: /memo/data-counterfactuals
     body: The longer written argument behind the project.
   - title: Compare formalisms
     href: /memo/formalisms
@@ -29,7 +29,7 @@ reading_paths:
     body: A toy environment for inspecting the grid metaphor directly.
   - title: Browse references
     href: /collections
-    body: Reading lists and glossary pages for when you want papers or definitions instead of narrative.
+    body: Reading lists and the glossary for when you want papers or definitions instead of narrative.
 figures:
   leave_one_out:
     label: Leave-one-out toy example
