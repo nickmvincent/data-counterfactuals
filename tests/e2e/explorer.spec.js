@@ -27,9 +27,13 @@ test("grid-first explorer keeps the matrix in view and exposes lettered axis lab
   await expect(rowLabels.nth(1)).toHaveText("A");
 
   await expect(page.getByTestId("explorer-toolbar")).not.toContainText("How to read this grid");
-  await expect(page.getByTestId("question-controls")).toContainText("Question target");
+  await expect(page.getByTestId("question-controls")).toContainText("Focus contributor");
   await expect(page.getByTestId("question-controls")).toContainText("selected train row stays");
-  await expect(gridCard).toContainText("source worlds used in the marginal comparisons");
+  await expect(page.getByTestId("grid-marker-controls")).toContainText("Choose the data point we're going to value");
+  await expect(page.getByTestId("grid-marker-controls")).toContainText("Shapley values use the entire active evaluation column");
+  await expect(page.getByRole("button", { name: "Choose point to compare" })).toBeDisabled();
+  await page.getByRole("button", { name: "Leave-one-out" }).click();
+  await expect(page.getByRole("button", { name: "Choose point to compare" })).toBeEnabled();
   await expect(gridCard).toContainText("Rows train");
   await expect(page.getByTestId("display-controls")).toContainText("Show raw values");
   await expect(page.getByTestId("metric-controls")).toContainText('toy proxy for "retrain on');

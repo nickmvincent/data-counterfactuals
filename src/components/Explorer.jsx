@@ -97,12 +97,12 @@ const faqEntries = [
   {
     question: "What is the difference between the focus chips and the selected row?",
     answer:
-      "The row chooses which training world you are looking at right now. The focus chips choose which point or group the question talks about. Picking B does not move you to row B; it tells leave-one-out, group, or Shapley views which member to value.",
+      "The target cell chooses the train/eval location you are looking at right now. The focus chips choose which point or group the question talks about. Picking B does not move you to row B; it tells leave-one-out, group, or Shapley views which member to value.",
   },
   {
     question: "Do I need to read every highlighted cell?",
     answer:
-      "No. Start with the selected row, selected column, and question card. The ochre and sage rings only mark the cells the current statistic compares, so they are there to narrow your attention rather than widen it.",
+      "No. Start with the squiggled target cell, the active column, and the question card. The extra rings only mark the cells the current statistic compares, so they are there to narrow your attention rather than widen it.",
   },
   {
     question: "Why do some answers come out as zero?",
@@ -209,6 +209,8 @@ function App() {
   const [tutorialKind, setTutorialKind] = useState(null);
   const [tutorialInfo, setTutorialInfo] = useState(null);
   const [pendingSelection, setPendingSelection] = useState(null);
+  const [selectionArmed, setSelectionArmed] = useState(null);
+  const [comparePoint, setComparePoint] = useState(null);
   const [poisonActive, setPoisonActive] = useState(false);
   const [noiseLevel, setNoiseLevel] = useState(0);
   const [editorMode, setEditorMode] = useState("poison");
@@ -234,6 +236,8 @@ function App() {
   useEffect(() => {
     setRowIdx(1);
     setColIdx(1);
+    setComparePoint(null);
+    setSelectionArmed(null);
   }, [base.length]);
 
   useEffect(() => {
@@ -365,6 +369,14 @@ function App() {
     }
     setPendingSelection(null);
   }, [pendingSelection, subs]);
+
+  useEffect(() => {
+    setComparePoint((previous) => {
+      if (!previous) return previous;
+      if (previous.rowIndex >= subs.length || previous.colIndex >= subs.length) return null;
+      return previous;
+    });
+  }, [subs.length]);
 
   useEffect(() => {
     setComputedFlash(true);
@@ -607,12 +619,42 @@ function App() {
   const compareRowSet = compareRowIndex >= 0 ? subs[compareRowIndex] || [] : [];
   const compareValue = compareRowIndex >= 0 ? (displayMatrix[compareRowIndex]?.[safeColIdx] ?? selectedValue) : selectedValue;
   const focusLabel = computed === "group" ? (groupSet.length ? label(groupSet) : "pick a group") : focusPrimary;
+  const compareChooserDisabled = computed === "shapley" || computed === "scaling";
+  const visibleComparePoint = compareChooserDisabled ? null : comparePoint;
+  const comparePointLabel = visibleComparePoint
+    ? `Train ${label(subs[visibleComparePoint.rowIndex] || [])} / Eval ${label(subs[visibleComparePoint.colIndex] || [])}`
+    : "No comparison point chosen yet.";
+
+  useEffect(() => {
+    if (compareChooserDisabled && selectionArmed === "compare") {
+      setSelectionArmed(null);
+    }
+  }, [compareChooserDisabled, selectionArmed]);
+
+  const markerPanelMessage = useMemo(() => {
+    if (selectionArmed === "target") {
+      return "Click a cell to mark the data point we are going to value.";
+    }
+    if (selectionArmed === "compare") {
+      return "Click a cell to mark the point of comparison.";
+    }
+    if (computed === "shapley") {
+      return "Shapley values use the entire active evaluation column.";
+    }
+    if (computed === "scaling") {
+      return `Scaling values use the entire active evaluation column and group rows by k = ${k}.`;
+    }
+    if (visibleComparePoint) {
+      return `Comparison point marked at ${comparePointLabel}`;
+    }
+    return "The teal squiggle marks the current target cell. In leave-one-out and group views, you can add an ochre comparison point too.";
+  }, [selectionArmed, computed, k, visibleComparePoint, comparePointLabel]);
 
   const stageReadouts = useMemo(() => {
     const cards = [
       {
         key: "selected",
-        label: "Selected cell",
+        label: "Target cell",
         value: selectedValue.toFixed(3),
         note: `f(${label(Srow)}, ${label(evalSet)})`,
         tone: "primary",
@@ -691,34 +733,6 @@ function App() {
     k,
   ]);
 
-  const highlightSummary = useMemo(() => {
-    if (computed === "loo") {
-      return `On the active evaluation column, the sage ring marks the selected training world and the ochre ring marks the comparison row after removing ${focusPrimary}.`;
-    }
-    if (computed === "group") {
-      return groupSet.length
-        ? `On the active evaluation column, the sage ring marks ${label(Srow)} and the ochre ring marks the row after removing ${label(groupSet)}.`
-        : "Pick multiple focus chips and the grid will show the selected row beside the row with that whole group removed.";
-    }
-    if (computed === "shapley") {
-      return `On the active evaluation column, ochre rings mark the source worlds used in the marginal comparisons and sage rings mark the paired worlds after adding ${focusPrimary}. Some rows can play both roles across different pairs.`;
-    }
-    return `Ochre rings sweep down the active evaluation column for every row whose size is ${k}. The white outline still marks the one row you clicked.`;
-  }, [computed, focusPrimary, groupSet, Srow, k]);
-
-  const ringRoleSummary = useMemo(() => {
-    if (computed === "shapley") {
-      return `Ochre rings mark source worlds in the marginal comparisons. Sage rings mark the paired worlds after adding ${focusPrimary}. Some rows wear both because the same world can appear on both sides of different Shapley pairs.`;
-    }
-    if (computed === "scaling") {
-      return `Ochre rings mark the rows that enter the current size bucket. Sage rings are not used in scaling mode.`;
-    }
-    if (computed === "group") {
-      return `Ochre rings mark the comparison row after removing ${groupSet.length ? label(groupSet) : "the chosen group"}. Sage rings mark the active training world.`;
-    }
-    return `Ochre rings mark the comparison row after removing ${focusPrimary}. Sage rings mark the active training world.`;
-  }, [computed, focusPrimary, groupSet]);
-
   const formulaLine = useMemo(() => {
     if (computed === "loo") {
       return `LOO delta = f(${label(Srow)}, ${label(evalSet)}) - f(${label(looMinus)}, ${label(evalSet)}) = ${selectedValue.toFixed(4)} - ${compareValue.toFixed(4)} = ${looDelta.toFixed(4)}`;
@@ -787,7 +801,7 @@ function App() {
   const isAdvancedMode = uiMode === "advanced";
   const showInspector = uiMode !== "simple";
   const gridSelectionHint =
-    "Click a row label to choose the training world, a column label to choose the evaluation slice, or any cell to set both at once.";
+    "Click a row label to choose the training world, a column label to choose the evaluation slice, or any cell to set both at once. Use the chooser buttons below the grid to mark a target or comparison point.";
   const exportPayload = useMemo(
     () => ({
       settings: settingsView,
@@ -935,6 +949,17 @@ function App() {
     if (!selectedCell) return;
     selectedCell.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [safeRowIdx, safeColIdx, subs.length]);
+
+  const handleCellClick = (rowIndex, colIndex) => {
+    if (selectionArmed === "compare" && !compareChooserDisabled) {
+      setComparePoint({ rowIndex, colIndex });
+      setSelectionArmed(null);
+      return;
+    }
+    setRowIdx(rowIndex);
+    setColIdx(colIndex);
+    setSelectionArmed(null);
+  };
 
   return html`
     <div class="workspace-shell">
@@ -1176,6 +1201,12 @@ function App() {
                   const value = displayMatrix[rowIndex][colIndex];
                   const normalized = normalizeValue(value, dispMin, dispMax, 0.5);
                   const isSel = rowIndex === safeRowIdx && colIndex === safeColIdx;
+                  const isTargetCell = isSel;
+                  const isCompareCell = Boolean(
+                    visibleComparePoint
+                      && visibleComparePoint.rowIndex === rowIndex
+                      && visibleComparePoint.colIndex === colIndex,
+                  );
                   const edited = uiMode === "advanced" && gridView === "operator" && poisonRows.has(rowIndex) && colIndex === safeColIdx;
 
                   let thin = false;
@@ -1208,13 +1239,14 @@ function App() {
                       key=${`cell-${rowIndex}-${colIndex}`}
                       class=${classes.join(" ")}
                       data-selected=${isSel ? "true" : "false"}
+                      data-target-cell=${isTargetCell ? "true" : "false"}
+                      data-compare-cell=${isCompareCell ? "true" : "false"}
                       title=${`Train ${label(rowSet)} | Eval ${label(evSet)} | value ${value.toFixed(3)}`}
-                      onClick=${() => {
-                        setRowIdx(rowIndex);
-                        setColIdx(colIndex);
-                      }}
+                      onClick=${() => handleCellClick(rowIndex, colIndex)}
                       style=${{ background: palette(normalized) }}
                     >
+                      ${isTargetCell ? html`<div class="marker-ring marker-ring-target"></div>` : null}
+                      ${isCompareCell ? html`<div class="marker-ring marker-ring-compare"></div>` : null}
                       ${thin ? html`<div class="ring ring-thin"></div>` : null}
                       ${thick ? html`<div class="ring ring-thick"></div>` : null}
                       ${edited ? html`<div class="edit-flag" title="Toy edit affects this row in operator view"></div>` : null}
@@ -1229,14 +1261,33 @@ function App() {
           })}
         </div>
 
-        <div class="comparison-legend">
-          <div>${highlightSummary}</div>
-          <div>
-            <b>White outline:</b> selected cell. ${ringRoleSummary}
-            ${isAdvancedMode ? html` <b>Red corner:</b> toy edit touches that row in operator view.` : null}
+        <div class="grid-marker-panel" data-testid="grid-marker-controls">
+          <div class="grid-marker-head">
+            <div>
+              <span class="summary-kicker">Grid markers</span>
+              <div class="grid-marker-title">Mark the cells you want to talk about.</div>
+            </div>
+            <div class="summary-inline toolbar-pills">
+              <span class="pill">Target Train ${label(Srow)} / Eval ${label(evalSet)}</span>
+              ${visibleComparePoint
+                ? html`<span class="pill">Compare ${comparePointLabel}</span>`
+                : null}
+            </div>
           </div>
-          <div><b>Axis labels:</b> each header shows the subset id and the specific instance letters in that world or slice.</div>
-          <div>${formulaLine}</div>
+          <div class="grid-marker-actions">
+            <button class="btn mini" aria-pressed=${selectionArmed === "target"} onClick=${() => setSelectionArmed("target")}>
+              Choose the data point we're going to value
+            </button>
+            <button
+              class="btn mini"
+              aria-pressed=${selectionArmed === "compare"}
+              disabled=${compareChooserDisabled}
+              onClick=${() => setSelectionArmed("compare")}
+            >
+              Choose point to compare
+            </button>
+          </div>
+          <div class="toolbar-note">${markerPanelMessage}</div>
         </div>
       </section>
 
@@ -1286,7 +1337,7 @@ function App() {
 
           <div class="control-cluster">
             <div class="control-head">
-              Question target
+              Focus contributor
               ${InfoTip("Pick the contributor whose effect you want to ask about. This changes who is being removed, added, or valued; it does not change the selected train row.")}
             </div>
             <div class="ctrl-note">${focusTargetCopy}</div>

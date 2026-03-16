@@ -313,6 +313,19 @@ const introSection = getSection(sections, "how-to-read-the-toy");
       background: var(--explorer-accent-soft);
       box-shadow: inset 0 0 0 1px rgba(47, 92, 126, 0.14);
     }
+    .explorer-shell .btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.46;
+      transform: none;
+      border-color: var(--explorer-border);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.46);
+    }
+    .explorer-shell .btn:disabled:hover,
+    .explorer-shell .btn:disabled:focus-visible {
+      transform: none;
+      border-color: var(--explorer-border);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.46);
+    }
     .explorer-shell .btn.ghost {
       background: transparent;
     }
@@ -952,6 +965,25 @@ const introSection = getSection(sections, "how-to-read-the-toy");
       outline-offset: -2px;
       box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22) inset;
     }
+    .explorer-shell .marker-ring {
+      position: absolute;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+      opacity: 0.98;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .explorer-shell .marker-ring-target {
+      inset: 1px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M14 53C10 31 26 13 50 11C75 9 92 28 89 52C86 76 75 91 49 89C24 87 11 71 14 53Z' fill='none' stroke='%232d7385' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      filter: drop-shadow(0 0 2px rgba(45, 115, 133, 0.28));
+    }
+    .explorer-shell .marker-ring-compare {
+      inset: 7px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M19 55C15 38 28 20 49 18C70 16 83 31 81 51C79 71 68 83 47 81C28 79 17 69 19 55Z' fill='none' stroke='%23bf8642' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      filter: drop-shadow(0 0 2px rgba(191, 134, 66, 0.34));
+    }
     .explorer-shell .ring-thin {
       box-shadow: 0 0 0 1px rgba(191, 134, 66, 0.46), 0 0 0 1px rgba(255, 255, 255, 0.22) inset;
       outline-color: var(--ring-thin);
@@ -1018,6 +1050,34 @@ const introSection = getSection(sections, "how-to-read-the-toy");
       color: var(--explorer-muted);
       font-size: 0.8rem;
       line-height: 1.6;
+    }
+    .explorer-shell .grid-marker-panel {
+      display: grid;
+      gap: 0.75rem;
+      padding: 0.95rem 1rem;
+      border-radius: var(--explorer-radius-md);
+      border: 1px solid rgba(33, 65, 95, 0.12);
+      background: rgba(255, 255, 255, 0.56);
+    }
+    .explorer-shell .grid-marker-head,
+    .explorer-shell .grid-marker-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .explorer-shell .grid-marker-head {
+      justify-content: space-between;
+    }
+    .explorer-shell .grid-marker-actions {
+      justify-content: flex-start;
+    }
+    .explorer-shell .grid-marker-title {
+      color: var(--explorer-fg);
+      font-family: var(--font-ui);
+      font-size: 0.92rem;
+      font-weight: 650;
+      line-height: 1.35;
     }
     .explorer-shell .equation-block {
       padding: 0.85rem 1rem;

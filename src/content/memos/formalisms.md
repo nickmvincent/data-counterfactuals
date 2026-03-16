@@ -7,6 +7,8 @@ visibility: public
 type: shared_memo
 ---
 
+WARNING!! The rest of this site has been human-reviewed and curated. This is still a lightly reviewed AI first draft. I think it's a valuable artifact but probably don't spend too much time looking at this now unless you'd like to critique/edit.
+
 This draft tries to write down a simplified data-counterfactual formalism and then ask how far it stretches. The goal is not to collapse several literatures into one master equation, and not to claim that influence, active learning, privacy, unlearning, and poisoning are secretly interchangeable. The goal is to identify the minimal comparative object they often share and then say, more carefully, where each literature departs from it.
 
 The template below is deliberately lossy. Some tasks fit it neatly; others only fit once we add an observer, an aggregation rule, a sequential policy, or a staged training protocol. That is not a failure of the exercise. It is the point of it.
