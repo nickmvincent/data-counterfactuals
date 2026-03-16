@@ -15,26 +15,30 @@ The template below is deliberately lossy. Some tasks fit it neatly; others only 
 
 Start with five objects:
 
-```text
-D          = observed training data
-A          = comparison protocol held fixed within one family of worlds
-E          = evaluation target, task, slice, or observer query
-U(A(D), E) = the behavior, score, transcript, or release we care about
-T          = an allowed transformation of the training data
-```
+$$
+\begin{aligned}
+D &= \text{observed training data} \\
+A &= \text{comparison protocol held fixed within one family of worlds} \\
+E &= \text{evaluation target, task, slice, or observer query} \\
+U(A(D), E) &= \text{the behavior, score, transcript, or release we care about} \\
+T &= \text{an allowed transformation of the training data}
+\end{aligned}
+$$
 
 Apply the transformation to produce a neighboring training world:
 
-```text
-D'       = T(D)
-Delta_T  = Compare( U(A(D'), E), U(A(D), E) )
-```
+$$
+\begin{aligned}
+D' &= T(D) \\
+\Delta_T &= \operatorname{Compare}\bigl(U(A(D'), E), U(A(D), E)\bigr)
+\end{aligned}
+$$
 
 This is the simplest version of a data counterfactual: hold the comparison protocol fixed, change the training data, and compare outcomes.
 
 That minimal form already captures a lot, but most literatures add at least one extra ingredient:
 
-- an **intervention family** `T` such as deletion, upweighting, addition, replacement, corruption, or repair
+- an **intervention family** $T$ such as deletion, upweighting, addition, replacement, corruption, or repair
 - an **aggregation rule** over many transformations rather than one comparison
 - an **observer model** describing what outputs an auditor or attacker gets to see
 - a **decision rule** for selecting the next transformation rather than passively evaluating one
@@ -49,24 +53,25 @@ In the abstract, Koh and Liang describe influence functions as a way to "[trace 
 
 For the data-counterfactual view, the discrete version is the easiest place to start:
 
-```text
-Delta_i(x) = ell(x; A(D \ {z_i})) - ell(x; A(D))
-```
+$$
+\Delta_i(x) = \ell\bigl(x; A(D \setminus \{z_i\})\bigr) - \ell\bigl(x; A(D)\bigr)
+$$
 
-This asks what changes for test point `x` when training point `z_i` is removed.
+This asks what changes for test point $x$ when training point $z_i$ is removed.
 
 The classical influence-function version turns that deletion into an infinitesimal upweighting problem:
 
-```text
-I_up,loss(z_i, x) = d/dε ell(x; A(D, weight(z_i) + ε)) evaluated at ε = 0
-```
+$$
+I_{\mathrm{up},\mathrm{loss}}(z_i, x)
+= \left.\frac{d}{d\varepsilon} \, \ell\bigl(x; A(D, \operatorname{weight}(z_i) + \varepsilon)\bigr)\right|_{\varepsilon = 0}
+$$
 
 This is a very direct specialization of the simplified formalism:
 
-- `T` changes the weight of one example
-- `E` is often one test point or one loss term
-- `U` is local predictive behavior
-- `Compare` is a first-order derivative or a discrete difference
+- $T$ changes the weight of one example
+- $E$ is often one test point or one loss term
+- $U$ is local predictive behavior
+- $\operatorname{Compare}$ is a first-order derivative or a discrete difference
 
 ## 2. Data valuation and Shapley-style methods
 
@@ -74,11 +79,12 @@ In the abstract, Jia et al. say they study the problem of "[data valuation by ut
 
 Here the key move is to add an aggregation rule over many training worlds rather than study one deletion:
 
-```text
-phi_i
-  = sum over S subset of D \ {i}
-      [ |S|! (n - |S| - 1)! / n! ] * ( U(A(S ∪ {i}), E) - U(A(S), E) )
-```
+$$
+\phi_i
+= \sum_{S \subseteq D \setminus \{i\}}
+\frac{|S|!(n - |S| - 1)!}{n!}
+\Bigl(U(A(S \cup \{i\}), E) - U(A(S), E)\Bigr)
+$$
 
 This is still a data counterfactual, but the comparison is averaged across many coalitional worlds. Relative to influence methods, two things change:
 
@@ -93,13 +99,13 @@ Early in the survey, Settles summarizes active learning with a line that is stil
 
 Here the counterfactual is prospective rather than retrospective. A simple pool-based one-step objective looks like:
 
-```text
-x*
-  = argmax over x in X_pool
-      E_y [ U(A(D ∪ {(x, y)}), E) ]
-```
+$$
+x^*
+= \operatorname*{arg\,max}_{x \in X_{\mathrm{pool}}}
+\mathbb{E}_y \bigl[U(A(D \cup \{(x, y)\}), E)\bigr]
+$$
 
-The expectation is over the unknown label `y`, or over whatever posterior the method assumes.
+The expectation is over the unknown label $y$, or over whatever posterior the method assumes.
 
 This should not be mistaken for the whole field. Uncertainty sampling, query-by-committee, expected model change, density weighting, and Bayesian experimental design do not reduce to one identical objective. What they share is a decision rule over possible additions to the training set. That is why active learning only fits once the comparison protocol includes a query rule and an assumption about how labels arrive. The learner is not asking which existing point mattered most. It is asking which not-yet-labeled point would move the model into the most useful neighboring world, if acquired.
 
@@ -107,15 +113,15 @@ This should not be mistaken for the whole field. Uncertainty sampling, query-by-
 
 In the abstract, Wang et al. define dataset distillation as an attempt to "[distill the knowledge from a large training dataset into a small one](https://openreview.net/forum?id=Sy4lojC9tm)."
 
-The object now is a synthetic replacement dataset `D_tilde`, usually under a strict size budget and a fixed training protocol:
+The object now is a synthetic replacement dataset $\tilde{D}$, usually under a strict size budget and a fixed training protocol:
 
-```text
-D_tilde*
-  = argmin over |D_tilde| = m
-      d( A_k,theta0(D_tilde), A_k,theta0(D) )
-```
+$$
+\tilde{D}^*
+= \operatorname*{arg\,min}_{|\tilde{D}| = m}
+d\bigl(A_{k,\theta_0}(\tilde{D}), A_{k,\theta_0}(D)\bigr)
+$$
 
-Here `A_k,theta0` stands in for a constrained training procedure such as a fixed number of gradient steps from a given or randomized initialization. The distance `d` can mean many things: downstream loss, gradient matching, trajectory matching, or performance across initializations.
+Here $A_{k,\theta_0}$ stands in for a constrained training procedure such as a fixed number of gradient steps from a given or randomized initialization. The distance $d$ can mean many things: downstream loss, gradient matching, trajectory matching, or performance across initializations.
 
 This still fits the data-counterfactual frame, but only in a looser sense than leave-one-out or Shapley do. The intervention is now synthetic replacement rather than simple deletion or addition, and the search takes place in a constructed data space rather than over nearby observed subsets. The question is whether a tiny constructed world can stand in for a much larger one under a fixed training recipe.
 
@@ -123,40 +129,37 @@ This still fits the data-counterfactual frame, but only in a looser sense than l
 
 Bourtoule et al. frame machine unlearning as the problem of removing data influence without paying the full cost of retraining from scratch; their SISA proposal is one systems design for making that comparison operational at lower cost ([paper](https://arxiv.org/abs/1912.03817)).
 
-The formal object is usually something like:
+Given a removal request $R \subseteq D$, the formal object is usually something like:
 
-```text
-Given a removal request R subset of D,
-produce A_unlearn(D, R) such that
-
-A_unlearn(D, R) ≈ A(D \ R)
-```
+$$
+A_{\mathrm{unlearn}}(D, R) \approx A(D \setminus R)
+$$
 
 The approximation can be exact or approximate, depending on the setting.
 
 This sits naturally inside the simplified formalism:
 
-- `T` deletes a requested subset
-- the reference world is full retraining on `D \ R`
+- $T$ deletes a requested subset
+- the reference world is full retraining on $D \setminus R$
 - the extra question is systems-oriented: how quickly, exactly, and auditably can we realize that counterfactual in practice?
 
 ## 6. Differential privacy
 
 Differential privacy should be treated separately from membership inference because it is a different kind of formal object. It is not an attack. It is a guarantee over neighboring training worlds.
 
-For neighboring datasets `D ~ D'` that differ in one record, a randomized mechanism `M` is `(epsilon, delta)`-differentially private if for every measurable event `S`,
+For neighboring datasets $D \sim D'$ that differ in one record, a randomized mechanism $M$ is $(\varepsilon, \delta)$-differentially private if for every measurable event $S$,
 
-```text
-Pr[M(D) in S] <= exp(epsilon) * Pr[M(D') in S] + delta
-```
+$$
+\Pr[M(D) \in S] \le e^\varepsilon \Pr[M(D') \in S] + \delta
+$$
 
 Following [Dwork (2006)](https://www.microsoft.com/en-us/research/publication/differential-privacy/), the point is to bound how distinguishable two one-record-apart worlds can be from the outside.
 
-This belongs in the same neighborhood as data counterfactuals, but it does not plug into the simplified `Delta_T = Compare(...)` template as directly as influence or Shapley do. The important correspondences are:
+This belongs in the same neighborhood as data counterfactuals, but it does not plug into the simplified $\Delta_T = \operatorname{Compare}(\cdots)$ template as directly as influence or Shapley do. The important correspondences are:
 
-- `T` is an adjacent-dataset transformation, usually add/remove or replace one record
+- $T$ is an adjacent-dataset transformation, usually add/remove or replace one record
 - the observable object is the distribution of released outputs, not just one chosen utility score
-- `Compare` is not a raw performance gap but an indistinguishability bound across all measurable events `S`
+- $\operatorname{Compare}$ is not a raw performance gap but an indistinguishability bound across all measurable events $S$
 
 So differential privacy is best read as a worst-case limit on the observable consequences of a one-record data counterfactual. It is not something established by sampling a few neighboring worlds well; it is a guarantee proved about the release mechanism.
 
@@ -166,21 +169,22 @@ In the abstract, Song and Mittal describe membership inference as an attack wher
 
 In schematic form:
 
-```text
-a(z, O(A(D), z)) -> {member, non-member}
-or
-s(z, O(A(D), z)) ≈ P(z in D | observable outputs)
-```
+$$
+\begin{aligned}
+a\bigl(z, O(A(D), z)\bigr) &\to \{\text{member}, \text{non-member}\} \\
+s\bigl(z, O(A(D), z)\bigr) &\approx \Pr(z \in D \mid \text{observable outputs})
+\end{aligned}
+$$
 
-Here `O` is the observer model: logits, confidence scores, loss values, generated text, or whatever outputs the attacker can actually inspect.
+Here $O$ is the observer model: logits, confidence scores, loss values, generated text, or whatever outputs the attacker can actually inspect.
 
 This task does not change the training set directly at evaluation time. Instead, it asks whether the difference between two counterfactual worlds,
 
-```text
-z in D
-versus
-z not in D
-```
+$$
+z \in D
+\qquad \text{versus} \qquad
+z \notin D
+$$
 
 left a detectable trace in the model's behavior.
 
@@ -197,17 +201,17 @@ So MIA is best read as one empirical probe of whether a data counterfactual leak
 
 Biggio et al. study poisoning attacks on SVMs in which an adversary adds crafted training points to worsen downstream performance ([paper](https://arxiv.org/abs/1206.6389)).
 
-The attacker chooses a perturbation set `P` to optimize a bad downstream objective:
+The attacker chooses a perturbation set $P$ to optimize a bad downstream objective:
 
-```text
-P*
-  = argmax over feasible poisoned sets P
-      U_attack( A(D ∪ P), E )
-```
+$$
+P^*
+= \operatorname*{arg\,max}_{P \in \mathcal{P}_{\mathrm{feasible}}}
+U_{\mathrm{attack}}\bigl(A(D \cup P), E\bigr)
+$$
 
-For targeted poisoning or backdoors, `U_attack` is not generic test error but some attack-specific failure mode.
+For targeted poisoning or backdoors, $U_{\mathrm{attack}}$ is not generic test error but some attack-specific failure mode.
 
-This is the same broad template with the sign flipped. The transformation `T` is malicious, the utility is adversarial, and the point is to move the model into a worse part of the grid. But the adversarial setting also changes the epistemic posture of the problem: feasibility sets, stealth constraints, attacker knowledge, and threat models become central.
+This is the same broad template with the sign flipped. The transformation $T$ is malicious, the utility is adversarial, and the point is to move the model into a worse part of the grid. But the adversarial setting also changes the epistemic posture of the problem: feasibility sets, stealth constraints, attacker knowledge, and threat models become central.
 
 ## What really changes across these tasks
 
@@ -224,11 +228,14 @@ That is why the umbrella remains useful. The shared object is not one universal 
 
 A data strike simulation is one especially useful way to instantiate the simplified formalism. Pick a withholding rule, remove or downweight some subset, retrain or approximate retraining, and compare the result to the baseline world:
 
-```text
-For strike set S subset of D,
-T_strike,S(D) = D \ S
-Delta_strike(S) = Compare( U(A(D \ S), E), U(A(D), E) )
-```
+For a strike set $S \subseteq D$,
+
+$$
+\begin{aligned}
+T_{\mathrm{strike},S}(D) &= D \setminus S \\
+\Delta_{\mathrm{strike}}(S) &= \operatorname{Compare}\bigl(U(A(D \setminus S), E), U(A(D), E)\bigr)
+\end{aligned}
+$$
 
 That looks narrow at first, but it is actually a reusable experimental substrate for several important families of questions.
 

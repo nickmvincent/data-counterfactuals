@@ -58,9 +58,9 @@ function createPalette(stops) {
 }
 
 const palettes = {
-  "Studio ember": createPalette(["#2a1f1a", "#5f4738", "#a66a43", "#d9a56a", "#f3debf"]),
-  "Moss signal": createPalette(["#1e2624", "#36544e", "#617d75", "#a2baaa", "#ebe4d6"]),
-  "Graphite paper": createPalette(["#211d1a", "#4d463f", "#81786f", "#b9b0a6", "#f4ece0"]),
+  "Clear daylight": createPalette(["#14324a", "#2f5c7e", "#5f8fb0", "#c59d59", "#fbf4de"]),
+  "Sage ledger": createPalette(["#1b2d2b", "#365b56", "#6b9387", "#bfd0c3", "#f7f2e7"]),
+  "Ink and paper": createPalette(["#1d2434", "#38597d", "#7899ba", "#d1b27a", "#fff6e2"]),
 };
 
 const metricMeta = {
@@ -192,11 +192,13 @@ function createExportStamp() {
 }
 
 function App() {
+  const countMin = 2;
+  const countMax = 8;
   const [count, setCount] = useState(4);
   const base = useMemo(() => alphabet.slice(0, count), [count]);
 
   const [metric, setMetric] = useState("jaccard");
-  const [paletteName, setPaletteName] = useState("Studio ember");
+  const [paletteName, setPaletteName] = useState("Clear daylight");
   const palette = palettes[paletteName];
 
   const [uiMode, setUiMode] = useState("simple");
@@ -322,7 +324,7 @@ function App() {
   const operatorRange = useMemo(() => matrixRange(matrix), [matrix]);
   const baseRange = useMemo(() => matrixRange(baseMatrix), [baseMatrix]);
   const effectiveGridView = uiMode === "advanced" ? gridView : "real";
-  const effectiveShowNums = uiMode === "advanced" ? showNums : false;
+  const effectiveShowNums = showNums;
   const analysisMatrix = selectAnalysisMatrix({ baseMatrix, editedMatrix: matrix, gridView: effectiveGridView });
   const displayMatrix = analysisMatrix;
   const { min: dispMin, max: dispMax } = effectiveGridView === "real" ? baseRange : operatorRange;
@@ -533,7 +535,7 @@ function App() {
       ? groupSet.length
         ? `The current question treats ${label(groupSet)} as one coalition. Changing these tokens changes who gets removed together; it does not move the selected train row ${label(Srow)}.`
         : `Pick two or more tokens to ask what happens when that coalition leaves train ${label(Srow)} together. This control changes the question, not the selected row.`
-      : `The current question is about ${focusPrimary}. Clicking another token changes who is being removed, added, or valued, while the selected train row stays ${label(Srow)} until you change it below.`;
+      : `The current question is about ${focusPrimary}. Clicking another token changes who is being removed, added, or valued, while the selected train row stays ${label(Srow)} until you change it on the grid.`;
 
   const scoreProxyCopy =
     `Each cell is a toy proxy for "retrain on ${label(Srow)} and evaluate on ${label(evalSet)}." ` +
@@ -779,6 +781,13 @@ function App() {
   const poisonTargetLabel = computed === "group" && groupSet.length ? label(groupSet) : focusPrimary;
   const noiseStateLabel = ["Off", "DP-ish", "Heavy"][noiseLevel];
   const subsetLabels = useMemo(() => subs.map((subset) => label(subset)), [subs]);
+  const canDecreaseCount = count > countMin;
+  const canIncreaseCount = count < countMax;
+  const isGuidedMode = uiMode === "guided";
+  const isAdvancedMode = uiMode === "advanced";
+  const showInspector = uiMode !== "simple";
+  const gridSelectionHint =
+    "Click a row label to choose the training world, a column label to choose the evaluation slice, or any cell to set both at once.";
   const exportPayload = useMemo(
     () => ({
       settings: settingsView,
@@ -910,17 +919,14 @@ function App() {
     </section>
   `;
   const currentWorldLabel = effectiveGridView === "operator" ? "Operator view" : uiMode === "advanced" ? "Real world" : "Reference grid";
-  const modeLabel = uiMode === "simple" ? "Simple mode" : "Advanced mode";
+  const modeLabel =
+    uiMode === "simple" ? "Simple explore" : uiMode === "guided" ? "Guided" : "Advanced explore";
   const modeCopy =
     uiMode === "simple"
-      ? "Stay here when you want the cleanest distillation: one reference grid, the essential scene controls, and the explanation of the active question."
-      : "Use Advanced mode when you want to compare edited and untouched worlds, layer in toy interventions, inspect raw state, and export the current configuration.";
-  const sceneFacts = [
-    { label: "Train world", value: label(Srow) },
-    { label: "Evaluation slice", value: label(evalSet) },
-    { label: "Focus", value: focusLabel },
-    { label: "Score rule", value: metricMeta[metric].short },
-  ];
+      ? "Keep the explorer lean: choose a score rule, click the grid to set train and eval, and inspect the current value without the extra walkthrough chrome."
+      : uiMode === "guided"
+        ? "Guided mode keeps the grid visible but adds presets and the statistic walkthroughs so the explorer can teach as you move."
+        : "Advanced explore unlocks world-layer comparisons, toy edits, export tools, palette controls, and the raw state inspector.";
 
   useEffect(() => {
     const container = gridWrapRef.current;
@@ -935,130 +941,111 @@ function App() {
       <section class="workspace-toolbar" data-testid="explorer-toolbar">
         <div class="toolbar-bar">
           <div class="toolbar-guide">
-            <span class="summary-kicker">Current lens</span>
-            <p class="toolbar-guide-copy">
-              ${questionSummary.question}
-            </p>
+            <span class="summary-kicker">Workspace mode</span>
+            <p class="toolbar-guide-copy">${modeCopy}</p>
           </div>
           <div class="summary-inline toolbar-status-row">
             <span class="pill">${modeLabel}</span>
             <span class="pill">${currentWorldLabel}</span>
-            <span class="pill">${questionSummary.answerLabel}: ${questionSummary.answerValue}</span>
+            <span class="pill">${metricMeta[metric].short}</span>
+            <span class="pill">${effectiveShowNums ? "Raw values on" : "Color scale"}</span>
           </div>
         </div>
 
         <div class="toolbar-grid">
-          <section class=${`toolbar-group toolbar-group-question ${computedFlash ? "computed-flash" : ""}`} data-testid="question-controls">
-            <div class="toolbar-label">Question</div>
-            <div class="segmented-row question-button-row">
-              <button class="btn" aria-pressed=${computed === "loo"} onClick=${() => setComputed("loo")}>Leave-one-out</button>
-              <button class="btn" aria-pressed=${computed === "group"} onClick=${() => setComputed("group")}>Group LOO</button>
-              <button class="btn" aria-pressed=${computed === "shapley"} onClick=${() => setComputed("shapley")}>Shapley</button>
-              <button class="btn" aria-pressed=${computed === "scaling"} onClick=${() => setComputed("scaling")}>Scaling</button>
-            </div>
-
-            <div class="control-cluster">
-              <div class="control-head">
-                Question target
-                ${InfoTip("Pick the contributor whose effect you want to ask about. This changes who is being removed, added, or valued; it does not change the selected train row.")}
-              </div>
-              <div class="ctrl-note">${focusTargetCopy}</div>
-              <div class="focus-chip-row">
-                ${base.map((token) => {
-                  const active = focusSet.includes(token);
-                  const handler = () => (computed === "group" ? toggleFocus(token) : setFocusSet([token]));
-                  return html`<button key=${`f-${token}`} class="btn" aria-pressed=${active} onClick=${handler}>${token}</button>`;
-                })}
-              </div>
-              <div class="summary-inline toolbar-pills">
-                <span class="pill">${focusTargetBadge}</span>
-                <span class="pill">${computed === "group" ? "Changes the coalition" : "Changes the contributor"}</span>
-              </div>
-            </div>
-
-            ${computed === "scaling"
-              ? html`
-                  <div class="control-cluster">
-                    <div class="control-head">Bucket size</div>
-                    <div class="slider-row">
-                      <input type="range" min="0" max=${base.length} value=${k} onInput=${(event) => setK(+event.target.value)} />
-                      <span class="pill">k = ${k}</span>
-                      <button class="btn ghost" onClick=${() => setPlaying((previous) => !previous)}>${playing ? "Stop" : "Animate"}</button>
-                    </div>
-                    <div class="ctrl-note">Scaling averages the active evaluation slice across every training world whose size is k.</div>
-                  </div>
-                `
-              : null}
-          </section>
-
-          <section class="toolbar-group toolbar-group-scene" data-testid="scene-controls">
-            <div class="toolbar-label">Scene</div>
-            <div class="control-grid">
-              <div class="control-field">
-                <div class="control-label">
-                  Training world
-                  ${InfoTip("Choose the active training subset. Leave-one-out style comparisons are anchored to this row.")}
-                </div>
-                <select value=${rowIdx} onChange=${(event) => setRowIdx(+event.target.value)}>
-                  ${subs.map(
-                    (subset, index) => html`<option value=${index} key=${`r-${index}`}>${index}. ${label(subset)}</option>`,
-                  )}
-                </select>
-              </div>
-
-              <div class="control-field">
-                <div class="control-label">
-                  Evaluation slice
-                  ${InfoTip("Choose which evaluation subset provides the active column and the slice used by the summary cards.")}
-                </div>
-                <select value=${colIdx} onChange=${(event) => setColIdx(+event.target.value)}>
-                  ${subs.map(
-                    (subset, index) => html`<option value=${index} key=${`c-${index}`}>${index}. ${label(subset)}</option>`,
-                  )}
-                </select>
-              </div>
-
-              <div class="control-field">
-                <div class="control-label">
-                  Toy universe size
-                  ${InfoTip("How many base points exist (A, B, C...). Rows and columns grow as the powerset of this toy universe.")}
-                </div>
-                <div class="slider-row">
-                  <input type="range" min="2" max="8" value=${count} onInput=${(event) => setCount(+event.target.value)} />
-                  <span class="pill">${count}</span>
-                </div>
-              </div>
-
-              <div class="control-field control-field-full">
-                <div class="control-label">
-                  Cell score
-                  ${InfoTip("Each cell is a toy proxy for retraining on the row world and evaluating on the column slice. Jaccard = overlap divided by union. |Intersection| = raw count. Entropy = binary entropy of the overlap.")}
-                </div>
-                <div class="segmented-row">
-                  <button class="btn" aria-pressed=${metric === "jaccard"} onClick=${() => setMetric("jaccard")}>Jaccard</button>
-                  <button class="btn" aria-pressed=${metric === "inter"} onClick=${() => setMetric("inter")}>|Intersection|</button>
-                  <button class="btn" aria-pressed=${metric === "entropy"} onClick=${() => setMetric("entropy")}>Entropy</button>
-                </div>
-                <div class="control-note">${scoreProxyCopy}</div>
-              </div>
-            </div>
-          </section>
-
           <section class="toolbar-group" data-testid="workspace-controls">
-            <div class="toolbar-label">Workspace</div>
+            <div class="toolbar-label">Explore mode</div>
             <div class="segmented-row mode-toggle">
-              <button class="btn mini" aria-pressed=${uiMode === "simple"} onClick=${() => setUiMode("simple")}>Simple</button>
-              <button class="btn mini" aria-pressed=${uiMode === "advanced"} onClick=${() => setUiMode("advanced")}>Advanced</button>
-            </div>
-            <div class="summary-inline toolbar-pills">
-              <span class="pill">${currentWorldLabel}</span>
-              <span class="pill">${questionMeta[computed]}</span>
-              <span class="pill">${uiMode === "advanced" ? "Extended controls" : "Reference grid locked"}</span>
+              <button class="btn mini" aria-pressed=${uiMode === "simple"} onClick=${() => setUiMode("simple")}>Simple explore</button>
+              <button class="btn mini" aria-pressed=${uiMode === "guided"} onClick=${() => setUiMode("guided")}>Guided</button>
+              <button class="btn mini" aria-pressed=${uiMode === "advanced"} onClick=${() => setUiMode("advanced")}>Advanced explore</button>
             </div>
             <div class="toolbar-note">${modeCopy}</div>
           </section>
 
-          ${uiMode === "advanced"
+          <section class="toolbar-group" data-testid="metric-controls">
+            <div class="toolbar-label">
+              Cell score
+              ${InfoTip("Each cell is a toy proxy for retraining on the row world and evaluating on the column slice. Jaccard = overlap divided by union. |Intersection| = raw count. Entropy = binary entropy of the overlap.")}
+            </div>
+            <div class="segmented-row">
+              <button class="btn" aria-pressed=${metric === "jaccard"} onClick=${() => setMetric("jaccard")}>Jaccard</button>
+              <button class="btn" aria-pressed=${metric === "inter"} onClick=${() => setMetric("inter")}>|Intersection|</button>
+              <button class="btn" aria-pressed=${metric === "entropy"} onClick=${() => setMetric("entropy")}>Entropy</button>
+            </div>
+            <div class="toolbar-note">${scoreProxyCopy}</div>
+          </section>
+
+          <section class="toolbar-group toolbar-group-actions" data-testid="display-controls">
+            <div class="toolbar-label">
+              Display
+              ${InfoTip("These controls only change how the grid is rendered, not the underlying counterfactual question.")}
+            </div>
+            <label class="checkbox-row">
+              <input type="checkbox" checked=${showNums} onChange=${(event) => setShowNums(event.target.checked)} />
+              Show raw values
+            </label>
+            ${isAdvancedMode
+              ? html`
+                  <select value=${paletteName} onChange=${(event) => setPaletteName(event.target.value)}>
+                    ${Object.keys(palettes).map((name) => html`<option value=${name}>${name}</option>`)}
+                  </select>
+                  <div class="export-actions">
+                    <button class="btn mini" onClick=${exportJson}>Export JSON</button>
+                    <button class="btn ghost mini" onClick=${exportCsv}>Export CSV</button>
+                  </div>
+                `
+              : null}
+            <div class="toolbar-note">
+              ${isAdvancedMode
+                ? editSummary
+                : "Turn raw values on when you want to inspect the exact toy scores instead of just the color field."}
+            </div>
+            ${isAdvancedMode
+              ? html`
+                  <details class="guide-details toolbar-drawer">
+                    <summary>Inspect live settings</summary>
+                    <div class="ctrl-note">This is the same state currently driving the figure below.</div>
+                    <pre class="json-block">${settingsJson}</pre>
+                  </details>
+                `
+              : null}
+          </section>
+
+          ${isGuidedMode
+            ? html`
+                <section class=${`toolbar-group toolbar-expand ${presetFlash ? "preset-flash" : ""}`} data-testid="guided-controls">
+                  <div class="toolbar-label">Guided paths</div>
+                  <div class="tutorials">
+                    ${tutorialPresets.map(
+                      (tutorial) => html`
+                        <button
+                          key=${tutorial.id}
+                          class=${`tutorial-btn ${tutorialKind === tutorial.id ? "active" : ""}`}
+                          onClick=${() => runTutorial(tutorial.id)}
+                        >
+                          <span class="tutorial-title">${tutorial.title}</span>
+                          <span class="tutorial-desc">${tutorial.summary}</span>
+                        </button>
+                      `,
+                    )}
+                  </div>
+                  <div class="tutorial-note">
+                    ${tutorialInfo
+                      ? html`
+                          <div>
+                            <div><b>Goal</b>: ${tutorialInfo.goal}</div>
+                            <div><b>Action</b>: ${tutorialInfo.how}</div>
+                            <div><b>Why it matters</b>: ${tutorialInfo.concept}</div>
+                          </div>
+                        `
+                      : "Load a preset to jump straight to a useful scene instead of building one from scratch."}
+                  </div>
+                </section>
+              `
+            : null}
+
+          ${isAdvancedMode
             ? html`
                 <section class="toolbar-group" data-testid="world-layer-controls">
                   <div class="toolbar-label">
@@ -1071,7 +1058,6 @@ function App() {
                   </div>
                   <div class="toolbar-note">${advancedWorldSummary}</div>
                 </section>
-
                 <section class="toolbar-group" data-testid="toy-edit-controls">
                   <div class="toolbar-label">
                     Toy edits
@@ -1101,110 +1087,8 @@ function App() {
                     <span class="pill">Noise ${noiseStateLabel}</span>
                   </div>
                 </section>
-
-                <section class="toolbar-group toolbar-group-actions" data-testid="display-controls">
-                  <div class="toolbar-label">
-                    Display
-                    ${InfoTip("These controls only change how the grid is rendered, not the underlying counterfactual question.")}
-                  </div>
-                  <label class="checkbox-row">
-                    <input type="checkbox" checked=${showNums} onChange=${(event) => setShowNums(event.target.checked)} />
-                    Show cell values
-                  </label>
-                  <select value=${paletteName} onChange=${(event) => setPaletteName(event.target.value)}>
-                    ${Object.keys(palettes).map((name) => html`<option value=${name}>${name}</option>`)}
-                  </select>
-                  <div class="export-actions">
-                    <button class="btn mini" onClick=${exportJson}>Export JSON</button>
-                    <button class="btn ghost mini" onClick=${exportCsv}>Export CSV</button>
-                  </div>
-                  <div class="toolbar-note">${editSummary}</div>
-                  <details class="guide-details toolbar-drawer">
-                    <summary>Inspect live settings</summary>
-                    <div class="ctrl-note">This is the same state currently driving the figure below.</div>
-                    <pre class="json-block">${settingsJson}</pre>
-                  </details>
-                </section>
               `
             : null}
-
-          <details class=${`toolbar-group toolbar-expand ${presetFlash ? "preset-flash" : ""}`} data-testid="explorer-presets">
-            <summary class="toolbar-summary">
-              <div class="toolbar-summary-copy">
-                <span class="toolbar-summary-label">Presets</span>
-                <span class="toolbar-summary-title">${activeTutorial ? activeTutorial.title : "Guided starts"}</span>
-              </div>
-              <div class="toolbar-summary-actions">
-                <span class="pill">${activeTutorial ? "Loaded" : `${tutorialPresets.length} built in`}</span>
-                <span class="toolbar-summary-caret" aria-hidden="true"></span>
-              </div>
-            </summary>
-            <div class="toolbar-expanded">
-              <div class="tutorials">
-                ${tutorialPresets.map(
-                  (tutorial) => html`
-                    <button
-                      key=${tutorial.id}
-                      class=${`tutorial-btn ${tutorialKind === tutorial.id ? "active" : ""}`}
-                      onClick=${() => runTutorial(tutorial.id)}
-                    >
-                      <span class="tutorial-title">${tutorial.title}</span>
-                      <span class="tutorial-desc">${tutorial.summary}</span>
-                    </button>
-                  `,
-                )}
-              </div>
-              <div class="tutorial-note">
-                ${tutorialInfo
-                  ? html`
-                      <div>
-                        <div><b>Goal</b>: ${tutorialInfo.goal}</div>
-                        <div><b>Action</b>: ${tutorialInfo.how}</div>
-                        <div><b>Why it matters</b>: ${tutorialInfo.concept}</div>
-                      </div>
-                    `
-                  : "Load a preset to jump straight to a useful scene instead of building one from scratch."}
-              </div>
-            </div>
-          </details>
-
-          <details class=${`toolbar-group toolbar-expand toolbar-group-question-readout ${computedFlash ? "computed-flash" : ""}`} data-testid="explorer-active-question">
-            <summary class="toolbar-summary">
-              <div class="toolbar-summary-copy">
-                <span class="toolbar-summary-label">Active question</span>
-                <span class="toolbar-summary-title">${questionSummary.title}</span>
-              </div>
-              <div class="toolbar-summary-actions">
-                <span class="pill">${questionSummary.answerLabel}: ${questionSummary.answerValue}</span>
-                <span class="toolbar-summary-caret" aria-hidden="true"></span>
-              </div>
-            </summary>
-            <div class="toolbar-expanded">
-              <p class="toolbar-question-line">${questionSummary.question}</p>
-              <div class="toolbar-note">${questionSummary.trace}</div>
-              <div class="scene-fact-grid toolbar-fact-grid">
-                ${sceneFacts.map(
-                  (entry) => html`
-                    <div key=${entry.label} class="scene-fact">
-                      <div class="scene-fact-label">${entry.label}</div>
-                      <div class="scene-fact-value">${entry.value}</div>
-                    </div>
-                  `,
-                )}
-              </div>
-              <div class="stage-summary-grid toolbar-readout-grid">
-                ${stageReadouts.map(
-                  (entry) => html`
-                    <div key=${entry.key} class=${`stage-summary ${entry.tone}`}>
-                      <div class="stage-summary-label">${entry.label}</div>
-                      <div class="stage-summary-value">${entry.value}</div>
-                      <div class="stage-summary-note">${entry.note}</div>
-                    </div>
-                  `,
-                )}
-              </div>
-            </div>
-          </details>
         </div>
       </section>
 
@@ -1216,24 +1100,58 @@ function App() {
           </div>
           <div class="grid-meta-strip">
             <span class="pill">${metricMeta[metric].short}</span>
+            <span class="pill">${modeLabel}</span>
             <span class="pill">Train ${label(Srow)}</span>
             <span class="pill">Eval ${label(evalSet)}</span>
             <span class="pill">${questionMeta[computed]}</span>
-            ${uiMode === "advanced" ? html`<span class="pill">${paletteName}</span>` : null}
-            ${uiMode === "advanced" ? html`<span class="pill">${effectiveShowNums ? "Numbers on" : "Color only"}</span>` : null}
+            <span class="pill">${effectiveShowNums ? "Raw values on" : "Color only"}</span>
+            ${isAdvancedMode ? html`<span class="pill">${paletteName}</span>` : null}
           </div>
+        </div>
+
+        <div class="grid-toolbar-strip">
+          <div class="grid-selection-note" title=${gridSelectionHint}>${gridSelectionHint}</div>
         </div>
 
         <div class="grid-wrap stage-grid" ref=${gridWrapRef} data-testid="explorer-grid">
           <div style="display:flex">
-            <div class="rl axis-corner" style="width:var(--grid-axis-w)"></div>
+            <div class="rl axis-corner" style="width:var(--grid-axis-w)" title=${`${gridSelectionHint} Use the plus and minus buttons to grow or shrink the toy universe.`}>
+              <div class="axis-corner-stack">
+                <span class="axis-corner-label">Grid controls</span>
+                <div class="axis-corner-mode">
+                  <span>Rows train</span>
+                  <span>Cols eval</span>
+                </div>
+                <div class="axis-corner-actions">
+                  <button
+                    class="axis-corner-btn"
+                    type="button"
+                    disabled=${!canDecreaseCount}
+                    onClick=${() => setCount((previous) => Math.max(countMin, previous - 1))}
+                    title="Remove one base point; rows and columns both shrink."
+                  >
+                    -
+                  </button>
+                  <span class="axis-corner-size" title="Toy universe size">${count}</span>
+                  <button
+                    class="axis-corner-btn"
+                    type="button"
+                    disabled=${!canIncreaseCount}
+                    onClick=${() => setCount((previous) => Math.min(countMax, previous + 1))}
+                    title="Add one base point; rows and columns both grow."
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
             ${subs.map((colSet, colIndex) => {
               const active = colIndex === safeColIdx;
               return html`
                 <div
                   key=${`col-${colIndex}`}
                   class=${`cl ${active ? "axis-active" : ""}`}
-                  title=${`Col ${colIndex}: ${label(colSet)}`}
+                  title=${`Select evaluation slice ${label(colSet)}. Click any cell to set both train and eval at once.`}
                   onClick=${() => setColIdx(colIndex)}
                 >
                   ${formatColumnHeader(colIndex, colSet)}
@@ -1249,7 +1167,7 @@ function App() {
               <div key=${`row-${rowIndex}`} style="display:flex">
                 <div
                   class=${`rl ${selected ? "axis-active" : ""}`}
-                  title=${`Row ${rowIndex}: ${label(rowSet)}`}
+                  title=${`Select training world ${label(rowSet)}. Click any cell to set both train and eval at once.`}
                   onClick=${() => setRowIdx(rowIndex)}
                 >
                   ${formatRowHeader(rowIndex, rowSet)}
@@ -1301,7 +1219,7 @@ function App() {
                       ${thick ? html`<div class="ring ring-thick"></div>` : null}
                       ${edited ? html`<div class="edit-flag" title="Toy edit affects this row in operator view"></div>` : null}
                       ${effectiveShowNums
-                        ? html`<div class="num" style=${{ color: normalized > 0.56 ? "#1f1a16" : "#fffaf2" }}>${value.toFixed(2)}</div>`
+                        ? html`<div class="num" style=${{ color: normalized > 0.48 ? "#10273d" : "#f7fbff" }}>${value.toFixed(2)}</div>`
                         : null}
                     </div>
                   `;
@@ -1315,31 +1233,112 @@ function App() {
           <div>${highlightSummary}</div>
           <div>
             <b>White outline:</b> selected cell. ${ringRoleSummary}
-            ${uiMode === "advanced" ? html` <b>Red corner:</b> toy edit touches that row in operator view.` : null}
+            ${isAdvancedMode ? html` <b>Red corner:</b> toy edit touches that row in operator view.` : null}
           </div>
           <div><b>Axis labels:</b> each header shows the subset id and the specific instance letters in that world or slice.</div>
           <div>${formulaLine}</div>
         </div>
       </section>
 
-      <div class="inspector-grid">
-        ${analysisDetailBlock}
-
-        <details class="analysis-card support-drawer">
-          <summary>Reading help</summary>
-          <p class="analysis-copy">Quick answers stay nearby so you can recover the mental model without leaving the grid.</p>
-          <div class="faq-stack">
-            ${faqEntries.map(
+      <div class="workspace-footer">
+        <section class="stage-panel value-dock" data-testid="value-dock">
+          <div class="panel-head">
+            <div>
+              <span class="summary-kicker">Current reading</span>
+              <h3 class="panel-title">${questionSummary.title}</h3>
+            </div>
+            <span class="pill">${questionSummary.answerLabel}: ${questionSummary.answerValue}</span>
+          </div>
+          <p class="panel-copy">${questionSummary.question}</p>
+          <div class="summary-inline toolbar-pills">
+            <span class="pill">Train ${label(Srow)}</span>
+            <span class="pill">Eval ${label(evalSet)}</span>
+            <span class="pill">Focus ${focusLabel}</span>
+            <span class="pill">${metricMeta[metric].short}</span>
+          </div>
+          <div class="stage-summary-grid">
+            ${stageReadouts.map(
               (entry) => html`
-                <div key=${entry.question} class="inspector-banner">
-                  <div class="inspector-banner-title">${entry.question}</div>
-                  <div class="inspector-banner-copy">${entry.answer}</div>
+                <div key=${entry.key} class=${`stage-summary ${entry.tone}`}>
+                  <div class="stage-summary-label">${entry.label}</div>
+                  <div class="stage-summary-value">${entry.value}</div>
+                  <div class="stage-summary-note">${entry.note}</div>
                 </div>
               `,
             )}
           </div>
-        </details>
+        </section>
+
+        <section class=${`stage-panel question-dock ${computedFlash ? "computed-flash" : ""}`} data-testid="question-controls">
+          <div class="panel-head">
+            <div>
+              <span class="summary-kicker">Question controls</span>
+              <h3 class="panel-title">What counterfactual are we asking?</h3>
+            </div>
+            <span class="pill">${questionMeta[computed]}</span>
+          </div>
+          <div class="segmented-row question-button-row">
+            <button class="btn" aria-pressed=${computed === "loo"} onClick=${() => setComputed("loo")}>Leave-one-out</button>
+            <button class="btn" aria-pressed=${computed === "group"} onClick=${() => setComputed("group")}>Group LOO</button>
+            <button class="btn" aria-pressed=${computed === "shapley"} onClick=${() => setComputed("shapley")}>Shapley</button>
+            <button class="btn" aria-pressed=${computed === "scaling"} onClick=${() => setComputed("scaling")}>Scaling</button>
+          </div>
+
+          <div class="control-cluster">
+            <div class="control-head">
+              Question target
+              ${InfoTip("Pick the contributor whose effect you want to ask about. This changes who is being removed, added, or valued; it does not change the selected train row.")}
+            </div>
+            <div class="ctrl-note">${focusTargetCopy}</div>
+            <div class="focus-chip-row">
+              ${base.map((token) => {
+                const active = focusSet.includes(token);
+                const handler = () => (computed === "group" ? toggleFocus(token) : setFocusSet([token]));
+                return html`<button key=${`f-${token}`} class="btn" aria-pressed=${active} onClick=${handler}>${token}</button>`;
+              })}
+            </div>
+            <div class="summary-inline toolbar-pills">
+              <span class="pill">${focusTargetBadge}</span>
+              <span class="pill">${computed === "group" ? "Changes the coalition" : "Changes the contributor"}</span>
+            </div>
+          </div>
+
+          ${computed === "scaling"
+            ? html`
+                <div class="control-cluster">
+                  <div class="control-head">Bucket size</div>
+                  <div class="focus-chip-row">
+                    ${Array.from({ length: base.length + 1 }, (_, bucket) => html`
+                      <button class="btn mini" aria-pressed=${k === bucket} onClick=${() => setK(bucket)}>k=${bucket}</button>
+                    `)}
+                  </div>
+                  <div class="summary-inline toolbar-pills">
+                    <span class="pill">${scalingBucket.n} rows in bucket</span>
+                    <button class="btn ghost mini" onClick=${() => setPlaying((previous) => !previous)}>${playing ? "Stop" : "Animate"}</button>
+                  </div>
+                  <div class="ctrl-note">Scaling averages the active evaluation slice across every training world whose size is k.</div>
+                </div>
+              `
+            : null}
+        </section>
       </div>
+
+      ${showInspector ? analysisDetailBlock : null}
+
+      <details class="analysis-card support-drawer" data-testid="reading-help">
+        <summary>Reading help</summary>
+        <p class="analysis-copy">Quick answers stay nearby so you can recover the mental model without leaving the grid.</p>
+        <div class="faq-stack">
+          ${faqEntries.map(
+            (entry) => html`
+              <div key=${entry.question} class="inspector-banner">
+                <div class="inspector-banner-title">${entry.question}</div>
+                <div class="inspector-banner-copy">${entry.answer}</div>
+              </div>
+            `,
+          )}
+        </div>
+      </details>
     </div>
   `;
 }

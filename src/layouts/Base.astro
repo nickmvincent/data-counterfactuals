@@ -1,4 +1,6 @@
 ---
+import "katex/dist/katex.min.css";
+
 interface Props {
   title?: string;
   description?: string;
@@ -434,6 +436,26 @@ const fullTitle = title === "Data Counterfactuals" ? title : `${title} | Data Co
     background: rgba(255, 250, 243, 0.9);
     color: var(--fg);
     font-size: 0.9em;
+  }
+  .prose :where(.katex) {
+    color: var(--fg);
+  }
+  .prose :where(.katex-display) {
+    margin: 1.4rem 0 1.55rem;
+    padding: 0.85rem 1rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-radius: 18px;
+    border: 1px solid rgba(92, 72, 52, 0.12);
+    background:
+      linear-gradient(180deg, rgba(255, 252, 248, 0.92), rgba(247, 238, 226, 0.72)),
+      rgba(255, 250, 243, 0.86);
+    box-shadow: var(--shadow-soft);
+  }
+  .prose :where(.katex-display > .katex) {
+    min-width: fit-content;
+    padding: 0 0.1rem;
+    font-size: 1.03em;
   }
 
   .essay-page {
