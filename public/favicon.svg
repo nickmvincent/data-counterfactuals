@@ -1,19 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
-  <title>Data Counterfactuals</title>
+  <title>Data Counterfactuals mini grid</title>
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#101a34" />
-      <stop offset="100%" stop-color="#0b1020" />
+    <linearGradient id="bg" x1="10%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fcf7ef" />
+      <stop offset="100%" stop-color="#ead9c1" />
     </linearGradient>
+    <linearGradient id="panel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fffdf8" />
+      <stop offset="100%" stop-color="#f5ecdf" />
+    </linearGradient>
+    <radialGradient id="wash" cx="80%" cy="18%" r="68%">
+      <stop offset="0%" stop-color="#d8ebea" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#d8ebea" stop-opacity="0" />
+    </radialGradient>
   </defs>
-  <rect width="64" height="64" rx="14" fill="url(#bg)" />
-  <g fill="none" stroke="#33d6ff" stroke-width="2.5">
-    <path d="M16 20h32" />
-    <path d="M16 32h32" />
-    <path d="M16 44h32" />
-    <path d="M20 16v32" />
-    <path d="M32 16v32" />
-    <path d="M44 16v32" />
+  <rect width="64" height="64" rx="16" fill="url(#bg)" />
+  <rect width="64" height="64" rx="16" fill="url(#wash)" />
+  <rect x="9" y="9" width="46" height="46" rx="12" fill="url(#panel)" stroke="#c7b59d" />
+  <rect x="13" y="33" width="38" height="8" rx="4" fill="#efd9b2" />
+  <rect x="43" y="13" width="8" height="38" rx="4" fill="#d8ebea" />
+  <g fill="#d3c0a6">
+    <rect x="23" y="14" width="8" height="5" rx="2.5" />
+    <rect x="33" y="14" width="8" height="5" rx="2.5" />
+    <rect x="14" y="23" width="5" height="8" rx="2.5" />
+    <rect x="14" y="43" width="5" height="8" rx="2.5" />
   </g>
-  <circle cx="20" cy="20" r="3.5" fill="#ffce6a" />
-  <circle cx="44" cy="44" r="3.5" fill="#ffce6a" />
+  <rect x="43" y="14" width="8" height="5" rx="2.5" fill="#2d7385" />
+  <rect x="14" y="33" width="5" height="8" rx="2.5" fill="#bf8642" />
+  <rect x="23" y="23" width="8" height="8" rx="2.5" fill="#6fa0a4" />
+  <rect x="33" y="23" width="8" height="8" rx="2.5" fill="#9db7ab" />
+  <rect x="43" y="23" width="8" height="8" rx="2.5" fill="#8cb8bf" />
+  <rect x="23" y="33" width="8" height="8" rx="2.5" fill="#d3bb82" />
+  <rect x="33" y="33" width="8" height="8" rx="2.5" fill="#e2cc98" />
+  <rect x="43" y="33" width="8" height="8" rx="2.5" fill="#b14f1f" />
+  <rect x="23" y="43" width="8" height="8" rx="2.5" fill="#9cb1b0" />
+  <rect x="33" y="43" width="8" height="8" rx="2.5" fill="#cbb17c" />
+  <rect x="43" y="43" width="8" height="8" rx="2.5" fill="#d97a2d" />
+  <rect x="43" y="33" width="8" height="8" rx="2.5" fill="none" stroke="#fffaf2" stroke-width="1.5" />
+  <circle cx="47" cy="37" r="1.8" fill="#fffaf2" />
+</svg>

@@ -7,15 +7,12 @@ async function openExplorer(page) {
   await expect(page.getByRole("button", { name: "Simple explore" })).toBeVisible();
 }
 
-test("grid-first explorer keeps the matrix in view and exposes lettered axis labels", async ({ page }) => {
+test("grid explorer exposes lettered axis labels and question controls", async ({ page }) => {
   await openExplorer(page);
 
-  const viewport = page.viewportSize();
   const gridCard = page.getByTestId("explorer-grid-card");
-  const gridCardBox = await gridCard.boundingBox();
-
-  expect(gridCardBox).not.toBeNull();
-  expect(gridCardBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(viewport.height);
+  await gridCard.scrollIntoViewIfNeeded();
+  await expect(gridCard).toBeVisible();
 
   const columnLabels = page.locator('[data-testid="explorer-grid"] .cl .axis-set');
   await expect(columnLabels.nth(0)).toHaveText("∅");
@@ -32,7 +29,7 @@ test("grid-first explorer keeps the matrix in view and exposes lettered axis lab
   await expect(page.getByTestId("grid-marker-controls")).toContainText("Choose the data point we're going to value");
   await expect(page.getByTestId("grid-marker-controls")).toContainText("Shapley values use the entire active evaluation column");
   await expect(page.getByRole("button", { name: "Choose point to compare" })).toBeDisabled();
-  await page.getByRole("button", { name: "Leave-one-out" }).click();
+  await page.getByTestId("question-controls").getByRole("button", { name: "Leave-one-out" }).click();
   await expect(page.getByRole("button", { name: "Choose point to compare" })).toBeEnabled();
   await expect(gridCard).toContainText("Rows train");
   await expect(page.getByTestId("display-controls")).toContainText("Show raw values");

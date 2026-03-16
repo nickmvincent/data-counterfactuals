@@ -1326,6 +1326,12 @@ const introSection = getSection(sections, "how-to-read-the-toy");
         margin-bottom: 0.75rem;
       }
     }
+    @media (max-width: 480px) {
+      .explorer-shell {
+        --grid-axis-w: 72px;
+        --grid-cell-w: 40px;
+      }
+    }
     @media (max-width: 720px) {
       .explorer-shell {
         --grid-axis-w: 88px;
@@ -1367,7 +1373,7 @@ const introSection = getSection(sections, "how-to-read-the-toy");
       </div>
     </header>
 
-    <p class="explorer-mobile-notice">The explorer works best on a wider screen — consider switching to desktop view for the full experience.</p>
+    <p class="explorer-mobile-notice">The explorer works best on a wider screen. On a phone, scroll the grid horizontally to see all columns — or view on a larger device for the full experience.</p>
 
     <section class="section-card explorer-frame" id="explore" aria-label="Explore">
       <div class="explorer-shell">

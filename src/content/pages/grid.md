@@ -29,4 +29,4 @@ notes:
 
 ## How to read the toy
 
-Start by fixing the mental model: rows are possible training worlds and columns are evaluation slices. Once that is in place, the rest of the interface is about moving between nearby rows, nearby columns, or nearby perturbations and asking what changed.
+Start by fixing the mental model: rows are possible training worlds and columns are evaluation slices. Once that is in place, the rest of the interface is about moving between nearby rows, nearby columns, or nearby perturbations and asking what changed. If you prefer to think in terms of nodes and edges, the graph explorer shows the same toy universe as a subset lattice instead.

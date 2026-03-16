@@ -10,7 +10,7 @@ interface Props {
 const {
   title = "Data Counterfactuals",
   description = "An interactive explainer for the core idea of data counterfactuals: what changes when the training data changes?",
-  ogImage = "/favicon.svg"
+  ogImage = "/favicon.svg?v=cf-grid-1"
 } = Astro.props;
 
 const siteUrl = "https://datacounterfactuals.org";
@@ -37,7 +37,7 @@ const fullTitle = title === "Data Counterfactuals" ? title : `${title} | Data Co
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={`${siteUrl}${ogImage}`} />
 
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=cf-grid-1" />
     <link rel="preconnect" href="https://esm.sh" />
   </head>
   <body>

@@ -174,7 +174,68 @@ export function computeShapleyPairs(subsets, focusItem) {
   return pairs;
 }
 
-export function computeShapleyStats({ matrix, subsets, focusItem, evalColumnIndex, playerCount }) {
+function logGamma(value) {
+  const coefficients = [
+    0.9999999999998099,
+    676.5203681218851,
+    -1259.1392167224028,
+    771.3234287776531,
+    -176.6150291621406,
+    12.507343278686905,
+    -0.13857109526572012,
+    0.000009984369578019572,
+    0.00000015056327351493116,
+  ];
+
+  if (value < 0.5) {
+    return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * value)) - logGamma(1 - value);
+  }
+
+  let x = coefficients[0];
+  const shifted = value - 1;
+  for (let index = 1; index < coefficients.length; index += 1) {
+    x += coefficients[index] / (shifted + index);
+  }
+  const t = shifted + coefficients.length - 0.5;
+  return 0.5 * Math.log(2 * Math.PI) + (shifted + 0.5) * Math.log(t) - t + Math.log(x);
+}
+
+function betaFunction(alpha, beta) {
+  return Math.exp(logGamma(alpha) + logGamma(beta) - logGamma(alpha + beta));
+}
+
+function betaBinomialProbability(total, subsetSize, alpha, beta) {
+  if (total <= 0) return subsetSize === 0 ? 1 : 0;
+  return choose(total, subsetSize) * betaFunction(subsetSize + alpha, total - subsetSize + beta) / betaFunction(alpha, beta);
+}
+
+function semivalueWeight({ mode, subsetSize, playerCount, alpha = 2, beta = 2 }) {
+  if (playerCount <= 0) return 0;
+
+  if (mode === "shapley") {
+    return 1 / (playerCount * choose(playerCount - 1, subsetSize));
+  }
+
+  if (mode === "banzhaf") {
+    return 1 / (2 ** Math.max(0, playerCount - 1));
+  }
+
+  const bucketCount = choose(playerCount - 1, subsetSize);
+  if (!bucketCount) return 0;
+  const bucketWeight = betaBinomialProbability(playerCount - 1, subsetSize, alpha, beta);
+  return bucketWeight / bucketCount;
+}
+
+export function computeSemivalueStats({
+  matrix,
+  subsets,
+  focusItem,
+  evalColumnIndex,
+  playerCount,
+  mode = "shapley",
+  alpha = 2,
+  beta = 2,
+}) {
   const bySize = new Map();
   const pairs = computeShapleyPairs(subsets, focusItem);
   let weightedSum = 0;
@@ -183,12 +244,13 @@ export function computeShapleyStats({ matrix, subsets, focusItem, evalColumnInde
   for (const { subsetIndex, withFocusIndex } of pairs) {
     const delta = matrix[withFocusIndex][evalColumnIndex] - matrix[subsetIndex][evalColumnIndex];
     const subsetSize = subsets[subsetIndex].length;
-    const bucket = bySize.get(subsetSize) || { sum: 0, n: 0 };
+    const weight = semivalueWeight({ mode, subsetSize, playerCount, alpha, beta });
+    const bucket = bySize.get(subsetSize) || { sum: 0, n: 0, weight: 0 };
     bucket.sum += delta;
     bucket.n += 1;
+    bucket.weight += weight;
     bySize.set(subsetSize, bucket);
 
-    const weight = playerCount > 0 ? 1 / (playerCount * choose(playerCount - 1, subsetSize)) : 0;
     weightedSum += delta * weight;
     totalWeight += weight;
   }
@@ -198,10 +260,27 @@ export function computeShapleyStats({ matrix, subsets, focusItem, evalColumnInde
     cnt: pairs.length,
     rows: [...bySize.entries()]
       .sort((left, right) => left[0] - right[0])
-      .map(([size, bucket]) => ({ size, avg: bucket.sum / bucket.n, n: bucket.n })),
+      .map(([size, bucket]) => ({
+        size,
+        avg: bucket.sum / bucket.n,
+        n: bucket.n,
+        weight: bucket.weight,
+        contribution: (bucket.sum / bucket.n) * bucket.weight,
+      })),
     pairs,
     totalWeight,
   };
+}
+
+export function computeShapleyStats({ matrix, subsets, focusItem, evalColumnIndex, playerCount }) {
+  return computeSemivalueStats({
+    matrix,
+    subsets,
+    focusItem,
+    evalColumnIndex,
+    playerCount,
+    mode: "shapley",
+  });
 }
 
 export function computeLooDelta({ matrix, rowIndex, colIndex, compareRowIndex }) {
@@ -231,104 +310,217 @@ export function createTutorialPresets(actions) {
     setMetric,
     setFocusSet,
     setK,
-    setShowNums,
+    setConceptMode,
     setComputed,
+    setShowNums,
     setPendingSelection,
     setPoisonActive,
-    setNoiseLevel,
-    setEditorMode,
+    setGridView,
+    setBetaAlpha,
+    setBetaBeta,
+    setEpsilon,
+    setAuditTolerance,
   } = actions;
+  const setMode = setConceptMode || setComputed || (() => {});
 
   return [
     {
+      id: "readGrid",
+      mode: "explore",
+      title: "Read one cell",
+      summary: "Anchor on a single train/eval pair.",
+      goal: "We want to explain what one grid cell stands for before aggregating anything.",
+      how: "We click the ABC / ABC cell and read it directly as train on ABC, evaluate on ABC.",
+      concept: "Baseline exploration",
+      setup: () => {
+        setCount(3);
+        setMetric("jaccard");
+        setFocusSet(["A"]);
+        setK(3);
+        setShowNums(true);
+        setMode("explore");
+        setPoisonActive?.(false);
+        setGridView?.("real");
+        setPendingSelection({ row: ["A", "B", "C"], col: ["A", "B", "C"] });
+      },
+    },
+    {
       id: "omitB",
+      mode: "loo",
       title: "Compare ABC vs AC",
-      summary: "Simple leave-one-out comparison.",
+      summary: "Single-point leave-one-out.",
       goal: "We want an estimate of how much point B matters.",
       how: "We train on ABC, then omit B so we can compare the ABC vs AC cells directly.",
       concept: "Leave-one-out influence",
       setup: () => {
-        setEditorMode?.("poison");
         setCount(3);
         setMetric("jaccard");
         setFocusSet(["B"]);
         setK(3);
         setShowNums(true);
-        setComputed("loo");
+        setMode("loo");
+        setPoisonActive?.(false);
+        setGridView?.("real");
         setPendingSelection({ row: ["A", "B", "C"], col: ["A", "B", "C"] });
       },
     },
     {
-      id: "powerset",
-      title: "ABCD & the powerset",
-      summary: "Show the whole powerset via scaling.",
-      goal: "We want to see how performance scales with dataset size.",
-      how: "We train on ABCD, then look across the entire powerset via the scaling summary.",
-      concept: "Scaling laws",
-      setup: () => {
-        setEditorMode?.("poison");
-        setCount(4);
-        setMetric("jaccard");
-        setFocusSet(["A"]);
-        setK(2);
-        setShowNums(false);
-        setComputed("scaling");
-        setPendingSelection({ row: ["A", "B", "C", "D"], col: ["A", "B", "C", "D"] });
-      },
-    },
-    {
       id: "strikeCD",
+      mode: "group",
       title: "Strike with C and D",
       summary: "Data strike after full training.",
       goal: "We want to see what happens if C and D stop contributing.",
       how: "We train on ABCD, then have C and D walk out together to watch the data strike drop performance.",
       concept: "Group leave-one-out / data strike",
       setup: () => {
-        setEditorMode?.("poison");
         setCount(4);
         setMetric("jaccard");
         setFocusSet(["C", "D"].sort());
         setK(4);
         setShowNums(true);
-        setComputed("group");
+        setMode("group");
+        setPoisonActive?.(false);
+        setGridView?.("real");
         setPendingSelection({ row: ["A", "B", "C", "D"], col: ["A", "B", "C", "D"] });
       },
     },
     {
       id: "shapleyB",
+      mode: "shapley",
       title: "Shapley around B",
       summary: "Average contribution of point B.",
       goal: "We want the Shapley-style value for point B.",
       how: "We let the Shapley view sweep all subsets at eval ABC and focus on B's average marginal gain.",
       concept: "Shapley value",
       setup: () => {
-        setEditorMode?.("poison");
         setCount(3);
         setMetric("jaccard");
         setFocusSet(["B"]);
         setK(2);
         setShowNums(false);
-        setComputed("shapley");
+        setMode("shapley");
+        setPoisonActive?.(false);
+        setGridView?.("real");
         setPendingSelection({ row: ["A", "B"], col: ["A", "B", "C"] });
       },
     },
     {
+      id: "banzhafB",
+      mode: "banzhaf",
+      title: "Banzhaf around B",
+      summary: "Equal weight on every coalition.",
+      goal: "We want a semivalue that treats every subset world equally rather than every subset size equally.",
+      how: "We keep the same subset pairs as Shapley but switch to Banzhaf weighting for B.",
+      concept: "Banzhaf value",
+      setup: () => {
+        setCount(4);
+        setMetric("jaccard");
+        setFocusSet(["B"]);
+        setShowNums(false);
+        setMode("banzhaf");
+        setPoisonActive?.(false);
+        setGridView?.("real");
+        setPendingSelection({ row: ["A", "B"], col: ["A", "B", "C", "D"] });
+      },
+    },
+    {
+      id: "betaB",
+      mode: "beta",
+      title: "Beta Shapley toward big worlds",
+      summary: "Bias the semivalue toward larger coalitions.",
+      goal: "We want a semivalue that emphasizes larger retained worlds.",
+      how: "We keep B fixed but move Beta-Shapley toward larger subset sizes with alpha=4, beta=1.",
+      concept: "Beta Shapley",
+      setup: () => {
+        setCount(4);
+        setMetric("jaccard");
+        setFocusSet(["B"]);
+        setShowNums(false);
+        setBetaAlpha?.(4);
+        setBetaBeta?.(1);
+        setMode("beta");
+        setPoisonActive?.(false);
+        setGridView?.("real");
+        setPendingSelection({ row: ["A", "B", "C"], col: ["A", "B", "C", "D"] });
+      },
+    },
+    {
+      id: "powerset",
+      mode: "scaling",
+      title: "ABCD & the powerset",
+      summary: "Show the whole powerset via scaling.",
+      goal: "We want to see how performance scales with dataset size.",
+      how: "We train on ABCD, then look across the entire powerset via the scaling summary.",
+      concept: "Scaling laws",
+      setup: () => {
+        setCount(4);
+        setMetric("jaccard");
+        setFocusSet(["A"]);
+        setK(2);
+        setShowNums(false);
+        setMode("scaling");
+        setPoisonActive?.(false);
+        setGridView?.("real");
+        setPendingSelection({ row: ["A", "B", "C", "D"], col: ["A", "B", "C", "D"] });
+      },
+    },
+    {
+      id: "dpB",
+      mode: "dp",
+      title: "Protect B with epsilon 1",
+      summary: "Compare neighboring rows under a privacy budget.",
+      goal: "We want to estimate how much one record can move the output and what noise scale that implies.",
+      how: "We compare a row containing B against the adjacent row without B, then read off a toy Laplace scale at epsilon = 1.",
+      concept: "Differential privacy",
+      setup: () => {
+        setCount(4);
+        setMetric("jaccard");
+        setFocusSet(["B"]);
+        setShowNums(true);
+        setEpsilon?.(1);
+        setMode("dp");
+        setPoisonActive?.(false);
+        setGridView?.("real");
+        setPendingSelection({ row: ["A", "B", "C"], col: ["A", "B", "C"] });
+      },
+    },
+    {
+      id: "unlearnC",
+      mode: "unlearning",
+      title: "Forget C from ABCD",
+      summary: "Compare the current row to the exact retrain world.",
+      goal: "We want to inspect a deletion request as an exact retrain benchmark.",
+      how: "We treat removing C from ABCD as the reference unlearned world and audit the gap against that retrain baseline.",
+      concept: "Machine unlearning",
+      setup: () => {
+        setCount(4);
+        setMetric("jaccard");
+        setFocusSet(["C"]);
+        setShowNums(true);
+        setAuditTolerance?.(0.15);
+        setMode("unlearning");
+        setPoisonActive?.(false);
+        setGridView?.("real");
+        setPendingSelection({ row: ["A", "B", "C", "D"], col: ["A", "B", "C", "D"] });
+      },
+    },
+    {
       id: "poisonA",
-      title: "Poison with A'",
+      mode: "poison",
+      title: "Poison rows with A",
       summary: "Edit data via corruption.",
-      goal: "We want to see how corrupting A affects evals.",
-      how: "We turn on the poison edit (rows containing A drop) rather than expanding the universe.",
+      goal: "We want to see how corrupting rows containing A affects evals.",
+      how: "We turn on the poison edit for every row containing A and compare the attacked cell to the clean reference score.",
       concept: "Data poisoning / leverage",
       setup: () => {
-        setEditorMode?.("poison");
-        setPoisonActive(true);
-        setNoiseLevel(0);
         setCount(3);
         setMetric("jaccard");
         setFocusSet(["A"]);
         setK(3);
         setShowNums(true);
-        setComputed("group");
+        setMode("poison");
+        setPoisonActive?.(true);
+        setGridView?.("operator");
         setPendingSelection({ row: ["A", "B", "C"], col: ["A", "B", "C"] });
       },
     },

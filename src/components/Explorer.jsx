@@ -110,9 +110,9 @@ const faqEntries = [
       "A zero often means the selected point or group is not actually present in the chosen training world, so removing it changes nothing. In scaling mode, the headline average may also stay flat when many same-size worlds behave similarly.",
   },
   {
-    question: "What changes in Operator view?",
+    question: "What is the difference between Edited view and Original?",
     answer:
-      "Operator view applies toy edits like poisoning or added noise before the grid is rendered. Real world always shows the untouched reference matrix, even if the edit toggles are still switched on.",
+      "Edited view applies toy edits like poisoning or added noise before the grid is rendered. Original always shows the untouched reference matrix, even if the edit toggles are still switched on.",
   },
 ];
 
@@ -201,7 +201,7 @@ function App() {
   const [paletteName, setPaletteName] = useState("Clear daylight");
   const palette = palettes[paletteName];
 
-  const [uiMode, setUiMode] = useState("simple");
+  const [uiMode, setUiMode] = useState("guided");
   const [gridView, setGridView] = useState("operator");
   const [focusSet, setFocusSet] = useState(["A"]);
   const [k, setK] = useState(2);
@@ -529,11 +529,11 @@ function App() {
   const advancedWorldSummary =
     gridView === "operator"
       ? activeEditLabels.length
-        ? `Operator view is active, so the grid is drawn after ${activeEditLabels.join(" and ")}.`
-        : "Operator view is active, but no edit toggles are on yet."
+        ? `Edited view is active, so the grid is drawn after ${activeEditLabels.join(" and ")}.`
+        : "Edited view is active, but no edit toggles are on yet."
       : activeEditLabels.length
-        ? "Real world is active, so you are seeing the untouched reference matrix even though edits are toggled on."
-        : "No edit toggles are active, so Operator and Real world currently match.";
+        ? "Original is active, so you are seeing the untouched reference matrix even though edits are toggled on."
+        : "No edit toggles are active, so Edited view and Original currently match.";
 
   const focusTargetBadge =
     computed === "group"
@@ -932,12 +932,12 @@ function App() {
         : null}
     </section>
   `;
-  const currentWorldLabel = effectiveGridView === "operator" ? "Operator view" : uiMode === "advanced" ? "Real world" : "Reference grid";
+  const currentWorldLabel = effectiveGridView === "operator" ? "Edited view" : uiMode === "advanced" ? "Original" : "Reference grid";
   const modeLabel =
     uiMode === "simple" ? "Simple explore" : uiMode === "guided" ? "Guided" : "Advanced explore";
   const modeCopy =
     uiMode === "simple"
-      ? "Keep the explorer lean: choose a score rule, click the grid to set train and eval, and inspect the current value without the extra walkthrough chrome."
+      ? "Keep the explorer lean: choose a score rule, click the grid to set train and eval, and inspect the current value. Switch to Guided mode for step-by-step tutorial presets."
       : uiMode === "guided"
         ? "Guided mode keeps the grid visible but adds presets and the statistic walkthroughs so the explorer can teach as you move."
         : "Advanced explore unlocks world-layer comparisons, toy edits, export tools, palette controls, and the raw state inspector.";
@@ -1078,8 +1078,8 @@ function App() {
                     ${InfoTip("Operator view shows the edited matrix; Real world shows the untouched reference matrix.")}
                   </div>
                   <div class="segmented-row">
-                    <button class="btn mini" aria-pressed=${gridView === "operator"} onClick=${() => setGridView("operator")}>Operator</button>
-                    <button class="btn mini" aria-pressed=${gridView === "real"} onClick=${() => setGridView("real")}>Reference</button>
+                    <button class="btn mini" aria-pressed=${gridView === "operator"} onClick=${() => setGridView("operator")} title="Show the grid after toy edits (poison, noise) are applied">Edited view</button>
+                    <button class="btn mini" aria-pressed=${gridView === "real"} onClick=${() => setGridView("real")} title="Show the untouched reference matrix, regardless of edit toggles">Original</button>
                   </div>
                   <div class="toolbar-note">${advancedWorldSummary}</div>
                 </section>

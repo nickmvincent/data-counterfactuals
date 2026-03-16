@@ -5,7 +5,8 @@ const { pathname } = Astro.url;
 
 const links = [
   { href: "/", label: "Overview", title: "What data counterfactuals are and why they matter" },
-  { href: "/grid", label: "Explorer", title: "Interactive toy grid for exploring train/eval counterfactuals" },
+  { href: "/grid", label: "Grid", title: "Interactive toy grid for exploring train/eval counterfactuals" },
+  { href: "/graph", label: "Graph", title: "Subset-lattice companion that treats dataset edits as graph moves" },
   { href: "/memo", label: "Memos", title: "Written notes: the launch post, formalisms, and more" },
   { href: "/collections", label: "Related Areas and Papers", title: "Curated shelf of neighboring literatures and representative papers" },
 ];
@@ -45,8 +46,9 @@ function isActive(href: string): boolean {
         href={externalLink.href}
         target="_blank"
         rel="noreferrer noopener"
+        title="Opens in a new tab"
       >
-        {externalLink.label}
+        {externalLink.label} ↗
       </a>
       {githubUrl && (
         <a

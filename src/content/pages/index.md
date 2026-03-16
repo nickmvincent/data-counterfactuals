@@ -22,6 +22,9 @@ reading_paths:
   - title: Open the grid explorer
     href: /grid
     body: Explore the data counterfactuals "grid" framing directly.
+  - title: Open the graph explorer
+    href: /graph
+    body: "Walk the subset lattice directly: nodes are training sets and edges are ablations, augmentations, or strike steps."
   - title: Compare formalisms
     href: /memo/formalisms
     body: A more technical, web-only companion that lines up neighboring formalisms side by side.
@@ -64,6 +67,6 @@ That does not mean the projects are all formally identical. One major distinctio
 
 ## How to read the site
 
-The site is currently closer to an interactive research note than a polished landing page. If you want the shared launch-post version of the argument, start with the main memo. If you want the visual intuition, open the explorer and move around the grid. If you want the more experimental angle on how new data get produced, try the 3D view. The formalisms note is there as a more technical web companion rather than required reading for the introduction. It's WIP.
+The site is currently closer to an interactive research note than a polished landing page. If you want the shared launch-post version of the argument, start with the main memo. If you want the visual intuition, open the grid explorer or the graph explorer and move around the same toy counterfactual space from different angles. If you want the more experimental angle on how new data get produced, try the 3D view. The formalisms note is there as a more technical web companion rather than required reading for the introduction. It's WIP.
 
 The implementation is still early, so it is best treated as a working model rather than a finished explainer. My hope is that it offers a cleaner mental model for why *what if the data were different?* keeps showing up across so many lines of work.

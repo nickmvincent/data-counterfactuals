@@ -1,0 +1,523 @@
+---
+import Layout from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import GraphExplorer from "../components/GraphExplorer.jsx";
+import { getRequiredPageEntry, getSection, splitMarkdownSections } from "../lib/page-content";
+
+const page = await getRequiredPageEntry("graph");
+const sections = splitMarkdownSections(page.body);
+const introSection = getSection(sections, "how-to-read-the-graph");
+---
+
+<Layout
+  title={page.data.title}
+  description={page.data.description}
+>
+  <style is:global>
+    body:has(.graph-page) {
+      background:
+        radial-gradient(circle at top left, rgba(36, 92, 112, 0.18), transparent 30%),
+        radial-gradient(circle at top right, rgba(177, 119, 51, 0.16), transparent 24%),
+        linear-gradient(180deg, #fbf7ef 0%, #f3ebdf 48%, #ebdfcf 100%);
+    }
+    .graph-page {
+      display: grid;
+      gap: 1rem;
+    }
+    .graph-page .page-header {
+      margin-bottom: 0;
+      display: grid;
+      grid-template-columns: minmax(19rem, 25rem) minmax(0, 1fr);
+      gap: 1.25rem;
+      align-items: start;
+    }
+    .graph-page .page-title {
+      margin-bottom: 0;
+    }
+    .graph-read-note {
+      display: grid;
+      gap: 0.35rem;
+      padding: 1rem 1.1rem;
+      border-radius: 16px;
+      border: 1px solid rgba(62, 84, 94, 0.14);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0)),
+        rgba(240, 246, 249, 0.88);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.82),
+        0 16px 32px rgba(70, 54, 42, 0.06);
+    }
+    .graph-read-note-label {
+      color: #24566e;
+      font-family: var(--font-ui);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .graph-read-note :where(p) {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .graph-mobile-notice {
+      display: none;
+      margin: 0;
+      padding: 0.85rem 1rem;
+      border-radius: 14px;
+      border: 1px solid rgba(62, 84, 94, 0.14);
+      background: rgba(248, 251, 253, 0.94);
+      color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+    .graph-frame {
+      padding: 0.22rem;
+      background:
+        linear-gradient(180deg, rgba(34, 29, 25, 0.08), rgba(34, 29, 25, 0.02)),
+        rgba(246, 249, 251, 0.72);
+    }
+    .graph-shell {
+      --graph-surface: rgba(242, 248, 251, 0.94);
+      --graph-surface-strong: rgba(251, 253, 255, 0.98);
+      --graph-surface-soft: rgba(225, 234, 240, 0.9);
+      --graph-border: rgba(33, 65, 95, 0.14);
+      --graph-border-strong: rgba(33, 65, 95, 0.24);
+      --graph-fg: #10273d;
+      --graph-muted: #5d7083;
+      --graph-accent: #2f5c7e;
+      --graph-accent-soft: rgba(47, 92, 126, 0.12);
+      --graph-highlight: #c9913c;
+      --graph-radius-xl: 20px;
+      --graph-radius-lg: 16px;
+      --graph-radius-md: 12px;
+      --graph-radius-sm: 10px;
+    }
+    .graph-shell .graph-workspace {
+      display: grid;
+      gap: 1rem;
+      max-width: 1220px;
+      margin: 0 auto;
+    }
+    .graph-shell .graph-toolbar,
+    .graph-shell .graph-canvas-card,
+    .graph-shell .graph-panel {
+      display: grid;
+      gap: 0.95rem;
+      padding: 1.15rem;
+      border-radius: var(--graph-radius-xl);
+      border: 1px solid var(--graph-border);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0)),
+        var(--graph-surface);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.82),
+        0 18px 32px rgba(88, 64, 42, 0.07);
+    }
+    .graph-shell .graph-toolbar {
+      padding: 1.25rem;
+    }
+    .graph-shell .graph-toolbar-copyblock,
+    .graph-shell .graph-control-card,
+    .graph-shell .graph-panel,
+    .graph-shell .graph-canvas-card,
+    .graph-shell .graph-sidepanels {
+      min-width: 0;
+    }
+    .graph-shell .graph-kicker {
+      display: inline-block;
+      color: var(--graph-accent);
+      font-family: var(--font-ui);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .graph-shell .graph-toolbar-title,
+    .graph-shell .graph-card-title,
+    .graph-shell .graph-panel-title {
+      margin: 0.16rem 0 0;
+      color: var(--graph-fg);
+      font-family: var(--font-ui);
+      font-weight: 650;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+    .graph-shell .graph-toolbar-title {
+      font-size: clamp(1.32rem, 2vw, 1.74rem);
+    }
+    .graph-shell .graph-card-title,
+    .graph-shell .graph-panel-title {
+      font-size: 1.08rem;
+    }
+    .graph-shell .graph-toolbar-copy,
+    .graph-shell .graph-panel-copy,
+    .graph-shell .graph-control-note,
+    .graph-shell .graph-footnote {
+      margin: 0;
+      color: var(--graph-muted);
+      line-height: 1.72;
+    }
+    .graph-shell .graph-toolbar-grid,
+    .graph-shell .graph-stat-grid {
+      display: grid;
+      gap: 0.85rem;
+    }
+    .graph-shell .graph-toolbar-grid {
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    }
+    .graph-shell .graph-stat-grid {
+      grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+    }
+    .graph-shell .graph-stage {
+      display: grid;
+      grid-template-columns: minmax(0, 1.38fr) minmax(290px, 0.78fr);
+      gap: 1rem;
+      align-items: start;
+    }
+    .graph-shell .graph-sidepanels {
+      display: grid;
+      gap: 1rem;
+    }
+    .graph-shell .graph-card-head,
+    .graph-shell .graph-panel-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.8rem;
+    }
+    .graph-shell .graph-pill-row,
+    .graph-shell .graph-inline-actions,
+    .graph-shell .graph-token-row,
+    .graph-shell .graph-segmented-row,
+    .graph-shell .graph-path-strip,
+    .graph-shell .graph-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      align-items: center;
+    }
+    .graph-shell .graph-pill,
+    .graph-shell .graph-answer-pill,
+    .graph-shell .graph-stepper-value,
+    .graph-shell .graph-path-node {
+      display: inline-flex;
+      align-items: center;
+      min-height: 2rem;
+      padding: 0.38rem 0.72rem;
+      border-radius: 999px;
+      border: 1px solid rgba(47, 92, 126, 0.12);
+      background: rgba(250, 253, 255, 0.84);
+      color: var(--graph-fg);
+      font-family: var(--font-ui);
+      font-size: 0.78rem;
+      font-weight: 650;
+      line-height: 1.3;
+    }
+    .graph-shell .graph-answer-pill {
+      background: rgba(255, 247, 230, 0.92);
+      border-color: rgba(201, 145, 60, 0.22);
+    }
+    .graph-shell .graph-control-card {
+      display: grid;
+      gap: 0.65rem;
+      padding: 0.95rem;
+      border-radius: var(--graph-radius-lg);
+      border: 1px solid rgba(33, 65, 95, 0.12);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0)),
+        rgba(251, 253, 255, 0.88);
+    }
+    .graph-shell .graph-control-label,
+    .graph-shell .graph-neighbor-title,
+    .graph-shell .graph-stat-label {
+      color: var(--graph-muted);
+      font-family: var(--font-ui);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .graph-shell .graph-select-label {
+      display: grid;
+      gap: 0.55rem;
+    }
+    .graph-shell .graph-btn,
+    .graph-shell .graph-select-label select {
+      border: 1px solid var(--graph-border);
+      background: var(--graph-surface-strong);
+      color: var(--graph-fg);
+      border-radius: var(--graph-radius-sm);
+      font-family: var(--font-ui);
+      font-size: 0.86rem;
+      font-weight: 600;
+      line-height: 1.3;
+      min-height: 2.4rem;
+      padding: 0.55rem 0.8rem;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+    .graph-shell .graph-btn {
+      cursor: pointer;
+    }
+    .graph-shell .graph-btn:hover,
+    .graph-shell .graph-btn:focus-visible,
+    .graph-shell .graph-select-label select:hover,
+    .graph-shell .graph-select-label select:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(47, 92, 126, 0.3);
+      background: rgba(255, 255, 255, 1);
+    }
+    .graph-shell .graph-btn[aria-pressed="true"] {
+      background: var(--graph-accent-soft);
+      border-color: rgba(47, 92, 126, 0.28);
+    }
+    .graph-shell .graph-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+      transform: none;
+    }
+    .graph-shell .graph-btn.mini {
+      min-height: 2rem;
+      padding-inline: 0.7rem;
+    }
+    .graph-shell .graph-btn.token {
+      min-width: 2.55rem;
+      justify-content: center;
+    }
+    .graph-shell .graph-stepper {
+      display: flex;
+      gap: 0.55rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .graph-shell .graph-legend {
+      padding: 0.75rem 0.85rem;
+      border-radius: var(--graph-radius-md);
+      border: 1px solid rgba(33, 65, 95, 0.1);
+      background: rgba(250, 253, 255, 0.82);
+    }
+    .graph-shell .graph-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      color: var(--graph-muted);
+      font-family: var(--font-ui);
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+    .graph-shell .graph-legend-swatch {
+      width: 0.9rem;
+      height: 0.9rem;
+      border-radius: 999px;
+      border: 1px solid rgba(16, 39, 61, 0.18);
+      background: rgba(215, 226, 235, 0.9);
+    }
+    .graph-shell .graph-legend-swatch.selected {
+      background: rgba(47, 92, 126, 0.9);
+    }
+    .graph-shell .graph-legend-swatch.highlighted {
+      background: rgba(201, 145, 60, 0.9);
+    }
+    .graph-shell .graph-legend-swatch.neutral {
+      background: rgba(196, 206, 214, 0.86);
+    }
+    .graph-shell .graph-scroll {
+      overflow: auto;
+      border-radius: var(--graph-radius-lg);
+      border: 1px solid rgba(33, 65, 95, 0.1);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)),
+        rgba(240, 246, 250, 0.8);
+      padding: 0.65rem;
+    }
+    .graph-shell .graph-lattice {
+      display: block;
+      width: max-content;
+      min-width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+    .graph-shell .graph-edge line {
+      stroke: rgba(120, 138, 150, 0.42);
+      stroke-width: 1.6;
+    }
+    .graph-shell .graph-edge text {
+      fill: var(--graph-highlight);
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .graph-shell .graph-edge.is-highlighted line {
+      stroke: rgba(201, 145, 60, 0.92);
+      stroke-width: 2.4;
+    }
+    .graph-shell .graph-node {
+      cursor: pointer;
+      transition: opacity 160ms ease;
+    }
+    .graph-shell .graph-node rect {
+      stroke: rgba(16, 39, 61, 0.16);
+      stroke-width: 1.2;
+      transition: stroke-width 160ms ease, stroke 160ms ease, filter 160ms ease;
+    }
+    .graph-shell .graph-node text {
+      fill: #10273d;
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      pointer-events: none;
+    }
+    .graph-shell .graph-node:hover rect,
+    .graph-shell .graph-node:focus-visible rect {
+      filter: saturate(1.04);
+      stroke: rgba(47, 92, 126, 0.42);
+    }
+    .graph-shell .graph-node.is-highlighted rect {
+      stroke: rgba(201, 145, 60, 0.72);
+      stroke-width: 2;
+    }
+    .graph-shell .graph-node.is-selected rect {
+      stroke: rgba(16, 39, 61, 0.98);
+      stroke-width: 2.6;
+    }
+    .graph-shell .graph-node-eval {
+      fill: #fff8ef;
+      stroke: rgba(16, 39, 61, 0.48);
+      stroke-width: 1.2;
+    }
+    .graph-shell .graph-formula {
+      padding: 0.78rem 0.9rem;
+      border-radius: var(--graph-radius-md);
+      border: 1px solid rgba(33, 65, 95, 0.12);
+      background: rgba(249, 252, 255, 0.9);
+      color: var(--graph-fg);
+      font-family: var(--font-ui);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+    .graph-shell .graph-stat {
+      display: grid;
+      gap: 0.2rem;
+      padding: 0.8rem 0.85rem;
+      border-radius: var(--graph-radius-md);
+      border: 1px solid rgba(33, 65, 95, 0.1);
+      background: rgba(250, 253, 255, 0.82);
+    }
+    .graph-shell .graph-stat-value {
+      color: var(--graph-fg);
+      font-family: var(--font-ui);
+      font-size: 0.94rem;
+      font-weight: 650;
+      line-height: 1.3;
+    }
+    .graph-shell .graph-neighbor-columns {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+    .graph-shell .graph-neighbor-list {
+      list-style: none;
+      padding: 0;
+      margin: 0.65rem 0 0;
+      display: grid;
+      gap: 0.6rem;
+    }
+    .graph-shell .graph-neighbor-list li {
+      display: grid;
+      gap: 0.16rem;
+      padding: 0.7rem 0.78rem;
+      border-radius: var(--graph-radius-md);
+      border: 1px solid rgba(33, 65, 95, 0.1);
+      background: rgba(250, 253, 255, 0.84);
+    }
+    .graph-shell .graph-neighbor-main,
+    .graph-shell .graph-neighbor-meta {
+      font-family: var(--font-ui);
+      font-size: 0.84rem;
+      line-height: 1.45;
+    }
+    .graph-shell .graph-neighbor-main {
+      color: var(--graph-fg);
+      font-weight: 650;
+    }
+    .graph-shell .graph-neighbor-meta {
+      color: var(--graph-muted);
+    }
+    .graph-shell .graph-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-ui);
+      font-size: 0.84rem;
+    }
+    .graph-shell .graph-table th,
+    .graph-shell .graph-table td {
+      padding: 0.48rem 0.18rem;
+      border-bottom: 1px solid rgba(33, 65, 95, 0.08);
+      text-align: left;
+      color: var(--graph-fg);
+    }
+    .graph-shell .graph-table th {
+      color: var(--graph-muted);
+      font-size: 0.74rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .graph-shell .graph-table tr.is-active td {
+      color: var(--graph-accent);
+      font-weight: 700;
+    }
+    .graph-shell .graph-path-strip {
+      padding: 0.2rem 0;
+    }
+    @media (max-width: 1020px) {
+      .graph-shell .graph-stage {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 820px) {
+      .graph-page .page-header {
+        grid-template-columns: 1fr;
+      }
+      .graph-mobile-notice {
+        display: block;
+      }
+      .graph-shell .graph-toolbar,
+      .graph-shell .graph-canvas-card,
+      .graph-shell .graph-panel {
+        padding: 1rem;
+        border-radius: var(--graph-radius-lg);
+      }
+      .graph-shell .graph-neighbor-columns {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <Nav />
+
+  <main class="page essay-page graph-page">
+    <header class="essay-header page-header">
+      <div>
+        {page.data.eyebrow && <span class="page-eyebrow">{page.data.eyebrow}</span>}
+        <h1 class="page-title">{page.data.title}</h1>
+      </div>
+      <div class="graph-read-note">
+        <span class="graph-read-note-label">{introSection.title}</span>
+        <div set:html={introSection.html}></div>
+      </div>
+    </header>
+
+    <p class="graph-mobile-notice">The graph explorer works best on a wider screen because the middle layers of the subset lattice can get wide.</p>
+
+    <section class="section-card graph-frame" id="explore" aria-label="Explore">
+      <div class="graph-shell">
+        <GraphExplorer client:load />
+      </div>
+    </section>
+  </main>
+</Layout>
