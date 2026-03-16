@@ -6,6 +6,7 @@ import {
   buildSubsetGrid,
   computeLooDelta,
   computeScalingStats,
+  computeSemivalueStats,
   computeShapleyStats,
   createTutorialPresets,
   findSubsetIndex,
@@ -43,6 +44,36 @@ test("Shapley weights sum to 1 and recover the known empty-eval example", () => 
   assert.equal(stats.cnt, 8);
   assert.equal(stats.totalWeight, 1);
   assert.equal(stats.phi, -0.25);
+});
+
+test("Banzhaf and Beta-Shapley reuse the same pair universe but different weights", () => {
+  const items = ["A", "B", "C", "D"];
+  const { matrix, subsets } = buildSubsetGrid(items, "jaccard");
+  const evalColumnIndex = findSubsetIndex(subsets, ["A", "B", "C", "D"]);
+  const banzhaf = computeSemivalueStats({
+    matrix,
+    subsets,
+    focusItem: "B",
+    evalColumnIndex,
+    playerCount: items.length,
+    mode: "banzhaf",
+  });
+  const beta = computeSemivalueStats({
+    matrix,
+    subsets,
+    focusItem: "B",
+    evalColumnIndex,
+    playerCount: items.length,
+    mode: "beta",
+    alpha: 4,
+    beta: 1,
+  });
+
+  assert.equal(banzhaf.cnt, 8);
+  assert.equal(beta.cnt, 8);
+  assert.ok(Math.abs(banzhaf.totalWeight - 1) < 1e-9);
+  assert.ok(Math.abs(beta.totalWeight - 1) < 1e-9);
+  assert.ok(beta.rows.at(-1).weight > beta.rows[0].weight);
 });
 
 test("operator and real matrices only diverge when edits are active", () => {
@@ -86,7 +117,7 @@ test("scaling stats preserve one row for the empty subset and combinatorial coun
   assert.deepEqual(scaling.map((row) => row.n), [1, 3, 3, 1]);
 });
 
-test("guided presets can all execute without missing setters", () => {
+test("concept presets can all execute without missing setters", () => {
   const calls = [];
   const record = (name) => (value) => calls.push([name, value]);
 
@@ -95,15 +126,19 @@ test("guided presets can all execute without missing setters", () => {
     setMetric: record("metric"),
     setFocusSet: record("focus"),
     setK: record("k"),
+    setConceptMode: record("mode"),
     setShowNums: record("showNums"),
-    setComputed: record("computed"),
     setPendingSelection: record("selection"),
     setPoisonActive: record("poison"),
-    setNoiseLevel: record("noise"),
+    setGridView: record("gridView"),
+    setBetaAlpha: record("alpha"),
+    setBetaBeta: record("beta"),
+    setEpsilon: record("epsilon"),
+    setAuditTolerance: record("tolerance"),
   });
 
   for (const preset of presets) preset.setup();
 
-  assert.equal(presets.length, 5);
+  assert.equal(presets.length, 10);
   assert.ok(calls.length > 0);
 });

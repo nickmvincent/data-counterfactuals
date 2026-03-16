@@ -175,6 +175,7 @@ export function computeShapleyPairs(subsets, focusItem) {
 }
 
 function logGamma(value) {
+  const g = 7;
   const coefficients = [
     0.9999999999998099,
     676.5203681218851,
@@ -196,7 +197,7 @@ function logGamma(value) {
   for (let index = 1; index < coefficients.length; index += 1) {
     x += coefficients[index] / (shifted + index);
   }
-  const t = shifted + coefficients.length - 0.5;
+  const t = shifted + g + 0.5;
   return 0.5 * Math.log(2 * Math.PI) + (shifted + 0.5) * Math.log(t) - t + Math.log(x);
 }
 

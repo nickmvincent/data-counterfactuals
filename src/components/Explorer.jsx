@@ -6,9 +6,8 @@ import {
   applyGridEdits,
   buildSubsetGrid,
   computeLooDelta,
-  computeSemivalueStats,
   computeScalingStats,
-  computeShapleyStats,
+  computeSemivalueStats,
   createTutorialPresets,
   findSubsetIndex,
   labelSubset as label,
@@ -27,9 +26,8 @@ function clamp01(value) {
 
 function hexToRgb(hex) {
   const normalized = hex.replace("#", "");
-  const value = normalized.length === 3
-    ? normalized.split("").map((char) => `${char}${char}`).join("")
-    : normalized;
+  const value =
+    normalized.length === 3 ? normalized.split("").map((char) => `${char}${char}`).join("") : normalized;
   return {
     r: Number.parseInt(value.slice(0, 2), 16),
     g: Number.parseInt(value.slice(2, 4), 16),
@@ -161,12 +159,12 @@ const faqEntries = [
   {
     question: "What is the difference between the focus chips and the selected row?",
     answer:
-      "The target cell chooses the train/eval location you are looking at right now. The focus chips choose which point or group the question talks about. Picking B does not move you to row B; it tells leave-one-out, group, or Shapley views which member to value.",
+      "The target cell chooses the train/eval location you are looking at right now. The focus chips choose which point or group the question talks about. Picking B does not move you to row B; it tells leave-one-out, semivalue, privacy, unlearning, or poison views which contributor to reason about.",
   },
   {
     question: "Do I need to read every highlighted cell?",
     answer:
-      "No. Start with the squiggled target cell, the active column, and the question card. The extra rings only mark the cells the current statistic compares, so they are there to narrow your attention rather than widen it.",
+      "No. Start with the squiggled target cell, the active column, and the current reading card. The extra rings only mark the cells the current concept compares, so they are there to narrow your attention rather than widen it.",
   },
   {
     question: "Why do some answers come out as zero?",
@@ -174,9 +172,9 @@ const faqEntries = [
       "A zero often means the selected point or group is not actually present in the chosen training world, so removing it changes nothing. In scaling mode, the headline average may also stay flat when many same-size worlds behave similarly.",
   },
   {
-    question: "What is the difference between Edited view and Original?",
+    question: "What changes in Operator view?",
     answer:
-      "Edited view applies toy edits like poisoning or added noise before the grid is rendered. Original always shows the untouched reference matrix, even if the edit toggles are still switched on.",
+      "Operator view applies the toy poisoning edit before the grid is rendered. Reference view always shows the untouched matrix, even if the attack toggle is still switched on.",
   },
 ];
 
@@ -255,6 +253,13 @@ function createExportStamp() {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
+function clampIndex(index, total) {
+  if (!total) return 0;
+  if (index < 0) return 0;
+  if (index >= total) return total - 1;
+  return index;
+}
+
 function App() {
   const countMin = 2;
   const countMax = 8;
@@ -265,8 +270,8 @@ function App() {
   const [paletteName, setPaletteName] = useState("Clear daylight");
   const palette = palettes[paletteName];
 
-  const [uiMode, setUiMode] = useState("guided");
-  const [gridView, setGridView] = useState("operator");
+  const [conceptMode, setConceptMode] = useState("explore");
+  const [gridView, setGridView] = useState("real");
   const [focusSet, setFocusSet] = useState(["A"]);
   const [k, setK] = useState(2);
   const [showNums, setShowNums] = useState(false);
@@ -276,21 +281,25 @@ function App() {
   const [selectionArmed, setSelectionArmed] = useState(null);
   const [comparePoint, setComparePoint] = useState(null);
   const [poisonActive, setPoisonActive] = useState(false);
-  const [noiseLevel, setNoiseLevel] = useState(0);
-  const [editorMode, setEditorMode] = useState("poison");
+  const [betaAlpha, setBetaAlpha] = useState(2);
+  const [betaBeta, setBetaBeta] = useState(2);
+  const [epsilon, setEpsilon] = useState(1);
+  const [auditTolerance, setAuditTolerance] = useState(0.15);
   const [presetFlash, setPresetFlash] = useState(false);
   const [computedFlash, setComputedFlash] = useState(false);
   const [switchPulse, setSwitchPulse] = useState(false);
-  const [computed, setComputed] = useState("shapley");
   const [playing, setPlaying] = useState(false);
 
   const presetFlashRef = useRef(null);
   const animRef = useRef(null);
   const gridWrapRef = useRef(null);
 
-  const resetEdits = () => {
+  const resetModeArtifacts = () => {
     setPoisonActive(false);
-    setNoiseLevel(0);
+    setGridView("real");
+    setPlaying(false);
+    setSelectionArmed(null);
+    setComparePoint(null);
   };
 
   const { matrix: baseMatrix, subsets: subs } = useGrid(base, metric);
@@ -312,28 +321,20 @@ function App() {
     });
   }, [base]);
 
+  const allowsMultiFocus = multiFocusModes.has(conceptMode);
   const focusPrimary = focusSet.find((token) => base.includes(token)) || base[0] || "A";
-  const groupSet = computed === "group" ? focusSet.filter((token) => base.includes(token)) : [];
+  const groupSet = allowsMultiFocus ? focusSet.filter((token) => base.includes(token)) : [];
 
   useEffect(() => {
-    if (computed !== "group" && focusSet.length > 1) {
+    if (!allowsMultiFocus && focusSet.length > 1) {
       setFocusSet((previous) => (previous.length ? [previous[0]] : base.length ? [base[0]] : []));
     }
-  }, [computed, focusSet.length, base]);
+  }, [allowsMultiFocus, focusSet.length, base]);
 
   const toggleFocus = (token) =>
     setFocusSet((previous) =>
-      previous.includes(token)
-        ? previous.filter((candidate) => candidate !== token)
-        : [...previous, token].sort(),
+      previous.includes(token) ? previous.filter((candidate) => candidate !== token) : [...previous, token].sort(),
     );
-
-  const clampIndex = (index, total) => {
-    if (!total) return 0;
-    if (index < 0) return 0;
-    if (index >= total) return total - 1;
-    return index;
-  };
 
   const safeRowIdx = clampIndex(rowIdx, subs.length);
   const safeColIdx = clampIndex(colIdx, subs.length);
@@ -353,22 +354,25 @@ function App() {
         setMetric,
         setFocusSet,
         setK,
+        setConceptMode,
         setShowNums,
-        setComputed,
         setPendingSelection,
         setPoisonActive,
-        setNoiseLevel,
-        setEditorMode,
+        setGridView,
+        setBetaAlpha,
+        setBetaBeta,
+        setEpsilon,
+        setAuditTolerance,
       }),
     [],
   );
+  const visibleTutorials = tutorialPresets.filter((entry) => entry.mode === conceptMode);
   const activeTutorial = tutorialPresets.find((entry) => entry.id === tutorialKind) || null;
 
   const runTutorial = (id) => {
     const preset = tutorialPresets.find((entry) => entry.id === id);
     if (!preset) return;
-    setPlaying(false);
-    resetEdits();
+    resetModeArtifacts();
     preset.setup();
     setTutorialKind(id);
     setTutorialInfo({ goal: preset.goal, how: preset.how, concept: preset.concept });
@@ -377,33 +381,44 @@ function App() {
     presetFlashRef.current = setTimeout(() => setPresetFlash(false), 900);
   };
 
+  const chooseConcept = (mode) => {
+    setConceptMode(mode);
+    setTutorialKind(null);
+    setTutorialInfo(null);
+  };
+
   const findIdx = (subset) => findSubsetIndex(subs, subset);
 
-  const matrix = useMemo(
+  const editedMatrix = useMemo(
     () =>
       applyGridEdits(baseMatrix, subs, {
-        focusSet,
-        poisonActive,
-        noiseLevel,
+        focusSet: groupSet.length ? groupSet : focusSet,
+        poisonActive: conceptMode === "poison" ? poisonActive : false,
+        noiseLevel: 0,
       }),
-    [baseMatrix, subs, focusSet, poisonActive, noiseLevel],
+    [baseMatrix, subs, groupSet, focusSet, conceptMode, poisonActive],
   );
 
-  const operatorRange = useMemo(() => matrixRange(matrix), [matrix]);
+  const operatorRange = useMemo(() => matrixRange(editedMatrix), [editedMatrix]);
   const baseRange = useMemo(() => matrixRange(baseMatrix), [baseMatrix]);
-  const effectiveGridView = uiMode === "advanced" ? gridView : "real";
-  const effectiveShowNums = showNums;
-  const analysisMatrix = selectAnalysisMatrix({ baseMatrix, editedMatrix: matrix, gridView: effectiveGridView });
+  const effectiveGridView = conceptMode === "poison" ? gridView : "real";
+  const analysisMatrix = selectAnalysisMatrix({ baseMatrix, editedMatrix, gridView: effectiveGridView });
   const displayMatrix = analysisMatrix;
   const { min: dispMin, max: dispMax } = effectiveGridView === "real" ? baseRange : operatorRange;
   const Srow = subs[safeRowIdx] || [];
   const evalSet = subs[safeColIdx] || [];
-  const hasGroup = computed === "group" && groupSet.length > 0;
+  const hasGroup = conceptMode === "group" && groupSet.length > 0;
   const strikeMinus = hasGroup ? Srow.filter((token) => !groupSet.includes(token)) : [];
   const strikeMinusIdx = hasGroup ? findIdx(strikeMinus) : -1;
-  const looMinus = hasGroup ? strikeMinus : Srow.filter((token) => token !== focusPrimary);
+  const looMinus = Srow.filter((token) => token !== focusPrimary);
   const looMinusIdx = findIdx(looMinus);
   const selectedValue = displayMatrix[safeRowIdx]?.[safeColIdx] ?? 0;
+  const cleanSelectedValue = baseMatrix[safeRowIdx]?.[safeColIdx] ?? 0;
+  const operatorSelectedValue = editedMatrix[safeRowIdx]?.[safeColIdx] ?? cleanSelectedValue;
+  const attackDelta = operatorSelectedValue - cleanSelectedValue;
+  const compareValueForLoo = looMinusIdx >= 0 ? (baseMatrix[looMinusIdx]?.[safeColIdx] ?? cleanSelectedValue) : cleanSelectedValue;
+  const compareValueForGroup =
+    strikeMinusIdx >= 0 ? (baseMatrix[strikeMinusIdx]?.[safeColIdx] ?? cleanSelectedValue) : cleanSelectedValue;
 
   useEffect(() => {
     setRowIdx((previous) => {
@@ -451,102 +466,82 @@ function App() {
       clearTimeout(flashTimer);
       clearTimeout(pulseTimer);
     };
-  }, [computed, safeColIdx, safeRowIdx]);
+  }, [conceptMode, safeColIdx, safeRowIdx]);
 
   useEffect(() => () => {
     if (presetFlashRef.current) clearTimeout(presetFlashRef.current);
   }, []);
 
-  const shapleyStats = useMemo(
+  useEffect(() => {
+    if (conceptMode !== "poison") {
+      setPoisonActive(false);
+      setGridView("real");
+    }
+    if (conceptMode !== "scaling") setPlaying(false);
+  }, [conceptMode]);
+
+  const semivalueStats = useMemo(
     () =>
-      computeShapleyStats({
-        matrix: analysisMatrix,
+      computeSemivalueStats({
+        matrix: baseMatrix,
         subsets: subs,
         focusItem: focusPrimary,
         evalColumnIndex: safeColIdx,
         playerCount: base.length,
+        mode: conceptMode === "banzhaf" ? "banzhaf" : conceptMode === "beta" ? "beta" : "shapley",
+        alpha: betaAlpha,
+        beta: betaBeta,
       }),
-    [analysisMatrix, focusPrimary, base.length, safeColIdx, subs],
+    [baseMatrix, subs, focusPrimary, safeColIdx, base.length, conceptMode, betaAlpha, betaBeta],
   );
-  const shapleyPairs = shapleyStats.pairs;
 
   const looDelta = useMemo(
     () =>
       computeLooDelta({
-        matrix: analysisMatrix,
+        matrix: baseMatrix,
         rowIndex: safeRowIdx,
         colIndex: safeColIdx,
-        compareRowIndex: looMinusIdx,
+        compareRowIndex: conceptMode === "group" ? strikeMinusIdx : looMinusIdx,
       }),
-    [analysisMatrix, safeRowIdx, safeColIdx, looMinusIdx],
+    [baseMatrix, safeRowIdx, safeColIdx, conceptMode, strikeMinusIdx, looMinusIdx],
   );
 
   const scalingAll = useMemo(
     () =>
       computeScalingStats({
-        matrix: analysisMatrix,
+        matrix: baseMatrix,
         subsets: subs,
         maxSize: base.length,
         evalColumnIndex: safeColIdx,
       }),
-    [analysisMatrix, base.length, safeColIdx, subs],
+    [baseMatrix, subs, base.length, safeColIdx],
   );
   const scalingBucket = scalingAll.find((entry) => entry.k === k) || { avg: 0, n: 0 };
-  const spark = useMemo(() => {
-    const values = scalingAll.map((entry) => entry.avg);
-    return sparkPath(values, 260, 50, 4);
-  }, [scalingAll]);
+  const spark = useMemo(() => sparkPath(scalingAll.map((entry) => entry.avg), 260, 50, 4), [scalingAll]);
 
-  const settingsView = useMemo(
-    () => ({
-      uiMode,
-      tutorial: tutorialKind,
-      universe: base,
-      metric,
-      palette: paletteName,
-      focus: focusPrimary,
-      focusSet,
-      baselineTrain: { index: safeRowIdx, set: Srow },
-      evalColumn: { index: safeColIdx, set: evalSet },
-      computed,
-      edits: {
-        mode: editorMode,
-        poison: poisonActive,
-        noiseLevel,
-      },
-      scalingK: k,
-      showNumbers: effectiveShowNums,
-      gridView: effectiveGridView,
-      advancedGridView: gridView,
-      rows: subs.map((subset) => label(subset)),
-    }),
-    [
-      uiMode,
-      tutorialKind,
-      base,
-      metric,
-      paletteName,
-      focusPrimary,
-      focusSet,
-      safeRowIdx,
-      Srow,
-      safeColIdx,
-      evalSet,
-      computed,
-      editorMode,
-      poisonActive,
-      noiseLevel,
-      k,
-      effectiveShowNums,
-      effectiveGridView,
-      gridView,
-      subs,
-    ],
-  );
-  const settingsJson = useMemo(() => JSON.stringify(settingsView, null, 2), [settingsView]);
+  const unlearningGap = Math.abs(cleanSelectedValue - compareValueForLoo);
+  const unlearningPass = unlearningGap <= auditTolerance;
+  const dpLocalGap = Math.abs(cleanSelectedValue - compareValueForLoo);
+  const dpColumnSensitivity = looMinusIdx >= 0
+    ? baseMatrix[safeRowIdx].reduce(
+        (maxGap, value, index) => Math.max(maxGap, Math.abs(value - (baseMatrix[looMinusIdx]?.[index] ?? value))),
+        0,
+      )
+    : 0;
+  const dpRecommendedScale = epsilon > 0 ? dpColumnSensitivity / epsilon : 0;
+
+  const attackTokens = groupSet.length ? groupSet : focusPrimary ? [focusPrimary] : [];
+  const poisonRows = useMemo(() => {
+    const out = new Set();
+    if (conceptMode !== "poison" || !poisonActive) return out;
+    subs.forEach((subset, index) => {
+      if (attackTokens.some((token) => subset.includes(token))) out.add(index);
+    });
+    return out;
+  }, [conceptMode, poisonActive, subs, attackTokens]);
 
   useEffect(() => {
-    if (!playing) return undefined;
+    if (!playing || conceptMode !== "scaling") return undefined;
     let direction = 1;
     function tick() {
       setK((previous) => {
@@ -561,129 +556,433 @@ function App() {
     return () => {
       if (animRef.current) clearTimeout(animRef.current);
     };
-  }, [playing, base.length]);
+  }, [playing, conceptMode, base.length]);
 
-  const shapleyThinRows = useMemo(
-    () => new Set(shapleyPairs.map((pair) => pair.subsetIndex)),
-    [shapleyPairs],
+  const semivalueThinRows = useMemo(
+    () => new Set(semivalueStats.pairs.map((pair) => pair.subsetIndex)),
+    [semivalueStats.pairs],
   );
-  const shapleyThickRows = useMemo(
-    () => new Set(shapleyPairs.map((pair) => pair.withFocusIndex)),
-    [shapleyPairs],
+  const semivalueThickRows = useMemo(
+    () => new Set(semivalueStats.pairs.map((pair) => pair.withFocusIndex)),
+    [semivalueStats.pairs],
   );
-  const poisonRows = useMemo(() => {
-    const out = new Set();
-    if (!poisonActive) return out;
-    subs.forEach((subset, index) => {
-      if (focusSet.some((token) => subset.includes(token))) out.add(index);
-    });
-    return out;
-  }, [poisonActive, subs, focusSet]);
 
   const activeEditLabels = [];
   if (poisonActive) {
-    activeEditLabels.push(
-      `poisoning every row that contains ${computed === "group" && groupSet.length ? label(groupSet) : focusPrimary}`,
-    );
+    activeEditLabels.push(`poisoning every row that contains ${groupSet.length ? label(groupSet) : focusPrimary}`);
   }
-  if (noiseLevel > 0) {
-    activeEditLabels.push(noiseLevel === 1 ? "light noise" : "heavy noise");
-  }
-
-  const advancedWorldSummary =
+  const worldLayerSummary =
     gridView === "operator"
       ? activeEditLabels.length
-        ? `Edited view is active, so the grid is drawn after ${activeEditLabels.join(" and ")}.`
-        : "Edited view is active, but no edit toggles are on yet."
+        ? `Operator view is active, so the grid is drawn after ${activeEditLabels.join(" and ")}.`
+        : "Operator view is active, but no attack toggles are on yet."
       : activeEditLabels.length
-        ? "Original is active, so you are seeing the untouched reference matrix even though edits are toggled on."
-        : "No edit toggles are active, so Edited view and Original currently match.";
+        ? "Reference view is active, so you are seeing the untouched matrix even though the attack toggle is on."
+        : "No attack layer is active, so Operator and Reference currently match.";
 
   const focusTargetBadge =
-    computed === "group"
+    conceptMode === "group"
       ? groupSet.length
         ? `Coalition ${label(groupSet)}`
         : "Choose 2+ tokens"
-      : `Asking about ${focusPrimary}`;
+      : conceptMode === "poison"
+        ? groupSet.length
+          ? `Attack ${label(groupSet)}`
+          : `Attack ${focusPrimary}`
+        : `Asking about ${focusPrimary}`;
 
   const focusTargetCopy =
-    computed === "group"
+    conceptMode === "group"
       ? groupSet.length
         ? `The current question treats ${label(groupSet)} as one coalition. Changing these tokens changes who gets removed together; it does not move the selected train row ${label(Srow)}.`
         : `Pick two or more tokens to ask what happens when that coalition leaves train ${label(Srow)} together. This control changes the question, not the selected row.`
-      : `The current question is about ${focusPrimary}. Clicking another token changes who is being removed, added, or valued, while the selected train row stays ${label(Srow)} until you change it on the grid.`;
+      : conceptMode === "poison"
+        ? `The current attack targets rows containing ${groupSet.length ? label(groupSet) : focusPrimary}. Changing these chips changes which rows get corrupted; it does not move the selected row ${label(Srow)}.`
+        : `The current question is about ${focusPrimary}. Clicking another token changes who is being removed, added, or valued, while the selected train row stays ${label(Srow)} until you change it on the grid.`;
 
   const scoreProxyCopy =
     `Each cell is a toy proxy for "retrain on ${label(Srow)} and evaluate on ${label(evalSet)}." ` +
     `${metricMeta[metric].short} is just the stand-in score we use so you can inspect the comparison structure without running real retrain experiments.`;
 
-  const questionSummary = useMemo(() => {
-    if (computed === "loo") {
-      return {
-        title: "Remove one point from the selected training world",
-        question: `If ${focusPrimary} disappeared from train ${label(Srow)} while eval ${label(evalSet)} stays fixed, how much would the score move?`,
-        answerLabel: "LOO delta",
-        answerValue: looDelta.toFixed(4),
-        trace: Srow.includes(focusPrimary)
-          ? `We compare the selected row ${label(Srow)} against ${label(looMinus)} at eval ${label(evalSet)}.`
-          : `${focusPrimary} is not in ${label(Srow)}, so removing it leaves the selected row unchanged here.`,
-      };
-    }
+  let questionSummary;
+  let formulaLine;
+  let lensGuide;
+  let stageReadouts;
 
-    if (computed === "group") {
-      return {
-        title: "Remove a group together",
-        question: groupSet.length
-          ? `If group ${label(groupSet)} walked out of train ${label(Srow)} while eval ${label(evalSet)} stays fixed, what would happen?`
-          : "Pick multiple focus chips to turn this into a group-removal question.",
-        answerLabel: "Group delta",
-        answerValue: looDelta.toFixed(4),
-        trace: groupSet.length
-          ? groupSet.some((token) => Srow.includes(token))
-            ? `We compare ${label(Srow)} against ${label(strikeMinus)} after removing the chosen group.`
-            : `None of ${label(groupSet)} are present in ${label(Srow)}, so the selected group cannot change this row.`
-          : "Group mode is most useful once you choose a multi-point group above the grid.",
-      };
-    }
-
-    if (computed === "shapley") {
-      return {
-        title: "Average one point's marginal contribution across many worlds",
-        question: `Across every partial training world and fixed eval ${label(evalSet)}, how much does adding ${focusPrimary} help on average?`,
-        answerLabel: "Shapley phi",
-        answerValue: shapleyStats.phi.toFixed(4),
-        trace: `${shapleyStats.cnt} row-pairs contribute to this estimate. The rings show the exact before-and-after comparisons.`,
-      };
-    }
-
-    return {
+  if (conceptMode === "explore") {
+    questionSummary = {
+      title: "Read one train/eval cell",
+      question: `What does it mean to train on ${label(Srow)} and evaluate on ${label(evalSet)}?`,
+      answerLabel: "Cell score",
+      answerValue: selectedValue.toFixed(4),
+      trace: `Read this directly as f(${label(Srow)}, ${label(evalSet)}). The row chooses the training world; the column chooses the evaluation slice.`,
+    };
+    formulaLine = `f(${label(Srow)}, ${label(evalSet)}) = ${selectedValue.toFixed(4)}`;
+    lensGuide = {
+      title: "Stay local first",
+      body:
+        "Explore mode is the anchor for the whole interface. Before averaging, deleting, or attacking anything, it asks you to read one world pair directly.",
+    };
+    stageReadouts = [
+      {
+        key: "selected",
+        label: "Cell score",
+        value: selectedValue.toFixed(3),
+        note: `f(${label(Srow)}, ${label(evalSet)})`,
+        tone: "primary",
+      },
+      {
+        key: "train",
+        label: "Train world",
+        value: label(Srow),
+        note: "The selected row determines which world the toy model trains on.",
+        tone: "accent",
+      },
+      {
+        key: "eval",
+        label: "Eval slice",
+        value: label(evalSet),
+        note: "The selected column determines which slice gets evaluated.",
+        tone: "quiet",
+      },
+    ];
+  } else if (conceptMode === "loo") {
+    questionSummary = {
+      title: "Remove one point from the selected training world",
+      question: `If ${focusPrimary} disappeared from train ${label(Srow)} while eval ${label(evalSet)} stays fixed, how much would the score move?`,
+      answerLabel: "LOO delta",
+      answerValue: looDelta.toFixed(4),
+      trace: Srow.includes(focusPrimary)
+        ? `We compare the selected row ${label(Srow)} against ${label(looMinus)} at eval ${label(evalSet)}.`
+        : `${focusPrimary} is not in ${label(Srow)}, so removing it leaves the selected row unchanged here.`,
+    };
+    formulaLine = `LOO delta = f(${label(Srow)}, ${label(evalSet)}) - f(${label(looMinus)}, ${label(evalSet)}) = ${cleanSelectedValue.toFixed(4)} - ${compareValueForLoo.toFixed(4)} = ${looDelta.toFixed(4)}`;
+    lensGuide = {
+      title: "Nearest-neighbor comparison",
+      body:
+        "Leave-one-out is the most local move in the grid. You keep the evaluation slice fixed and step from the selected training row to the nearby row with one member removed.",
+    };
+    stageReadouts = [
+      {
+        key: "selected",
+        label: "Target cell",
+        value: cleanSelectedValue.toFixed(3),
+        note: `f(${label(Srow)}, ${label(evalSet)})`,
+        tone: "primary",
+      },
+      {
+        key: "answer",
+        label: "LOO delta",
+        value: looDelta.toFixed(4),
+        note: questionSummary.trace,
+        tone: "accent",
+      },
+      {
+        key: "compare",
+        label: `Without ${focusPrimary}`,
+        value: compareValueForLoo.toFixed(3),
+        note: looMinusIdx >= 0 ? `f(${label(looMinus)}, ${label(evalSet)})` : "The comparison row matches the selected row here.",
+        tone: "quiet",
+      },
+    ];
+  } else if (conceptMode === "group") {
+    questionSummary = {
+      title: "Remove a group together",
+      question: groupSet.length
+        ? `If group ${label(groupSet)} walked out of train ${label(Srow)} while eval ${label(evalSet)} stays fixed, what would happen?`
+        : "Pick multiple focus chips to turn this into a group-removal question.",
+      answerLabel: "Group delta",
+      answerValue: looDelta.toFixed(4),
+      trace: groupSet.length
+        ? groupSet.some((token) => Srow.includes(token))
+          ? `We compare ${label(Srow)} against ${label(strikeMinus)} after removing the chosen group.`
+          : `None of ${label(groupSet)} are present in ${label(Srow)}, so the selected coalition cannot change this row.`
+        : "Group mode is most useful once you choose a multi-point group above the grid.",
+    };
+    formulaLine = `Group delta = f(${label(Srow)}, ${label(evalSet)}) - f(${label(groupSet.length ? strikeMinus : [])}, ${label(evalSet)}) = ${cleanSelectedValue.toFixed(4)} - ${compareValueForGroup.toFixed(4)} = ${looDelta.toFixed(4)}`;
+    lensGuide = {
+      title: "Coordinated removal",
+      body:
+        "Group leave-one-out asks whether several contributors matter together. The grid shows the selected world next to the world that remains after removing the chosen group as a block.",
+    };
+    stageReadouts = [
+      {
+        key: "selected",
+        label: "Target cell",
+        value: cleanSelectedValue.toFixed(3),
+        note: `f(${label(Srow)}, ${label(evalSet)})`,
+        tone: "primary",
+      },
+      {
+        key: "answer",
+        label: "Group delta",
+        value: looDelta.toFixed(4),
+        note: questionSummary.trace,
+        tone: "accent",
+      },
+      {
+        key: "compare",
+        label: groupSet.length ? `Without ${label(groupSet)}` : "Comparison row",
+        value: compareValueForGroup.toFixed(3),
+        note:
+          strikeMinusIdx >= 0 ? `f(${label(strikeMinus)}, ${label(evalSet)})` : "Choose at least two focus chips to create a coalition comparison.",
+        tone: "quiet",
+      },
+    ];
+  } else if (semivalueModes.has(conceptMode)) {
+    const answerLabel =
+      conceptMode === "shapley" ? "Shapley phi" : conceptMode === "banzhaf" ? "Banzhaf value" : "Beta phi";
+    questionSummary = {
+      title: `${questionMeta[conceptMode]} on one contributor`,
+      question:
+        conceptMode === "shapley"
+          ? `Across every partial training world and fixed eval ${label(evalSet)}, how much does adding ${focusPrimary} help on average?`
+          : conceptMode === "banzhaf"
+            ? `Across every partial training world and fixed eval ${label(evalSet)}, what is ${focusPrimary}'s average marginal contribution when every coalition gets equal weight?`
+            : `Across every partial training world and fixed eval ${label(evalSet)}, what is ${focusPrimary}'s marginal contribution when coalition sizes are reweighted by alpha=${betaAlpha} and beta=${betaBeta}?`,
+      answerLabel,
+      answerValue: semivalueStats.phi.toFixed(4),
+      trace: `${semivalueStats.cnt} row-pairs contribute to this estimate. The rings show the exact before-and-after comparisons.`,
+    };
+    formulaLine =
+      conceptMode === "shapley"
+        ? `Shapley phi(${focusPrimary}) averages the marginal change from adding ${focusPrimary} across ${semivalueStats.cnt} paired rows on eval ${label(evalSet)}.`
+        : conceptMode === "banzhaf"
+          ? `Banzhaf(${focusPrimary}) averages the same paired deltas, but every coalition gets equal weight instead of each coalition size sharing weight equally.`
+          : `Beta Shapley(${focusPrimary}; alpha=${betaAlpha}, beta=${betaBeta}) keeps the same paired deltas but redistributes weight across coalition sizes.`;
+    lensGuide = {
+      title:
+        conceptMode === "shapley"
+          ? "Average many local moves"
+          : conceptMode === "banzhaf"
+            ? "Equal weight on coalitions"
+            : "Reweight coalition sizes",
+      body:
+        conceptMode === "shapley"
+          ? "Shapley does not trust any single row pair. Instead it walks through every partial world on the active evaluation slice and averages the marginal contribution of the focus point."
+          : conceptMode === "banzhaf"
+            ? "Banzhaf stays in the same subset-pair universe as Shapley, but it treats each coalition equally rather than balancing the contribution of each coalition size."
+            : "Beta Shapley stays in the semivalue family while letting you emphasize smaller or larger coalitions through the alpha and beta controls.",
+    };
+    stageReadouts = [
+      {
+        key: "selected",
+        label: "Anchor cell",
+        value: cleanSelectedValue.toFixed(3),
+        note: `f(${label(Srow)}, ${label(evalSet)})`,
+        tone: "primary",
+      },
+      {
+        key: "answer",
+        label: answerLabel,
+        value: semivalueStats.phi.toFixed(4),
+        note: questionSummary.trace,
+        tone: "accent",
+      },
+      {
+        key: "pairs",
+        label: "Pair count",
+        value: `${semivalueStats.cnt}`,
+        note: `Matched partial worlds with and without ${focusPrimary}.`,
+        tone: "quiet",
+      },
+      ...(conceptMode === "beta"
+        ? [
+            {
+              key: "params",
+              label: "Alpha / Beta",
+              value: `${betaAlpha} / ${betaBeta}`,
+              note: "These parameters decide which coalition sizes receive more weight.",
+              tone: "quiet",
+            },
+          ]
+        : []),
+    ];
+  } else if (conceptMode === "scaling") {
+    questionSummary = {
       title: "Average across all training worlds of one size",
       question: `Holding eval ${label(evalSet)} fixed, what is the average score over every training world with ${k} item${k === 1 ? "" : "s"}?`,
       answerLabel: `Avg at k=${k}`,
       answerValue: scalingBucket.avg.toFixed(4),
       trace: `${scalingBucket.n} training worlds contribute to this bucket. The selected row still controls the highlighted cell, but not the headline average.`,
     };
-  }, [
-    computed,
-    focusPrimary,
-    Srow,
-    evalSet,
-    looDelta,
-    looMinus,
-    groupSet,
-    strikeMinus,
-    shapleyStats.phi,
-    shapleyStats.cnt,
-    k,
-    scalingBucket.avg,
-    scalingBucket.n,
-  ]);
+    formulaLine = `Scaling average at k = ${k} means averaging f(S, ${label(evalSet)}) over every row whose size is ${k}.`;
+    lensGuide = {
+      title: "Collapse many rows into one curve",
+      body:
+        "Scaling turns the grid into a summary over row sizes. The selected cell still anchors your attention, but the headline number now comes from every row with the chosen size.",
+    };
+    stageReadouts = [
+      {
+        key: "selected",
+        label: "Anchor cell",
+        value: cleanSelectedValue.toFixed(3),
+        note: `f(${label(Srow)}, ${label(evalSet)})`,
+        tone: "primary",
+      },
+      {
+        key: "answer",
+        label: `Avg at k=${k}`,
+        value: scalingBucket.avg.toFixed(4),
+        note: questionSummary.trace,
+        tone: "accent",
+      },
+      {
+        key: "rows",
+        label: "Rows in bucket",
+        value: `${scalingBucket.n}`,
+        note: `All rows with |S| = ${k} contribute to the scaling average.`,
+        tone: "quiet",
+      },
+    ];
+  } else if (conceptMode === "dp") {
+    questionSummary = {
+      title: "Bound one-row influence",
+      question: `If ${focusPrimary} changes membership in train ${label(Srow)}, how much can the output move, and what Laplace scale would that imply at epsilon = ${epsilon.toFixed(1)}?`,
+      answerLabel: "Suggested scale",
+      answerValue: dpRecommendedScale.toFixed(4),
+      trace: `Adjacent rows ${label(Srow)} and ${label(looMinus)} differ by ${dpLocalGap.toFixed(4)} on the selected cell and by at most ${dpColumnSensitivity.toFixed(4)} across this row pair.`,
+    };
+    formulaLine = `Sensitivity = max_E |f(${label(Srow)}, E) - f(${label(looMinus)}, E)| = ${dpColumnSensitivity.toFixed(4)}; Laplace scale b = sensitivity / epsilon = ${dpRecommendedScale.toFixed(4)}.`;
+    lensGuide = {
+      title: "Adjacent-row privacy lens",
+      body:
+        "Differential privacy mode treats the selected row and its leave-one-out neighbor as adjacent datasets. It then turns that observed row-pair sensitivity into a toy noise recommendation.",
+    };
+    stageReadouts = [
+      {
+        key: "local",
+        label: "Current cell gap",
+        value: dpLocalGap.toFixed(4),
+        note: `|f(${label(Srow)}, ${label(evalSet)}) - f(${label(looMinus)}, ${label(evalSet)})|`,
+        tone: "primary",
+      },
+      {
+        key: "sens",
+        label: "Row sensitivity",
+        value: dpColumnSensitivity.toFixed(4),
+        note: "Maximum gap across all evaluation slices for this adjacent row pair.",
+        tone: "accent",
+      },
+      {
+        key: "eps",
+        label: "Epsilon",
+        value: epsilon.toFixed(1),
+        note: "Smaller epsilon demands a larger noise scale.",
+        tone: "quiet",
+      },
+      {
+        key: "scale",
+        label: "Suggested scale",
+        value: dpRecommendedScale.toFixed(4),
+        note: "Toy Laplace scale for the observed row-pair sensitivity.",
+        tone: "quiet",
+      },
+    ];
+  } else if (conceptMode === "unlearning") {
+    questionSummary = {
+      title: "Delete and compare to exact retraining",
+      question: `If ${focusPrimary} must be forgotten from train ${label(Srow)}, how far is the current cell from the exact retrain reference on ${label(looMinus)}?`,
+      answerLabel: "Audit gap",
+      answerValue: unlearningGap.toFixed(4),
+      trace: `Exact retrain reference is ${label(looMinus)}. With tolerance ${auditTolerance.toFixed(2)}, this request ${unlearningPass ? "passes" : "fails"} the toy audit.`,
+    };
+    formulaLine = `Audit gap = |f(${label(Srow)}, ${label(evalSet)}) - f(${label(looMinus)}, ${label(evalSet)})| = |${cleanSelectedValue.toFixed(4)} - ${compareValueForLoo.toFixed(4)}| = ${unlearningGap.toFixed(4)}.`;
+    lensGuide = {
+      title: "Exact retrain reference",
+      body:
+        "Unlearning mode treats the leave-one-out world as the gold-standard retrain baseline. The point is not just to ask how much the score drops, but how close the current state is to the forget reference.",
+    };
+    stageReadouts = [
+      {
+        key: "current",
+        label: "Current score",
+        value: cleanSelectedValue.toFixed(3),
+        note: `f(${label(Srow)}, ${label(evalSet)})`,
+        tone: "primary",
+      },
+      {
+        key: "reference",
+        label: "Retrain reference",
+        value: compareValueForLoo.toFixed(3),
+        note: `f(${label(looMinus)}, ${label(evalSet)})`,
+        tone: "accent",
+      },
+      {
+        key: "gap",
+        label: "Audit gap",
+        value: unlearningGap.toFixed(4),
+        note: `Exact gap against the forget reference with tolerance ${auditTolerance.toFixed(2)}.`,
+        tone: "quiet",
+      },
+      {
+        key: "status",
+        label: "Toy audit",
+        value: unlearningPass ? "Pass" : "Fail",
+        note: "This is a visualization aid, not a certified unlearning guarantee.",
+        tone: "quiet",
+      },
+    ];
+  } else {
+    const poisonTargetLabel = groupSet.length ? label(groupSet) : focusPrimary;
+    questionSummary = {
+      title: "Corrupt one point or coalition",
+      question: `If rows containing ${poisonTargetLabel} are corrupted, how does the selected score move?`,
+      answerLabel: "Attack delta",
+      answerValue: attackDelta.toFixed(4),
+      trace: poisonActive
+        ? poisonRows.has(safeRowIdx)
+          ? `Row ${label(Srow)} is currently attacked because it contains ${poisonTargetLabel}.`
+          : `Row ${label(Srow)} is currently unaffected because it does not contain ${poisonTargetLabel}.`
+        : "Turn the attack on to compare the clean reference score to the corrupted version.",
+    };
+    formulaLine = `Attack delta = f_attack(${label(Srow)}, ${label(evalSet)}) - f_clean(${label(Srow)}, ${label(evalSet)}) = ${operatorSelectedValue.toFixed(4)} - ${cleanSelectedValue.toFixed(4)} = ${attackDelta.toFixed(4)}.`;
+    lensGuide = {
+      title: "Operator vs reference worlds",
+      body:
+        "Poison mode adds an operator layer. Instead of moving to a neighboring row, you compare the clean score to the score after applying a toy corruption rule to every affected training world.",
+    };
+    stageReadouts = [
+      {
+        key: "clean",
+        label: "Clean score",
+        value: cleanSelectedValue.toFixed(3),
+        note: `f_clean(${label(Srow)}, ${label(evalSet)})`,
+        tone: "primary",
+      },
+      {
+        key: "attack",
+        label: "Attacked score",
+        value: operatorSelectedValue.toFixed(3),
+        note: `f_attack(${label(Srow)}, ${label(evalSet)})`,
+        tone: "accent",
+      },
+      {
+        key: "delta",
+        label: "Attack delta",
+        value: attackDelta.toFixed(4),
+        note: questionSummary.trace,
+        tone: "quiet",
+      },
+      {
+        key: "rows",
+        label: "Affected rows",
+        value: `${poisonRows.size}`,
+        note: "Rows containing the chosen point or coalition receive the toy corruption penalty.",
+        tone: "quiet",
+      },
+    ];
+  }
 
-  const compareRowIndex = computed === "group" ? strikeMinusIdx : looMinusIdx;
-  const compareRowSet = compareRowIndex >= 0 ? subs[compareRowIndex] || [] : [];
-  const compareValue = compareRowIndex >= 0 ? (displayMatrix[compareRowIndex]?.[safeColIdx] ?? selectedValue) : selectedValue;
-  const focusLabel = computed === "group" ? (groupSet.length ? label(groupSet) : "pick a group") : focusPrimary;
-  const compareChooserDisabled = computed === "shapley" || computed === "scaling";
+  const focusLabel =
+    conceptMode === "group"
+      ? groupSet.length
+        ? label(groupSet)
+        : "pick a group"
+      : conceptMode === "poison" && groupSet.length
+        ? label(groupSet)
+        : focusPrimary;
+  const compareChooserDisabled = !["loo", "group", "dp", "unlearning"].includes(conceptMode);
   const visibleComparePoint = compareChooserDisabled ? null : comparePoint;
   const comparePointLabel = visibleComparePoint
     ? `Train ${label(subs[visibleComparePoint.rowIndex] || [])} / Eval ${label(subs[visibleComparePoint.colIndex] || [])}`
@@ -702,170 +1001,77 @@ function App() {
     if (selectionArmed === "compare") {
       return "Click a cell to mark the point of comparison.";
     }
-    if (computed === "shapley") {
-      return "Shapley values use the entire active evaluation column.";
+    if (semivalueModes.has(conceptMode)) {
+      return `${questionMeta[conceptMode]} uses the entire active evaluation column.`;
     }
-    if (computed === "scaling") {
+    if (conceptMode === "scaling") {
       return `Scaling values use the entire active evaluation column and group rows by k = ${k}.`;
+    }
+    if (conceptMode === "explore") {
+      return "Click any cell to read it directly as one train/eval world pair.";
+    }
+    if (conceptMode === "poison") {
+      return `Poison mode compares the clean and attacked versions of the current cell. Rows containing ${groupSet.length ? label(groupSet) : focusPrimary} are marked in operator view.`;
+    }
+    if (conceptMode === "dp") {
+      return "DP mode compares the selected row to its leave-one-out neighbor and turns that gap into a noise recommendation.";
+    }
+    if (conceptMode === "unlearning") {
+      return "Unlearning mode compares the current row to the exact retrain world without the requested point.";
     }
     if (visibleComparePoint) {
       return `Comparison point marked at ${comparePointLabel}`;
     }
-    return "The teal squiggle marks the current target cell. In leave-one-out and group views, you can add an ochre comparison point too.";
-  }, [selectionArmed, computed, k, visibleComparePoint, comparePointLabel]);
+    return "The teal squiggle marks the current target cell. In local comparison modes, you can add an ochre comparison point too.";
+  }, [selectionArmed, conceptMode, k, groupSet, focusPrimary, visibleComparePoint, comparePointLabel]);
 
-  const stageReadouts = useMemo(() => {
-    const cards = [
-      {
-        key: "selected",
-        label: "Target cell",
-        value: selectedValue.toFixed(3),
-        note: `f(${label(Srow)}, ${label(evalSet)})`,
-        tone: "primary",
+  const settingsView = useMemo(
+    () => ({
+      conceptMode,
+      tutorial: tutorialKind,
+      universe: base,
+      metric,
+      palette: paletteName,
+      focus: focusPrimary,
+      focusSet,
+      baselineTrain: { index: safeRowIdx, set: Srow },
+      evalColumn: { index: safeColIdx, set: evalSet },
+      edits: {
+        poison: poisonActive,
       },
-      {
-        key: "answer",
-        label: questionSummary.answerLabel,
-        value: questionSummary.answerValue,
-        note: questionSummary.trace,
-        tone: "accent",
-      },
-    ];
-
-    if (computed === "loo") {
-      cards.push({
-        key: "compare",
-        label: `Without ${focusPrimary}`,
-        value: compareValue.toFixed(3),
-        note:
-          compareRowIndex >= 0
-            ? `f(${label(compareRowSet)}, ${label(evalSet)})`
-            : `${focusPrimary} is absent, so the comparison row matches the selected one.`,
-        tone: "quiet",
-      });
-      return cards;
-    }
-
-    if (computed === "group") {
-      cards.push({
-        key: "compare",
-        label: groupSet.length ? `Without ${label(groupSet)}` : "Comparison row",
-        value: compareValue.toFixed(3),
-        note:
-          compareRowIndex >= 0
-            ? `f(${label(compareRowSet)}, ${label(evalSet)})`
-            : "Choose at least two focus chips to create a group comparison.",
-        tone: "quiet",
-      });
-      return cards;
-    }
-
-    if (computed === "shapley") {
-      cards.push({
-        key: "pairs",
-        label: "Pair count",
-        value: `${shapleyStats.cnt}`,
-        note: `Matched partial worlds with and without ${focusPrimary}.`,
-        tone: "quiet",
-      });
-      return cards;
-    }
-
-    cards.push({
-      key: "rows",
-      label: "Rows in bucket",
-      value: `${scalingBucket.n}`,
-      note: `All rows with |S| = ${k} contribute to the scaling average.`,
-      tone: "quiet",
-    });
-    return cards;
-  }, [
-    selectedValue,
-    Srow,
-    evalSet,
-    questionSummary.answerLabel,
-    questionSummary.answerValue,
-    questionSummary.trace,
-    computed,
-    focusPrimary,
-    compareValue,
-    compareRowIndex,
-    compareRowSet,
-    groupSet,
-    shapleyStats.cnt,
-    scalingBucket.n,
-    k,
-  ]);
-
-  const formulaLine = useMemo(() => {
-    if (computed === "loo") {
-      return `LOO delta = f(${label(Srow)}, ${label(evalSet)}) - f(${label(looMinus)}, ${label(evalSet)}) = ${selectedValue.toFixed(4)} - ${compareValue.toFixed(4)} = ${looDelta.toFixed(4)}`;
-    }
-    if (computed === "group") {
-      const compareLabel = groupSet.length ? label(strikeMinus) : "S\\G";
-      return `Group delta = f(${label(Srow)}, ${label(evalSet)}) - f(${compareLabel}, ${label(evalSet)}) = ${selectedValue.toFixed(4)} - ${compareValue.toFixed(4)} = ${looDelta.toFixed(4)}`;
-    }
-    if (computed === "shapley") {
-      return `Shapley phi(${focusPrimary}) averages the marginal change from adding ${focusPrimary} across ${shapleyStats.cnt} paired rows on eval ${label(evalSet)}.`;
-    }
-    return `Scaling average at k = ${k} means averaging f(S, ${label(evalSet)}) over every row whose size is ${k}.`;
-  }, [
-    computed,
-    Srow,
-    evalSet,
-    looMinus,
-    selectedValue,
-    compareValue,
-    looDelta,
-    groupSet,
-    strikeMinus,
-    focusPrimary,
-    shapleyStats.cnt,
-    k,
-  ]);
-
-  const lensGuide = useMemo(() => {
-    if (computed === "loo") {
-      return {
-        title: "Nearest-neighbor comparison",
-        body:
-          "Leave-one-out is the most local move in the grid. You keep the evaluation slice fixed and step from the selected training row to the nearby row with one member removed.",
-      };
-    }
-    if (computed === "group") {
-      return {
-        title: "Coordinated removal",
-        body:
-          "Group leave-one-out asks whether several contributors matter together. The grid shows the selected world next to the world that remains after removing the chosen group as a block.",
-      };
-    }
-    if (computed === "shapley") {
-      return {
-        title: "Average many local moves",
-        body:
-          "Shapley does not trust any single row pair. Instead it walks through every partial world on the active evaluation slice and averages the marginal contribution of the focus point.",
-      };
-    }
-    return {
-      title: "Collapse many rows into one curve",
-      body:
-        "Scaling turns the grid into a summary over row sizes. The selected cell still anchors your attention, but the headline number now comes from every row with the chosen size.",
-    };
-  }, [computed]);
-
-  const editSummary = activeEditLabels.length
-    ? `Active edit layer: ${activeEditLabels.join(" and ")}.`
-    : "No toy edits are active, so the operator grid and the untouched reference grid currently match.";
-  const poisonTargetLabel = computed === "group" && groupSet.length ? label(groupSet) : focusPrimary;
-  const noiseStateLabel = ["Off", "DP-ish", "Heavy"][noiseLevel];
+      betaShape: { alpha: betaAlpha, beta: betaBeta },
+      dp: { epsilon },
+      unlearning: { tolerance: auditTolerance },
+      scalingK: k,
+      showNumbers: showNums,
+      gridView: effectiveGridView,
+      rows: subs.map((subset) => label(subset)),
+    }),
+    [
+      conceptMode,
+      tutorialKind,
+      base,
+      metric,
+      paletteName,
+      focusPrimary,
+      focusSet,
+      safeRowIdx,
+      Srow,
+      safeColIdx,
+      evalSet,
+      poisonActive,
+      betaAlpha,
+      betaBeta,
+      epsilon,
+      auditTolerance,
+      k,
+      showNums,
+      effectiveGridView,
+      subs,
+    ],
+  );
+  const settingsJson = useMemo(() => JSON.stringify(settingsView, null, 2), [settingsView]);
   const subsetLabels = useMemo(() => subs.map((subset) => label(subset)), [subs]);
-  const canDecreaseCount = count > countMin;
-  const canIncreaseCount = count < countMax;
-  const isGuidedMode = uiMode === "guided";
-  const isAdvancedMode = uiMode === "advanced";
-  const showInspector = uiMode !== "simple";
-  const gridSelectionHint =
-    "Click a row label to choose the training world, a column label to choose the evaluation slice, or any cell to set both at once. Use the chooser buttons below the grid to mark a target or comparison point.";
   const exportPayload = useMemo(
     () => ({
       settings: settingsView,
@@ -881,7 +1087,7 @@ function App() {
 
   const exportJson = () => {
     downloadTextFile(
-      `counterfactual-config-${computed}-${effectiveGridView}-${createExportStamp()}.json`,
+      `counterfactual-config-${conceptMode}-${effectiveGridView}-${createExportStamp()}.json`,
       JSON.stringify(exportPayload, null, 2),
       "application/json;charset=utf-8",
     );
@@ -889,122 +1095,23 @@ function App() {
 
   const exportCsv = () => {
     downloadTextFile(
-      `counterfactual-matrix-${computed}-${effectiveGridView}-${createExportStamp()}.csv`,
+      `counterfactual-matrix-${conceptMode}-${effectiveGridView}-${createExportStamp()}.csv`,
       exportMatrixCsv,
       "text/csv;charset=utf-8",
     );
   };
 
-  const analysisDetailBlock = html`
-    <section class=${`analysis-card ${computedFlash ? "computed-flash" : ""}`}>
-      <div class="analysis-head">
-        <div>
-          <span class="summary-kicker">Inspector</span>
-          <h3 class="card-title">Statistic details</h3>
-        </div>
-        <span class="pill">${questionMeta[computed]}</span>
-      </div>
-      <div class="inspector-banner">
-        <div class="inspector-banner-title">${lensGuide.title}</div>
-        <div class="inspector-banner-copy">${lensGuide.body}</div>
-      </div>
-      <div class="equation-block">${formulaLine}</div>
-
-      ${computed === "shapley"
-        ? html`
-            <div class="inspector-stack">
-              <div class="inspector-row"><span class="inspector-key">Focus point</span><span class="inspector-value">${focusPrimary}</span></div>
-              <div class="inspector-row"><span class="inspector-key">Evaluation slice</span><span class="inspector-value">${label(evalSet)}</span></div>
-              <div class="inspector-row"><span class="inspector-key">phi</span><span class="inspector-value">${shapleyStats.phi.toFixed(4)}</span></div>
-              <div class="inspector-row"><span class="inspector-key">Paired worlds</span><span class="inspector-value">${shapleyStats.cnt}</span></div>
-              ${shapleyStats.rows.length > 0
-                ? html`
-                    <table class="small">
-                      <thead>
-                        <tr><th>|S|</th><th>Avg marginal delta</th><th>#pairs</th></tr>
-                      </thead>
-                      <tbody>
-                        ${shapleyStats.rows.map(
-                          (row) => html`<tr><td>${row.size}</td><td>${row.avg.toFixed(4)}</td><td>${row.n}</td></tr>`,
-                        )}
-                      </tbody>
-                    </table>
-                  `
-                : null}
-            </div>
-          `
-        : null}
-
-      ${computed === "loo"
-        ? html`
-            <div class="inspector-stack">
-              <div class="inspector-row"><span class="inspector-key">Selected row</span><span class="inspector-value">${label(Srow)}</span></div>
-              <div class="inspector-row"><span class="inspector-key">Comparison row</span><span class="inspector-value">${label(looMinus)}</span></div>
-              <div class="inspector-row"><span class="inspector-key">Evaluation slice</span><span class="inspector-value">${label(evalSet)}</span></div>
-              <div class="inspector-row"><span class="inspector-key">Delta</span><span class="inspector-value">${looDelta.toFixed(4)}</span></div>
-            </div>
-          `
-        : null}
-
-      ${computed === "group"
-        ? html`
-            <div class="inspector-stack">
-              <div class="inspector-row"><span class="inspector-key">Selected row</span><span class="inspector-value">${label(Srow)}</span></div>
-              <div class="inspector-row"><span class="inspector-key">Focus group</span><span class="inspector-value">${groupSet.length ? label(groupSet) : "Choose a group"}</span></div>
-              <div class="inspector-row"><span class="inspector-key">Row without group</span><span class="inspector-value">${label(strikeMinus)}</span></div>
-              <div class="inspector-row"><span class="inspector-key">Delta</span><span class="inspector-value">${looDelta.toFixed(4)}</span></div>
-            </div>
-          `
-        : null}
-
-      ${computed === "scaling"
-        ? html`
-            <div class="inspector-stack">
-              <div class="inspector-row"><span class="inspector-key">Evaluation slice</span><span class="inspector-value">${label(evalSet)}</span></div>
-              <div class="inspector-row"><span class="inspector-key">Bucket size</span><span class="inspector-value">|S| = ${k}</span></div>
-              <div class="inspector-row"><span class="inspector-key">Rows in bucket</span><span class="inspector-value">${scalingBucket.n}</span></div>
-              <div class="inspector-row"><span class="inspector-key">Average</span><span class="inspector-value">${scalingBucket.avg.toFixed(4)}</span></div>
-              <div class="spark-wrap">
-                <svg class="spark" viewBox="0 0 260 50">
-                  <path d=${spark.d} fill="none" stroke="#FFD166" stroke-width="2" />
-                  ${scalingAll.map((row, index) => {
-                    const total = scalingAll.length || 1;
-                    const minValue = Math.min(...scalingAll.map((entry) => entry.avg));
-                    const maxValue = Math.max(...scalingAll.map((entry) => entry.avg));
-                    const width = 260;
-                    const height = 50;
-                    const pad = 4;
-                    const x = pad + (index * (width - 2 * pad)) / Math.max(1, total - 1);
-                    const normalized = maxValue === minValue ? 0.5 : (row.avg - minValue) / (maxValue - minValue);
-                    const y = pad + (1 - normalized) * (height - 2 * pad);
-                    return html`<circle cx=${x} cy=${y} r="2.5" fill=${row.k === k ? "#68C6C1" : "#FFE0A6"} />`;
-                  })}
-                </svg>
-              </div>
-              <table class="small">
-                <thead>
-                  <tr><th>k</th><th>Avg f(S,E)</th><th>#rows</th></tr>
-                </thead>
-                <tbody>
-                  ${scalingAll.map(
-                    (row) => html`<tr><td>${row.k}</td><td>${row.avg.toFixed(4)}</td><td>${row.n}</td></tr>`,
-                  )}
-                </tbody>
-              </table>
-            </div>
-          `
-        : null}
-    </section>
-  `;
-  const currentWorldLabel = effectiveGridView === "operator" ? "Edited view" : uiMode === "advanced" ? "Original" : "Reference grid";
-  const modeLabel =
-    uiMode === "simple" ? "Simple explore" : uiMode === "guided" ? "Guided" : "Advanced explore";
-  const modeCopy =
-    uiMode === "simple"
-      ? "Keep the explorer lean: choose a score rule, click the grid to set train and eval, and inspect the current value. Switch to Guided mode for step-by-step tutorial presets."
-      : uiMode === "guided"
-        ? "Guided mode keeps the grid visible but adds presets and the statistic walkthroughs so the explorer can teach as you move."
-        : "Advanced explore unlocks world-layer comparisons, toy edits, export tools, palette controls, and the raw state inspector.";
+  const showInspector = conceptMode !== "explore";
+  const canDecreaseCount = count > countMin;
+  const canIncreaseCount = count < countMax;
+  const currentWorldLabel = effectiveGridView === "operator" ? "Operator view" : "Reference grid";
+  const modeLabel = conceptMeta[conceptMode].label;
+  const modeCopy = conceptMeta[conceptMode].description;
+  const editSummary = activeEditLabels.length
+    ? `Active edit layer: ${activeEditLabels.join(" and ")}.`
+    : "No attack layer is active, so the operator grid and the untouched reference grid currently match.";
+  const gridSelectionHint =
+    "Click a row label to choose the training world, a column label to choose the evaluation slice, or any cell to set both at once. Use the chooser buttons below the grid to mark a target or comparison point.";
 
   useEffect(() => {
     const container = gridWrapRef.current;
@@ -1025,29 +1132,326 @@ function App() {
     setSelectionArmed(null);
   };
 
+  const usesFocus = !["explore", "scaling"].includes(conceptMode);
+  const focusHeading =
+    conceptMode === "poison"
+      ? "Attack target"
+      : conceptMode === "unlearning"
+        ? "Forget request"
+        : conceptMode === "dp"
+          ? "Adjacent contributor"
+          : semivalueModes.has(conceptMode)
+            ? "Value contributor"
+            : conceptMode === "group"
+              ? "Focus coalition"
+              : "Focus contributor";
+  const focusPillCopy =
+    conceptMode === "poison"
+      ? "Changes which rows are corrupted"
+      : conceptMode === "group"
+        ? "Changes the coalition"
+        : "Changes the contributor";
+
+  const semivalueTable = semivalueModes.has(conceptMode)
+    ? html`
+        <div class="inspector-stack">
+          <div class="inspector-row"><span class="inspector-key">Focus point</span><span class="inspector-value">${focusPrimary}</span></div>
+          <div class="inspector-row"><span class="inspector-key">Evaluation slice</span><span class="inspector-value">${label(evalSet)}</span></div>
+          <div class="inspector-row"><span class="inspector-key">${questionSummary.answerLabel}</span><span class="inspector-value">${semivalueStats.phi.toFixed(4)}</span></div>
+          <div class="inspector-row"><span class="inspector-key">Paired worlds</span><span class="inspector-value">${semivalueStats.cnt}</span></div>
+          ${conceptMode === "beta"
+            ? html`
+                <div class="inspector-row"><span class="inspector-key">Alpha</span><span class="inspector-value">${betaAlpha}</span></div>
+                <div class="inspector-row"><span class="inspector-key">Beta</span><span class="inspector-value">${betaBeta}</span></div>
+              `
+            : null}
+          ${semivalueStats.rows.length > 0
+            ? html`
+                <table class="small">
+                  <thead>
+                    <tr><th>|S|</th><th>Avg marginal delta</th><th>Weight</th><th>Contribution</th></tr>
+                  </thead>
+                  <tbody>
+                    ${semivalueStats.rows.map(
+                      (row) =>
+                        html`<tr><td>${row.size}</td><td>${row.avg.toFixed(4)}</td><td>${row.weight.toFixed(3)}</td><td>${row.contribution.toFixed(4)}</td></tr>`,
+                    )}
+                  </tbody>
+                </table>
+              `
+            : null}
+        </div>
+      `
+    : null;
+
+  const analysisDetailBlock = html`
+    <section class=${`analysis-card ${computedFlash ? "computed-flash" : ""}`}>
+      <div class="analysis-head">
+        <div>
+          <span class="summary-kicker">Inspector</span>
+          <h3 class="card-title">Statistic details</h3>
+        </div>
+        <span class="pill">${questionMeta[conceptMode]}</span>
+      </div>
+      <div class="inspector-banner">
+        <div class="inspector-banner-title">${lensGuide.title}</div>
+        <div class="inspector-banner-copy">${lensGuide.body}</div>
+      </div>
+      <div class="equation-block">${formulaLine}</div>
+
+      ${conceptMode === "loo"
+        ? html`
+            <div class="inspector-stack">
+              <div class="inspector-row"><span class="inspector-key">Selected row</span><span class="inspector-value">${label(Srow)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Comparison row</span><span class="inspector-value">${label(looMinus)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Evaluation slice</span><span class="inspector-value">${label(evalSet)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Delta</span><span class="inspector-value">${looDelta.toFixed(4)}</span></div>
+            </div>
+          `
+        : null}
+
+      ${conceptMode === "group"
+        ? html`
+            <div class="inspector-stack">
+              <div class="inspector-row"><span class="inspector-key">Selected row</span><span class="inspector-value">${label(Srow)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Focus group</span><span class="inspector-value">${groupSet.length ? label(groupSet) : "Choose a group"}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Row without group</span><span class="inspector-value">${label(strikeMinus)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Delta</span><span class="inspector-value">${looDelta.toFixed(4)}</span></div>
+            </div>
+          `
+        : null}
+
+      ${semivalueModes.has(conceptMode) ? semivalueTable : null}
+
+      ${conceptMode === "scaling"
+        ? html`
+            <div class="inspector-stack">
+              <div class="inspector-row"><span class="inspector-key">Evaluation slice</span><span class="inspector-value">${label(evalSet)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Bucket size</span><span class="inspector-value">|S| = ${k}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Rows in bucket</span><span class="inspector-value">${scalingBucket.n}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Average</span><span class="inspector-value">${scalingBucket.avg.toFixed(4)}</span></div>
+              <div class="spark-wrap">
+                <svg class="spark" viewBox="0 0 260 50">
+                  <path d=${spark.d} fill="none" stroke="#FFD166" stroke-width="2" />
+                  ${scalingAll.map((row, index) => {
+                    const total = scalingAll.length || 1;
+                    const width = 260;
+                    const height = 50;
+                    const pad = 4;
+                    const x = pad + (index * (width - 2 * pad)) / Math.max(1, total - 1);
+                    const normalized = spark.max === spark.min ? 0.5 : (row.avg - spark.min) / (spark.max - spark.min);
+                    const y = pad + (1 - normalized) * (height - 2 * pad);
+                    return html`<circle cx=${x} cy=${y} r="2.5" fill=${row.k === k ? "#68C6C1" : "#FFE0A6"} />`;
+                  })}
+                </svg>
+              </div>
+              <table class="small">
+                <thead>
+                  <tr><th>k</th><th>Avg f(S,E)</th><th>#rows</th></tr>
+                </thead>
+                <tbody>
+                  ${scalingAll.map((row) => html`<tr><td>${row.k}</td><td>${row.avg.toFixed(4)}</td><td>${row.n}</td></tr>`)}
+                </tbody>
+              </table>
+            </div>
+          `
+        : null}
+
+      ${conceptMode === "dp"
+        ? html`
+            <div class="inspector-stack">
+              <div class="inspector-row"><span class="inspector-key">Adjacent row</span><span class="inspector-value">${label(looMinus)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Current cell gap</span><span class="inspector-value">${dpLocalGap.toFixed(4)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Row sensitivity</span><span class="inspector-value">${dpColumnSensitivity.toFixed(4)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Epsilon</span><span class="inspector-value">${epsilon.toFixed(1)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Suggested Laplace scale</span><span class="inspector-value">${dpRecommendedScale.toFixed(4)}</span></div>
+            </div>
+          `
+        : null}
+
+      ${conceptMode === "unlearning"
+        ? html`
+            <div class="inspector-stack">
+              <div class="inspector-row"><span class="inspector-key">Selected row</span><span class="inspector-value">${label(Srow)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Forget point</span><span class="inspector-value">${focusPrimary}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Retrain reference</span><span class="inspector-value">${label(looMinus)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Audit gap</span><span class="inspector-value">${unlearningGap.toFixed(4)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Tolerance</span><span class="inspector-value">${auditTolerance.toFixed(2)}</span></div>
+            </div>
+          `
+        : null}
+
+      ${conceptMode === "poison"
+        ? html`
+            <div class="inspector-stack">
+              <div class="inspector-row"><span class="inspector-key">Attack target</span><span class="inspector-value">${groupSet.length ? label(groupSet) : focusPrimary}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Reference score</span><span class="inspector-value">${cleanSelectedValue.toFixed(4)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Attacked score</span><span class="inspector-value">${operatorSelectedValue.toFixed(4)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Affected rows</span><span class="inspector-value">${poisonRows.size}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Current layer</span><span class="inspector-value">${effectiveGridView === "operator" ? "Operator" : "Reference"}</span></div>
+            </div>
+          `
+        : null}
+    </section>
+  `;
+
+  const modeControlsBlock = html`
+    <section class=${`stage-panel question-dock ${computedFlash ? "computed-flash" : ""}`} data-testid="question-controls">
+      <div class="panel-head">
+        <div>
+          <span class="summary-kicker">Mode controls</span>
+          <h3 class="panel-title">${questionMeta[conceptMode]}</h3>
+        </div>
+        <span class="pill">${questionMeta[conceptMode]}</span>
+      </div>
+      <p class="panel-copy">${modeCopy}</p>
+
+      ${usesFocus
+        ? html`
+            <div class="control-cluster">
+              <div class="control-head">
+                ${focusHeading}
+                ${InfoTip(
+                  conceptMode === "poison"
+                    ? "Pick the point or coalition whose containing rows should be corrupted. This changes which rows are attacked, not which row is selected."
+                    : "Pick the contributor whose effect you want to ask about. This changes who is being removed, added, or valued; it does not change the selected train row.",
+                )}
+              </div>
+              <div class="ctrl-note">${focusTargetCopy}</div>
+              <div class="focus-chip-row">
+                ${base.map((token) => {
+                  const active = focusSet.includes(token);
+                  const handler = () => (allowsMultiFocus ? toggleFocus(token) : setFocusSet([token]));
+                  return html`<button key=${`f-${token}`} class="btn" aria-pressed=${active} onClick=${handler}>${token}</button>`;
+                })}
+              </div>
+              <div class="summary-inline toolbar-pills">
+                <span class="pill">${focusTargetBadge}</span>
+                <span class="pill">${focusPillCopy}</span>
+              </div>
+            </div>
+          `
+        : html`
+            <div class="control-cluster">
+              <div class="control-head">How to use this mode</div>
+              <div class="ctrl-note">Click any cell to set the train/eval pair. Explore mode keeps the question local instead of aggregating across many worlds.</div>
+            </div>
+          `}
+
+      ${conceptMode === "beta"
+        ? html`
+            <div class="control-cluster">
+              <div class="control-head">Beta-Shapley weights</div>
+              <div class="slider-row">
+                <label>Alpha</label>
+                <input type="range" min="1" max="5" step="1" value=${betaAlpha} onInput=${(event) => setBetaAlpha(+event.target.value)} />
+                <span class="pill">${betaAlpha}</span>
+              </div>
+              <div class="slider-row">
+                <label>Beta</label>
+                <input type="range" min="1" max="5" step="1" value=${betaBeta} onInput=${(event) => setBetaBeta(+event.target.value)} />
+                <span class="pill">${betaBeta}</span>
+              </div>
+              <div class="ctrl-note">Increase alpha to emphasize larger coalitions; increase beta to emphasize smaller coalitions.</div>
+            </div>
+          `
+        : null}
+
+      ${conceptMode === "scaling"
+        ? html`
+            <div class="control-cluster">
+              <div class="control-head">Bucket size</div>
+              <div class="focus-chip-row">
+                ${Array.from({ length: base.length + 1 }, (_, bucket) => html`
+                  <button class="btn mini" aria-pressed=${k === bucket} onClick=${() => setK(bucket)}>k=${bucket}</button>
+                `)}
+              </div>
+              <div class="summary-inline toolbar-pills">
+                <span class="pill">${scalingBucket.n} rows in bucket</span>
+                <button class="btn ghost mini" onClick=${() => setPlaying((previous) => !previous)}>${playing ? "Stop" : "Animate"}</button>
+              </div>
+              <div class="ctrl-note">Scaling averages the active evaluation slice across every training world whose size is k.</div>
+            </div>
+          `
+        : null}
+
+      ${conceptMode === "dp"
+        ? html`
+            <div class="control-cluster">
+              <div class="control-head">Privacy budget</div>
+              <div class="slider-row">
+                <label>Epsilon</label>
+                <input type="range" min="0.5" max="4" step="0.5" value=${epsilon} onInput=${(event) => setEpsilon(+event.target.value)} />
+                <span class="pill">${epsilon.toFixed(1)}</span>
+              </div>
+              <div class="ctrl-note">Smaller epsilon means a tighter privacy budget and therefore a larger toy noise recommendation.</div>
+            </div>
+          `
+        : null}
+
+      ${conceptMode === "unlearning"
+        ? html`
+            <div class="control-cluster">
+              <div class="control-head">Audit tolerance</div>
+              <div class="slider-row">
+                <label>Tolerance</label>
+                <input
+                  type="range"
+                  min="0.05"
+                  max="0.5"
+                  step="0.05"
+                  value=${auditTolerance}
+                  onInput=${(event) => setAuditTolerance(+event.target.value)}
+                />
+                <span class="pill">${auditTolerance.toFixed(2)}</span>
+              </div>
+              <div class="ctrl-note">This toy threshold says how close the current score must stay to the exact retrain reference to count as a pass.</div>
+            </div>
+          `
+        : null}
+
+      ${conceptMode === "poison"
+        ? html`
+            <div class="control-cluster">
+              <div class="control-head">Attack controls</div>
+              <label class="checkbox-row">
+                <input type="checkbox" checked=${poisonActive} onChange=${(event) => setPoisonActive(event.target.checked)} />
+                Corrupt rows containing ${groupSet.length ? label(groupSet) : focusPrimary}.
+              </label>
+              <div class="summary-inline toolbar-pills">
+                <span class="pill">Attack ${poisonActive ? "on" : "off"}</span>
+                <span class="pill">${poisonRows.size} rows affected</span>
+              </div>
+              <div class="ctrl-note">Reference view shows the untouched grid; Operator view shows the toy corruption rule after the attack is applied.</div>
+            </div>
+          `
+        : null}
+    </section>
+  `;
+
   return html`
     <div class="workspace-shell">
       <section class="workspace-toolbar" data-testid="explorer-toolbar">
         <div class="toolbar-bar">
           <div class="toolbar-guide">
-            <span class="summary-kicker">Workspace mode</span>
+            <span class="summary-kicker">Concept mode</span>
             <p class="toolbar-guide-copy">${modeCopy}</p>
           </div>
           <div class="summary-inline toolbar-status-row">
             <span class="pill">${modeLabel}</span>
             <span class="pill">${currentWorldLabel}</span>
             <span class="pill">${metricMeta[metric].short}</span>
-            <span class="pill">${effectiveShowNums ? "Raw values on" : "Color scale"}</span>
+            <span class="pill">${showNums ? "Raw values on" : "Color scale"}</span>
           </div>
         </div>
 
         <div class="toolbar-grid">
-          <section class="toolbar-group" data-testid="workspace-controls">
-            <div class="toolbar-label">Explore mode</div>
+          <section class="toolbar-group" data-testid="concept-controls">
+            <div class="toolbar-label">Question family</div>
             <div class="segmented-row mode-toggle">
-              <button class="btn mini" aria-pressed=${uiMode === "simple"} onClick=${() => setUiMode("simple")}>Simple explore</button>
-              <button class="btn mini" aria-pressed=${uiMode === "guided"} onClick=${() => setUiMode("guided")}>Guided</button>
-              <button class="btn mini" aria-pressed=${uiMode === "advanced"} onClick=${() => setUiMode("advanced")}>Advanced explore</button>
+              ${conceptOrder.map((mode) => html`
+                <button class="btn mini" aria-pressed=${conceptMode === mode} onClick=${() => chooseConcept(mode)}>${conceptMeta[mode].label}</button>
+              `)}
             </div>
             <div class="toolbar-note">${modeCopy}</div>
           </section>
@@ -1074,107 +1478,62 @@ function App() {
               <input type="checkbox" checked=${showNums} onChange=${(event) => setShowNums(event.target.checked)} />
               Show raw values
             </label>
-            ${isAdvancedMode
-              ? html`
-                  <select value=${paletteName} onChange=${(event) => setPaletteName(event.target.value)}>
-                    ${Object.keys(palettes).map((name) => html`<option value=${name}>${name}</option>`)}
-                  </select>
-                  <div class="export-actions">
-                    <button class="btn mini" onClick=${exportJson}>Export JSON</button>
-                    <button class="btn ghost mini" onClick=${exportCsv}>Export CSV</button>
-                  </div>
-                `
-              : null}
-            <div class="toolbar-note">
-              ${isAdvancedMode
-                ? editSummary
-                : "Turn raw values on when you want to inspect the exact toy scores instead of just the color field."}
+            <select value=${paletteName} onChange=${(event) => setPaletteName(event.target.value)}>
+              ${Object.keys(palettes).map((name) => html`<option value=${name}>${name}</option>`)}
+            </select>
+            <div class="export-actions">
+              <button class="btn mini" onClick=${exportJson}>Export JSON</button>
+              <button class="btn ghost mini" onClick=${exportCsv}>Export CSV</button>
             </div>
-            ${isAdvancedMode
-              ? html`
-                  <details class="guide-details toolbar-drawer">
-                    <summary>Inspect live settings</summary>
-                    <div class="ctrl-note">This is the same state currently driving the figure below.</div>
-                    <pre class="json-block">${settingsJson}</pre>
-                  </details>
-                `
-              : null}
+            <div class="toolbar-note">${conceptMode === "poison" ? editSummary : "Turn raw values on when you want to inspect the exact toy scores instead of just the color field."}</div>
+            <details class="guide-details toolbar-drawer">
+              <summary>Inspect live settings</summary>
+              <div class="ctrl-note">This is the same state currently driving the figure below.</div>
+              <pre class="json-block">${settingsJson}</pre>
+            </details>
           </section>
 
-          ${isGuidedMode
-            ? html`
-                <section class=${`toolbar-group toolbar-expand ${presetFlash ? "preset-flash" : ""}`} data-testid="guided-controls">
-                  <div class="toolbar-label">Guided paths</div>
-                  <div class="tutorials">
-                    ${tutorialPresets.map(
-                      (tutorial) => html`
-                        <button
-                          key=${tutorial.id}
-                          class=${`tutorial-btn ${tutorialKind === tutorial.id ? "active" : ""}`}
-                          onClick=${() => runTutorial(tutorial.id)}
-                        >
-                          <span class="tutorial-title">${tutorial.title}</span>
-                          <span class="tutorial-desc">${tutorial.summary}</span>
-                        </button>
-                      `,
-                    )}
-                  </div>
-                  <div class="tutorial-note">
-                    ${tutorialInfo
-                      ? html`
-                          <div>
-                            <div><b>Goal</b>: ${tutorialInfo.goal}</div>
-                            <div><b>Action</b>: ${tutorialInfo.how}</div>
-                            <div><b>Why it matters</b>: ${tutorialInfo.concept}</div>
-                          </div>
-                        `
-                      : "Load a preset to jump straight to a useful scene instead of building one from scratch."}
-                  </div>
-                </section>
-              `
-            : null}
+          <section class=${`toolbar-group toolbar-expand ${presetFlash ? "preset-flash" : ""}`} data-testid="scene-controls">
+            <div class="toolbar-label">Example scenes</div>
+            <div class="tutorials">
+              ${visibleTutorials.map(
+                (tutorial) => html`
+                  <button
+                    key=${tutorial.id}
+                    class=${`tutorial-btn ${tutorialKind === tutorial.id ? "active" : ""}`}
+                    onClick=${() => runTutorial(tutorial.id)}
+                  >
+                    <span class="tutorial-title">${tutorial.title}</span>
+                    <span class="tutorial-desc">${tutorial.summary}</span>
+                  </button>
+                `,
+              )}
+            </div>
+            <div class="tutorial-note">
+              ${tutorialInfo && activeTutorial?.mode === conceptMode
+                ? html`
+                    <div>
+                      <div><b>Goal</b>: ${tutorialInfo.goal}</div>
+                      <div><b>Action</b>: ${tutorialInfo.how}</div>
+                      <div><b>Why it matters</b>: ${tutorialInfo.concept}</div>
+                    </div>
+                  `
+                : `Scenes for ${questionMeta[conceptMode]} preload a useful train/eval pair and the mode-specific controls.`}
+            </div>
+          </section>
 
-          ${isAdvancedMode
+          ${conceptMode === "poison"
             ? html`
                 <section class="toolbar-group" data-testid="world-layer-controls">
                   <div class="toolbar-label">
                     World layer
-                    ${InfoTip("Operator view shows the edited matrix; Real world shows the untouched reference matrix.")}
+                    ${InfoTip("Operator view shows the edited matrix; Reference view shows the untouched reference matrix.")}
                   </div>
                   <div class="segmented-row">
-                    <button class="btn mini" aria-pressed=${gridView === "operator"} onClick=${() => setGridView("operator")} title="Show the grid after toy edits (poison, noise) are applied">Edited view</button>
-                    <button class="btn mini" aria-pressed=${gridView === "real"} onClick=${() => setGridView("real")} title="Show the untouched reference matrix, regardless of edit toggles">Original</button>
+                    <button class="btn mini" aria-pressed=${gridView === "operator"} onClick=${() => setGridView("operator")}>Operator</button>
+                    <button class="btn mini" aria-pressed=${gridView === "real"} onClick=${() => setGridView("real")}>Reference</button>
                   </div>
-                  <div class="toolbar-note">${advancedWorldSummary}</div>
-                </section>
-                <section class="toolbar-group" data-testid="toy-edit-controls">
-                  <div class="toolbar-label">
-                    Toy edits
-                    ${InfoTip("Apply toy edits before rendering the operator view. The real-world layer remains untouched.")}
-                  </div>
-                  <div class="segmented-row">
-                    <button class="btn mini" aria-pressed=${editorMode === "poison"} onClick=${() => setEditorMode("poison")}>Poison</button>
-                    <button class="btn mini" aria-pressed=${editorMode === "noise"} onClick=${() => setEditorMode("noise")}>Noise</button>
-                    <button class="btn ghost mini" onClick=${resetEdits}>Reset</button>
-                  </div>
-                  ${editorMode === "poison"
-                    ? html`
-                        <label class="checkbox-row">
-                          <input type="checkbox" checked=${poisonActive} onChange=${(event) => setPoisonActive(event.target.checked)} />
-                          Corrupt rows containing ${poisonTargetLabel}.
-                        </label>
-                      `
-                    : html`
-                        <div class="slider-row">
-                          <label>Noise level</label>
-                          <input type="range" min="0" max="2" value=${noiseLevel} onInput=${(event) => setNoiseLevel(+event.target.value)} />
-                          <span class="pill">${noiseStateLabel}</span>
-                        </div>
-                      `}
-                  <div class="summary-inline toolbar-pills">
-                    <span class="pill">Poison ${poisonActive ? "on" : "off"}</span>
-                    <span class="pill">Noise ${noiseStateLabel}</span>
-                  </div>
+                  <div class="toolbar-note">${worldLayerSummary}</div>
                 </section>
               `
             : null}
@@ -1192,9 +1551,9 @@ function App() {
             <span class="pill">${modeLabel}</span>
             <span class="pill">Train ${label(Srow)}</span>
             <span class="pill">Eval ${label(evalSet)}</span>
-            <span class="pill">${questionMeta[computed]}</span>
-            <span class="pill">${effectiveShowNums ? "Raw values on" : "Color only"}</span>
-            ${isAdvancedMode ? html`<span class="pill">${paletteName}</span>` : null}
+            <span class="pill">${questionMeta[conceptMode]}</span>
+            <span class="pill">${showNums ? "Raw values on" : "Color only"}</span>
+            <span class="pill">${paletteName}</span>
           </div>
         </div>
 
@@ -1248,78 +1607,91 @@ function App() {
               `;
             })}
           </div>
-
           ${subs.map((rowSet, rowIndex) => {
-            const sizeK = rowSet.length === k;
-            const selected = rowIndex === safeRowIdx;
+            const rowActive = rowIndex === safeRowIdx;
             return html`
-              <div key=${`row-${rowIndex}`} style="display:flex">
+              <div style="display:flex" key=${`row-${rowIndex}`}>
                 <div
-                  class=${`rl ${selected ? "axis-active" : ""}`}
+                  class=${`rl ${rowActive ? "axis-active" : ""}`}
                   title=${`Select training world ${label(rowSet)}. Click any cell to set both train and eval at once.`}
                   onClick=${() => setRowIdx(rowIndex)}
                 >
                   ${formatRowHeader(rowIndex, rowSet)}
                 </div>
-                ${subs.map((evSet, colIndex) => {
-                  const value = displayMatrix[rowIndex][colIndex];
-                  const normalized = normalizeValue(value, dispMin, dispMax, 0.5);
-                  const isSel = rowIndex === safeRowIdx && colIndex === safeColIdx;
-                  const isTargetCell = isSel;
-                  const isCompareCell = Boolean(
-                    visibleComparePoint
-                      && visibleComparePoint.rowIndex === rowIndex
-                      && visibleComparePoint.colIndex === colIndex,
-                  );
-                  const edited = uiMode === "advanced" && gridView === "operator" && poisonRows.has(rowIndex) && colIndex === safeColIdx;
+                <div class="rr">
+                  ${subs.map((evSet, colIndex) => {
+                    const value = displayMatrix[rowIndex]?.[colIndex] ?? 0;
+                    const normalized = normalizeValue(value, dispMin, dispMax, 0.5);
+                    const sizeK = rowSet.length === k;
+                    const isSel = rowIndex === safeRowIdx && colIndex === safeColIdx;
+                    const isTargetCell =
+                      selectionArmed === "target" &&
+                      pendingSelection === null &&
+                      rowIndex === safeRowIdx &&
+                      colIndex === safeColIdx;
+                    const isCompareCell = Boolean(
+                      visibleComparePoint &&
+                        visibleComparePoint.rowIndex === rowIndex &&
+                        visibleComparePoint.colIndex === colIndex,
+                    );
+                    const edited =
+                      conceptMode === "poison" &&
+                      effectiveGridView === "operator" &&
+                      poisonRows.has(rowIndex) &&
+                      colIndex === safeColIdx;
 
-                  let thin = false;
-                  let thick = false;
-                  if (computed === "shapley" && colIndex === safeColIdx) {
-                    thin = thin || shapleyThinRows.has(rowIndex);
-                    thick = thick || shapleyThickRows.has(rowIndex);
-                  }
-                  if (computed === "loo" && colIndex === safeColIdx) {
-                    if (rowIndex === safeRowIdx) thick = true;
-                    if (compareRowIndex >= 0 && rowIndex === compareRowIndex) thin = true;
-                  }
-                  if (computed === "group" && colIndex === safeColIdx) {
-                    if (rowIndex === safeRowIdx) thick = true;
-                    if (strikeMinusIdx >= 0 && rowIndex === strikeMinusIdx) thin = true;
-                  }
-                  if (computed === "scaling" && colIndex === safeColIdx && sizeK) {
-                    thin = true;
-                  }
+                    let thin = false;
+                    let thick = false;
+                    if (semivalueModes.has(conceptMode) && colIndex === safeColIdx) {
+                      thin = thin || semivalueThinRows.has(rowIndex);
+                      thick = thick || semivalueThickRows.has(rowIndex);
+                    }
+                    if (["loo", "dp", "unlearning"].includes(conceptMode) && colIndex === safeColIdx) {
+                      if (rowIndex === safeRowIdx) thick = true;
+                      if (looMinusIdx >= 0 && rowIndex === looMinusIdx) thin = true;
+                    }
+                    if (conceptMode === "group" && colIndex === safeColIdx) {
+                      if (rowIndex === safeRowIdx) thick = true;
+                      if (strikeMinusIdx >= 0 && rowIndex === strikeMinusIdx) thin = true;
+                    }
+                    if (conceptMode === "scaling" && colIndex === safeColIdx && sizeK) {
+                      thin = true;
+                    }
+                    if (conceptMode === "poison" && colIndex === safeColIdx) {
+                      if (rowIndex === safeRowIdx) thick = true;
+                      if (poisonRows.has(rowIndex)) thin = true;
+                    }
 
-                  const highlight = thin || thick || isSel;
-                  const classes = ["cell"];
-                  if (isSel) classes.push("sel");
-                  if (highlight) classes.push("cell-emph");
-                  if (edited) classes.push("cell-edited");
-                  if (switchPulse && highlight) classes.push("cell-pulse");
+                    const highlight = thin || thick || isSel;
+                    const classes = ["cell"];
+                    if (isSel) classes.push("sel");
+                    if (highlight) classes.push("cell-emph");
+                    if (edited) classes.push("cell-edited");
+                    if (switchPulse && highlight) classes.push("cell-pulse");
 
-                  return html`
-                    <div
-                      key=${`cell-${rowIndex}-${colIndex}`}
-                      class=${classes.join(" ")}
-                      data-selected=${isSel ? "true" : "false"}
-                      data-target-cell=${isTargetCell ? "true" : "false"}
-                      data-compare-cell=${isCompareCell ? "true" : "false"}
-                      title=${`Train ${label(rowSet)} | Eval ${label(evSet)} | value ${value.toFixed(3)}`}
-                      onClick=${() => handleCellClick(rowIndex, colIndex)}
-                      style=${{ background: palette(normalized) }}
-                    >
-                      ${isTargetCell ? html`<div class="marker-ring marker-ring-target"></div>` : null}
-                      ${isCompareCell ? html`<div class="marker-ring marker-ring-compare"></div>` : null}
-                      ${thin ? html`<div class="ring ring-thin"></div>` : null}
-                      ${thick ? html`<div class="ring ring-thick"></div>` : null}
-                      ${edited ? html`<div class="edit-flag" title="Toy edit affects this row in operator view"></div>` : null}
-                      ${effectiveShowNums
-                        ? html`<div class="num" style=${{ color: normalized > 0.48 ? "#10273d" : "#f7fbff" }}>${value.toFixed(2)}</div>`
-                        : null}
-                    </div>
-                  `;
-                })}
+                    return html`
+                      <div
+                        key=${`cell-${rowIndex}-${colIndex}`}
+                        class=${classes.join(" ")}
+                        data-selected=${isSel ? "true" : "false"}
+                        data-target-cell=${isTargetCell ? "true" : "false"}
+                        data-compare-cell=${isCompareCell ? "true" : "false"}
+                        title=${`Train ${label(rowSet)} | Eval ${label(evSet)} | value ${value.toFixed(3)}`}
+                        onClick=${() => handleCellClick(rowIndex, colIndex)}
+                        style=${{ background: palette(normalized) }}
+                      >
+                        ${isTargetCell ? html`<div class="marker-ring marker-ring-target"></div>` : null}
+                        ${isCompareCell ? html`<div class="marker-ring marker-ring-compare"></div>` : null}
+                        ${thin ? html`<div class="ring ring-thin"></div>` : null}
+                        ${thick ? html`<div class="ring ring-thick"></div>` : null}
+                        ${edited ? html`<div class="edit-flag" title="Toy edit affects this row in operator view"></div>` : null}
+                        ${showNums
+                          ? html`<div class="num" style=${{ color: normalized > 0.48 ? "#10273d" : "#f7fbff" }}>${value.toFixed(2)}</div>`
+                          : null}
+                      </div>
+                    `;
+                  })}
+                </div>
               </div>
             `;
           })}
@@ -1333,9 +1705,7 @@ function App() {
             </div>
             <div class="summary-inline toolbar-pills">
               <span class="pill">Target Train ${label(Srow)} / Eval ${label(evalSet)}</span>
-              ${visibleComparePoint
-                ? html`<span class="pill">Compare ${comparePointLabel}</span>`
-                : null}
+              ${visibleComparePoint ? html`<span class="pill">Compare ${comparePointLabel}</span>` : null}
             </div>
           </div>
           <div class="grid-marker-actions">
@@ -1368,7 +1738,7 @@ function App() {
           <div class="summary-inline toolbar-pills">
             <span class="pill">Train ${label(Srow)}</span>
             <span class="pill">Eval ${label(evalSet)}</span>
-            <span class="pill">Focus ${focusLabel}</span>
+            ${usesFocus ? html`<span class="pill">Focus ${focusLabel}</span>` : null}
             <span class="pill">${metricMeta[metric].short}</span>
           </div>
           <div class="stage-summary-grid">
@@ -1384,58 +1754,7 @@ function App() {
           </div>
         </section>
 
-        <section class=${`stage-panel question-dock ${computedFlash ? "computed-flash" : ""}`} data-testid="question-controls">
-          <div class="panel-head">
-            <div>
-              <span class="summary-kicker">Question controls</span>
-              <h3 class="panel-title">What counterfactual are we asking?</h3>
-            </div>
-            <span class="pill">${questionMeta[computed]}</span>
-          </div>
-          <div class="segmented-row question-button-row">
-            <button class="btn" aria-pressed=${computed === "loo"} onClick=${() => setComputed("loo")}>Leave-one-out</button>
-            <button class="btn" aria-pressed=${computed === "group"} onClick=${() => setComputed("group")}>Group LOO</button>
-            <button class="btn" aria-pressed=${computed === "shapley"} onClick=${() => setComputed("shapley")}>Shapley</button>
-            <button class="btn" aria-pressed=${computed === "scaling"} onClick=${() => setComputed("scaling")}>Scaling</button>
-          </div>
-
-          <div class="control-cluster">
-            <div class="control-head">
-              Focus contributor
-              ${InfoTip("Pick the contributor whose effect you want to ask about. This changes who is being removed, added, or valued; it does not change the selected train row.")}
-            </div>
-            <div class="ctrl-note">${focusTargetCopy}</div>
-            <div class="focus-chip-row">
-              ${base.map((token) => {
-                const active = focusSet.includes(token);
-                const handler = () => (computed === "group" ? toggleFocus(token) : setFocusSet([token]));
-                return html`<button key=${`f-${token}`} class="btn" aria-pressed=${active} onClick=${handler}>${token}</button>`;
-              })}
-            </div>
-            <div class="summary-inline toolbar-pills">
-              <span class="pill">${focusTargetBadge}</span>
-              <span class="pill">${computed === "group" ? "Changes the coalition" : "Changes the contributor"}</span>
-            </div>
-          </div>
-
-          ${computed === "scaling"
-            ? html`
-                <div class="control-cluster">
-                  <div class="control-head">Bucket size</div>
-                  <div class="focus-chip-row">
-                    ${Array.from({ length: base.length + 1 }, (_, bucket) => html`
-                      <button class="btn mini" aria-pressed=${k === bucket} onClick=${() => setK(bucket)}>k=${bucket}</button>
-                    `)}
-                  </div>
-                  <div class="summary-inline toolbar-pills">
-                    <span class="pill">${scalingBucket.n} rows in bucket</span>
-                    <button class="btn ghost mini" onClick=${() => setPlaying((previous) => !previous)}>${playing ? "Stop" : "Animate"}</button>
-                  </div>
-                  <div class="ctrl-note">Scaling averages the active evaluation slice across every training world whose size is k.</div>
-                </div>
-              `
-            : null}
-        </section>
+        ${modeControlsBlock}
       </div>
 
       ${showInspector ? analysisDetailBlock : null}
