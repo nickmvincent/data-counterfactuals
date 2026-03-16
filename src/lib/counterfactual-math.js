@@ -82,9 +82,98 @@ export function intersectionScore(trainSet, evalSet) {
   return hits;
 }
 
-export function metricValueForSets(trainSet, evalSet, metric) {
+const toyRealExamples = {
+  A: { x: -1.45, y: 1.2, label: 1 },
+  B: { x: -1.05, y: 0.78, label: 1 },
+  C: { x: -0.52, y: 0.18, label: 1 },
+  D: { x: 0.38, y: -0.1, label: 0 },
+  E: { x: 0.95, y: -0.48, label: 0 },
+  F: { x: 1.48, y: -0.96, label: 0 },
+  G: { x: -0.86, y: 1.56, label: 1 },
+  H: { x: 1.34, y: 0.06, label: 0 },
+};
+
+function seedUnit(seed) {
+  const value = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+  return value - Math.floor(value);
+}
+
+export function createToyRealDataset(sample = 0) {
+  if (sample === 0) return toyRealExamples;
+
+  const jitterScale = 0.18;
+  const out = {};
+  for (const [token, example] of Object.entries(toyRealExamples)) {
+    const tokenSeed = sample * 97 + token.charCodeAt(0) * 13;
+    const jitterX = (seedUnit(tokenSeed) * 2 - 1) * jitterScale;
+    const jitterY = (seedUnit(tokenSeed + 1) * 2 - 1) * jitterScale;
+    out[token] = {
+      x: example.x + jitterX,
+      y: example.y + jitterY,
+      label: example.label,
+    };
+  }
+  return out;
+}
+
+function meanPoint(points) {
+  if (!points.length) return null;
+  const total = points.reduce(
+    (acc, point) => ({
+      x: acc.x + point.x,
+      y: acc.y + point.y,
+    }),
+    { x: 0, y: 0 },
+  );
+  return {
+    x: total.x / points.length,
+    y: total.y / points.length,
+  };
+}
+
+function squaredDistance(left, right) {
+  return (left.x - right.x) ** 2 + (left.y - right.y) ** 2;
+}
+
+export function toyRealDataScore(trainSet, evalSet, dataset = toyRealExamples) {
+  if (!evalSet.length) return 1;
+
+  const trainPoints = trainSet.map((token) => dataset[token]).filter(Boolean);
+  const evalPoints = evalSet.map((token) => dataset[token]).filter(Boolean);
+  if (!evalPoints.length) return 0;
+  if (!trainPoints.length) return 0.5;
+
+  const positives = trainPoints.filter((point) => point.label === 1);
+  const negatives = trainPoints.filter((point) => point.label === 0);
+  const positiveCentroid = meanPoint(positives);
+  const negativeCentroid = meanPoint(negatives);
+  const majorityLabel =
+    positives.length === negatives.length ? 1 : positives.length > negatives.length ? 1 : 0;
+
+  let correct = 0;
+  for (const point of evalPoints) {
+    let predicted;
+    if (positiveCentroid && negativeCentroid) {
+      predicted =
+        squaredDistance(point, positiveCentroid) <= squaredDistance(point, negativeCentroid) ? 1 : 0;
+    } else if (positiveCentroid) {
+      predicted = 1;
+    } else if (negativeCentroid) {
+      predicted = 0;
+    } else {
+      predicted = majorityLabel;
+    }
+    if (predicted === point.label) correct += 1;
+  }
+
+  return correct / evalPoints.length;
+}
+
+export function metricValueForSets(trainSet, evalSet, metric, options = {}) {
+  const { realDataset = toyRealExamples } = options;
   if (metric === "jaccard") return jaccardScore(trainSet, evalSet);
   if (metric === "inter") return intersectionScore(trainSet, evalSet);
+  if (metric === "real") return toyRealDataScore(trainSet, evalSet, realDataset);
   return binaryEntropy(jaccardScore(trainSet, evalSet));
 }
 
@@ -111,7 +200,7 @@ export function normalizeValue(value, min, max, fallback = 0.5) {
   return (value - min) / (max - min);
 }
 
-export function buildSubsetGrid(items, metric) {
+function buildGridFromScoreFn(items, scoreFn) {
   const subsets = allSubsets(items);
   const matrix = [];
   const values = [];
@@ -119,7 +208,7 @@ export function buildSubsetGrid(items, metric) {
   for (const trainSet of subsets) {
     const row = [];
     for (const evalSet of subsets) {
-      const value = metricValueForSets(trainSet, evalSet, metric);
+      const value = scoreFn(trainSet, evalSet);
       row.push(value);
       values.push(value);
     }
@@ -132,6 +221,30 @@ export function buildSubsetGrid(items, metric) {
     min: values.length ? Math.min(...values) : 0,
     max: values.length ? Math.max(...values) : 1,
   };
+}
+
+const precomputedRealGridCache = new Map();
+
+export function buildSubsetGrid(items, metric, options = {}) {
+  const { realDataMode = "precomputed", realDataSample = 0 } = options;
+
+  if (metric === "real" && realDataMode === "precomputed") {
+    const cacheKey = items.join("");
+    if (!precomputedRealGridCache.has(cacheKey)) {
+      precomputedRealGridCache.set(
+        cacheKey,
+        buildGridFromScoreFn(items, (trainSet, evalSet) =>
+          metricValueForSets(trainSet, evalSet, metric, { realDataset: toyRealExamples }),
+        ),
+      );
+    }
+    return precomputedRealGridCache.get(cacheKey);
+  }
+
+  const realDataset = metric === "real" ? createToyRealDataset(realDataSample) : toyRealExamples;
+  return buildGridFromScoreFn(items, (trainSet, evalSet) =>
+    metricValueForSets(trainSet, evalSet, metric, { realDataset }),
+  );
 }
 
 export function applyGridEdits(baseMatrix, subsets, options = {}) {

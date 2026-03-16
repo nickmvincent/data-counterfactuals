@@ -117,6 +117,32 @@ test("scaling stats preserve one row for the empty subset and combinatorial coun
   assert.deepEqual(scaling.map((row) => row.n), [1, 3, 3, 1]);
 });
 
+test("real-data metric stays bounded and rewards fuller training coverage on the toy dataset", () => {
+  const items = ["A", "B", "C", "D"];
+  const { matrix, subsets } = buildSubsetGrid(items, "real");
+  const fullIndex = findSubsetIndex(subsets, ["A", "B", "C", "D"]);
+  const emptyIndex = findSubsetIndex(subsets, []);
+
+  for (const row of matrix) {
+    for (const value of row) {
+      assert.ok(value >= 0 && value <= 1);
+    }
+  }
+
+  assert.ok(matrix[fullIndex][fullIndex] >= matrix[emptyIndex][fullIndex]);
+});
+
+test("real-data metric supports stable precomputed grids and perturbed live resamples", () => {
+  const items = ["A", "B", "C", "D"];
+  const precomputedA = buildSubsetGrid(items, "real", { realDataMode: "precomputed" });
+  const precomputedB = buildSubsetGrid(items, "real", { realDataMode: "precomputed" });
+  const liveA = buildSubsetGrid(items, "real", { realDataMode: "live", realDataSample: 1 });
+  const liveB = buildSubsetGrid(items, "real", { realDataMode: "live", realDataSample: 2 });
+
+  assert.deepEqual(precomputedA.matrix, precomputedB.matrix);
+  assert.notDeepEqual(liveA.matrix, liveB.matrix);
+});
+
 test("concept presets can all execute without missing setters", () => {
   const calls = [];
   const record = (name) => (value) => calls.push([name, value]);

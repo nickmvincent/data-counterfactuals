@@ -2,10 +2,16 @@
 title: Data Counterfactuals
 description: "An interactive explainer for a unifying frame across valuation, scaling, selection, poisoning, privacy, and collective action."
 eyebrow: Interactive explainer
-lede: "How might AI models if their training data changes in some way?"
+lede: "What might change in an AI model if its training data changes?"
 intro:
   - |
     There are many reasons we might want to understand how a specific piece of data impacts an AI model. Perhaps we want to find particularly valuable data to look at it. Perhaps we want to pay people based on the impact of their data (though this is a tricky endeavor!). Perhaps we need to debug our data. Or perhaps a group of people want to withhold data for bargaining or protest. This web project grew out of discussions on data valuation, algorithmic collective action, data scaling, data selection, data poisoning, privacy, unlearning and neighboring topics. Counterfactual questions about how data might change are foundational to all these areas, and so understanding various questions in terms of data counterfactuals can be practically and academically useful.
+  - |
+    This site exists to:
+
+    - show how cross-cutting the idea of data counterfactuals is
+    - make certain data counterfactual measurements easier to understand
+    - illustrate connections between technical and social data-centric work
 reading_paths:
   - title: Read the launch memo
     href: /memo/data-counterfactuals
@@ -62,3 +68,9 @@ I think this frame is useful because it connects conversations that often happen
 That does not mean the projects are all formally identical. One major distinction is that some techniques only explore counterfactuals over data that already exist: subsets, reweightings, filtering, or held-out removals. Others try to change what data the world produces in the first place, which is part of why collective action matters so much. And many minor distinctions exist.
 
 If you want the running map of adjacent methods, areas, and papers, head to the [related works page](/collections). It is updated dynamically via Semble, an atproto project, so this intro page does not need its own hand-maintained method-family list.
+
+## How to read the site
+
+This site is meant to work in three passes. First, use this overview page to get the basic idea in plain language. Second, open the grid or graph explorer to see toy data counterfactuals more concretely. Third, use the memos and collections pages when you want the longer argument, the neighboring formalisms, and pointers into the literature.
+
+You do not need to move through every page in order. If you already understand the basic frame, jump straight to the explorer. If you want the project motivation first, open the launch memo. If you want definitions without leaving the main thread for long, use the glossary.

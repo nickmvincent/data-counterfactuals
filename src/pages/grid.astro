@@ -2,11 +2,17 @@
 import Layout from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
 import Explorer from "../components/Explorer.jsx";
-import { getRequiredPageEntry, getSection, splitMarkdownSections } from "../lib/page-content";
+import { getRequiredPageEntry, splitMarkdownSections } from "../lib/page-content";
 
 const page = await getRequiredPageEntry("grid");
 const sections = splitMarkdownSections(page.body);
-const introSection = getSection(sections, "how-to-read-the-toy");
+const introSection = sections.find(
+  (section) => section.id === "how-to-read-the-toy" || section.id === "how-to-read-this",
+) ?? sections[0];
+
+if (!introSection) {
+  throw new Error("Missing intro section for the grid explorer.");
+}
 ---
 
 <Layout
@@ -799,6 +805,11 @@ const introSection = getSection(sections, "how-to-read-the-toy");
     .explorer-shell .cell {
       border-right: 1px solid rgba(33, 65, 95, 0.1);
       border-bottom: 1px solid rgba(33, 65, 95, 0.1);
+    }
+    .explorer-shell .rr {
+      display: flex;
+      flex-wrap: nowrap;
+      min-width: max-content;
     }
     .explorer-shell .rl {
       width: var(--grid-axis-w);

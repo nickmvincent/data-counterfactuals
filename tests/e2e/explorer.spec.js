@@ -23,17 +23,40 @@ test("grid explorer defaults to explore mode and exposes lettered axis labels", 
   await expect(rowLabels.nth(0)).toHaveText("∅");
   await expect(rowLabels.nth(1)).toHaveText("A");
 
+  const firstRowCells = page.locator('[data-testid="explorer-grid"] .rr').first().locator(".cell");
+  const firstCellBox = await firstRowCells.nth(0).boundingBox();
+  const secondCellBox = await firstRowCells.nth(1).boundingBox();
+  expect(firstCellBox).not.toBeNull();
+  expect(secondCellBox).not.toBeNull();
+  expect(secondCellBox.x).toBeGreaterThan(firstCellBox.x + 20);
+  expect(Math.abs(secondCellBox.y - firstCellBox.y)).toBeLessThan(5);
+
   await expect(page.getByTestId("value-dock").locator(".panel-title")).toHaveText("Read one train/eval cell");
   await expect(page.getByTestId("question-controls")).toContainText("How to use this mode");
   await expect(page.getByTestId("grid-marker-controls")).toContainText("Choose the data point we're going to value");
   await expect(page.getByTestId("grid-marker-controls")).toContainText("Click any cell to read it directly as one train/eval world pair");
   await expect(page.getByRole("button", { name: "Choose point to compare" })).toBeDisabled();
-  await page.getByRole("button", { name: "LOO", exact: true }).click();
+  const looButton = page.getByRole("button", { name: "LOO", exact: true });
+  await expect
+    .poll(async () => {
+      await looButton.click();
+      return looButton.getAttribute("aria-pressed");
+    })
+    .toBe("true");
   await expect(page.getByRole("button", { name: "Choose point to compare" })).toBeEnabled();
   await expect(page.getByTestId("question-controls")).toContainText("Focus contributor");
   await expect(gridCard).toContainText("Rows train");
   await expect(page.getByTestId("display-controls")).toContainText("Show raw values");
+  await expect(page.getByTitle(/pointwise-additive metrics/i)).toBeVisible();
+  await page.getByLabel("Show fewer eval cols (just single points)").check();
+  await expect(columnLabels).toHaveCount(4);
+  await expect(columnLabels.nth(0)).toHaveText("A");
+  await expect(columnLabels.nth(3)).toHaveText("D");
+  await expect(page.getByTestId("metric-controls")).toContainText("Real data");
   await expect(page.getByTestId("metric-controls")).toContainText('toy proxy for "retrain on');
+  await page.getByRole("button", { name: "Real data" }).click();
+  await expect(page.getByTestId("metric-controls")).toContainText("Precomputed");
+  await expect(page.getByTestId("metric-controls")).toContainText("Live");
 });
 
 test("mode-specific scenes drive the explorer through a real user flow", async ({ page }) => {

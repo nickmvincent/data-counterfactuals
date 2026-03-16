@@ -27,6 +27,8 @@ notes:
         Keep the main memo or glossary nearby if you want the longer framing or a quick definition while you click through the presets.
 ---
 
-## How to read the toy
+## how to read this
 
-Start by fixing the mental model: rows are possible training worlds and columns are evaluation slices. Once that is in place, the rest of the interface is about moving between nearby rows, nearby columns, or nearby perturbations and asking what changed. If you prefer to think in terms of nodes and edges, the graph explorer shows the same toy universe as a subset lattice instead.
+We are assuming someone is training an ML model, and this explorer is about evaluating that model. The rows stand in for possible training worlds, and the columns stand in for the evaluation slices or questions we use to check how the model behaves.
+
+Start by fixing that mental model: rows are possible training worlds and columns are evaluation slices. Once that is in place, the rest of the interface is about moving between nearby rows, nearby columns, or nearby perturbations and asking what changed. If you prefer to think in terms of nodes and edges, the graph explorer shows the same toy universe as a subset lattice instead.

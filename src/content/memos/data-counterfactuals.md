@@ -11,6 +11,12 @@ This is a short "memo" meant to explain the datacounterfactuals.org project/webs
 
 There are many reasons we might want to understand how a specific piece of data impacts an AI model. Perhaps we want to find particularly valuable data to look at it. Perhaps we want to pay people based on the impact of their data (though this is a tricky endeavor!). Perhaps we need to debug our data. Or perhaps a group of people want to withhold data for bargaining or protest. The datacounterfactuals project grew out of discussions on data valuation, algorithmic collective action, data scaling, data selection, data poisoning, privacy, unlearning and neighboring topics. Counterfactual questions about how data might change are foundational to all these areas, and so understanding various questions in terms of data counterfactuals can be practically and academically useful.
 
+This site exists to:
+
+- show how cross-cutting the idea of data counterfactuals is
+- make certain data counterfactual measurements easier to understand
+- illustrate connections between technical and social data-centric work
+
 In particular, I found myself using the phrase "data counterfactuals" very frequently while teaching about data valuation, algorithmic collective action, data scaling, and related topics. Students and colleagues would ask some version of: is "data counterfactuals" an actual field/area/offical term, or just a convenient phrase for a bunch of neighboring ideas?
 
 Variations of the term appear across the related data valuation and data attribution literature. Work on "datamodels" from [Ilyas et al.](https://proceedings.mlr.press/v162/ilyas22a.html) uses the term "dataset counterfactuals", and this [talk](https://simons.berkeley.edu/talks/andrew-ilyas-stanford-university-2025-04-03) from Ilyas uses the term "data counterfactuals" directly. In early work from Koh and Liang on influence functions, the authors state: "we ask the counterfactual: what would happen if we did not have this training point, or if the values of this training point were changed slightly?"

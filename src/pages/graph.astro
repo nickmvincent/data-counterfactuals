@@ -190,6 +190,7 @@ const introSection = getSection(sections, "how-to-read-the-graph");
     }
     .graph-shell .graph-pill-row,
     .graph-shell .graph-inline-actions,
+    .graph-shell .graph-action-row,
     .graph-shell .graph-token-row,
     .graph-shell .graph-segmented-row,
     .graph-shell .graph-path-strip,
@@ -428,12 +429,10 @@ const introSection = getSection(sections, "how-to-read-the-graph");
       gap: 0.6rem;
     }
     .graph-shell .graph-neighbor-list li {
-      display: grid;
-      gap: 0.16rem;
-      padding: 0.7rem 0.78rem;
-      border-radius: var(--graph-radius-md);
-      border: 1px solid rgba(33, 65, 95, 0.1);
-      background: rgba(250, 253, 255, 0.84);
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
     }
     .graph-shell .graph-neighbor-main,
     .graph-shell .graph-neighbor-meta {
@@ -447,6 +446,29 @@ const introSection = getSection(sections, "how-to-read-the-graph");
     }
     .graph-shell .graph-neighbor-meta {
       color: var(--graph-muted);
+    }
+    .graph-shell .graph-neighbor-button {
+      width: 100%;
+      display: grid;
+      gap: 0.16rem;
+      padding: 0.7rem 0.78rem;
+      border-radius: var(--graph-radius-md);
+      border: 1px solid rgba(33, 65, 95, 0.1);
+      background: rgba(250, 253, 255, 0.84);
+      text-align: left;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+    .graph-shell .graph-neighbor-button:hover,
+    .graph-shell .graph-neighbor-button:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(47, 92, 126, 0.24);
+      background: rgba(255, 255, 255, 0.96);
+    }
+    .graph-shell .graph-neighbor-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+      transform: none;
     }
     .graph-shell .graph-table {
       width: 100%;

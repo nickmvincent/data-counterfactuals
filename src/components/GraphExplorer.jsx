@@ -56,15 +56,15 @@ const palette = createPalette(["#17344f", "#2f5c7e", "#6d95b0", "#d4af6d", "#fff
 const metricMeta = {
   jaccard: {
     short: "Jaccard",
-    description: "Overlap divided by union.",
+    description: "Normalized overlap: a rough performance proxy when train and eval look similar, but still only set similarity.",
   },
   inter: {
     short: "|Intersection|",
-    description: "Raw overlap count on the chosen evaluation slice.",
+    description: "Raw shared count: a coverage-style proxy that often grows with performance, but it also favors larger slices.",
   },
   entropy: {
     short: "Entropy",
-    description: "Binary entropy of the overlap score.",
+    description: "Overlap turned into an uncertainty-style signal: useful for spotting middling overlap, not accuracy itself.",
   },
 };
 
@@ -202,6 +202,7 @@ function App() {
   const base = useMemo(() => alphabet.slice(0, count), [count]);
   const { matrix, subsets } = useMemo(() => buildSubsetGrid(base, metric), [base, metric]);
   const fullSetIndex = useMemo(() => findSubsetIndex(subsets, base), [subsets, base]);
+  const emptySetIndex = useMemo(() => findSubsetIndex(subsets, []), [subsets]);
 
   const [selectedIndex, setSelectedIndex] = useState(fullSetIndex >= 0 ? fullSetIndex : 0);
   const [evalIndex, setEvalIndex] = useState(fullSetIndex >= 0 ? fullSetIndex : 0);
@@ -321,6 +322,7 @@ function App() {
           token,
           kind: focusPrimary === token ? "focus ablation" : "single deletion",
           nextLabel: label(nextSet),
+          nextIndex,
           delta: currentValue - nextValue,
           nextValue,
         };
@@ -340,6 +342,7 @@ function App() {
             token,
             kind: "augmentation",
             nextLabel: label(nextSet),
+            nextIndex,
             delta: nextValue - currentValue,
             nextValue,
           };
@@ -349,6 +352,8 @@ function App() {
 
   const highlightedNodes = new Set([safeSelectedIndex]);
   const highlightedEdges = new Set();
+  const canJumpToAblation = ablationIndex >= 0 && ablationIndex !== safeSelectedIndex;
+  const canJumpToStrikeTerminal = strikeTerminalIndex >= 0 && strikeTerminalIndex !== safeSelectedIndex;
 
   if (lens === "ablation" && ablationIndex >= 0 && selectedSet.includes(focusPrimary)) {
     highlightedNodes.add(ablationIndex);
@@ -464,9 +469,9 @@ function App() {
           <section class="graph-control-card">
             <div class="graph-control-label">Universe size</div>
             <div class="graph-stepper">
-              <button class="graph-btn mini" type="button" disabled=${count <= countMin} onClick=${() => setCount((previous) => Math.max(countMin, previous - 1))}>-</button>
-              <span class="graph-stepper-value">${count} datasets</span>
-              <button class="graph-btn mini" type="button" disabled=${count >= countMax} onClick=${() => setCount((previous) => Math.min(countMax, previous + 1))}>+</button>
+              <button class="graph-btn mini" type="button" data-testid="graph-count-decrease" disabled=${count <= countMin} onClick=${() => setCount((previous) => Math.max(countMin, previous - 1))}>-</button>
+              <span class="graph-stepper-value" data-testid="graph-count-value">${count} datasets</span>
+              <button class="graph-btn mini" type="button" data-testid="graph-count-increase" disabled=${count >= countMax} onClick=${() => setCount((previous) => Math.min(countMax, previous + 1))}>+</button>
             </div>
             <div class="graph-control-note">The graph has ${subsets.length} nodes once every possible subset is enumerated.</div>
           </section>
@@ -495,7 +500,7 @@ function App() {
           <section class="graph-control-card">
             <label class="graph-select-label">
               <span class="graph-control-label">Training world</span>
-              <select value=${safeSelectedIndex} onChange=${(event) => setSelectedIndex(Number(event.target.value))}>
+              <select data-testid="graph-train-select" value=${safeSelectedIndex} onChange=${(event) => setSelectedIndex(Number(event.target.value))}>
                 ${subsets.map((subset, index) => html`<option key=${`train-${index}`} value=${index}>${label(subset)}</option>`)}
               </select>
             </label>
@@ -505,7 +510,7 @@ function App() {
           <section class="graph-control-card">
             <label class="graph-select-label">
               <span class="graph-control-label">Evaluation slice</span>
-              <select value=${safeEvalIndex} onChange=${(event) => setEvalIndex(Number(event.target.value))}>
+              <select data-testid="graph-eval-select" value=${safeEvalIndex} onChange=${(event) => setEvalIndex(Number(event.target.value))}>
                 ${subsets.map((subset, index) => html`<option key=${`eval-${index}`} value=${index}>${label(subset)}</option>`)}
               </select>
             </label>
@@ -530,7 +535,7 @@ function App() {
             : html`
                 <section class="graph-control-card">
                   <div class="graph-control-label">${lens === "strike" ? "Strike group" : "Focus contributor"}</div>
-                  <div class="graph-token-row">
+                  <div class="graph-token-row" data-testid="graph-focus-tokens">
                     ${base.map((token) => {
                       const active = focusSet.includes(token);
                       const toggle = () => {
@@ -568,9 +573,9 @@ function App() {
             </div>
             <div class="graph-pill-row">
               <span class="graph-pill">${lensMeta[lens].title}</span>
-              <span class="graph-pill">Train ${label(selectedSet)}</span>
-              <span class="graph-pill">Eval ${label(evalSet)}</span>
-              <span class="graph-pill">${metricMeta[metric].short}</span>
+              <span class="graph-pill" data-testid="graph-pill-train">Train ${label(selectedSet)}</span>
+              <span class="graph-pill" data-testid="graph-pill-eval">Eval ${label(evalSet)}</span>
+              <span class="graph-pill" data-testid="graph-pill-metric">${metricMeta[metric].short}</span>
             </div>
           </div>
 
@@ -626,7 +631,16 @@ function App() {
                     class=${`graph-node ${selected ? "is-selected" : ""} ${highlighted ? "is-highlighted" : ""}`}
                     transform=${`translate(${node.x}, ${node.y})`}
                     onClick=${() => setSelectedIndex(index)}
+                    onKeyDown=${(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSelectedIndex(index);
+                      }
+                    }}
                     data-selected=${selected ? "true" : "false"}
+                    role="button"
+                    tabIndex="0"
+                    aria-label=${`Select training world ${node.label}`}
                   >
                     <rect
                       x=${-node.width / 2}
@@ -664,29 +678,53 @@ function App() {
             <div class="graph-stat-grid">
               <div class="graph-stat">
                 <span class="graph-stat-label">Selected score</span>
-                <span class="graph-stat-value">${currentValue.toFixed(4)}</span>
+                <span class="graph-stat-value" data-testid="graph-selected-score">${currentValue.toFixed(4)}</span>
               </div>
               <div class="graph-stat">
                 <span class="graph-stat-label">Train node</span>
-                <span class="graph-stat-value">${label(selectedSet)}</span>
+                <span class="graph-stat-value" data-testid="graph-selected-train">${label(selectedSet)}</span>
               </div>
               <div class="graph-stat">
                 <span class="graph-stat-label">Eval slice</span>
-                <span class="graph-stat-value">${label(evalSet)}</span>
+                <span class="graph-stat-value" data-testid="graph-selected-eval">${label(evalSet)}</span>
               </div>
               <div class="graph-stat">
                 <span class="graph-stat-label">Node degree</span>
                 <span class="graph-stat-value">${selectedSet.length + additionWalks.length}</span>
               </div>
             </div>
+            <div class="graph-inline-actions graph-action-row" data-testid="graph-quick-actions">
+              <button class="graph-btn mini" type="button" onClick=${() => emptySetIndex >= 0 && setSelectedIndex(emptySetIndex)}>Use empty train</button>
+              <button class="graph-btn mini" type="button" onClick=${() => fullSetIndex >= 0 && setSelectedIndex(fullSetIndex)}>Use full train</button>
+              <button class="graph-btn mini" type="button" onClick=${() => setSelectedIndex(safeEvalIndex)}>Use eval as train</button>
+              ${lens === "ablation"
+                ? html`
+                    <button class="graph-btn mini" type="button" disabled=${!canJumpToAblation} onClick=${() => canJumpToAblation && setSelectedIndex(ablationIndex)}>
+                      Jump to without ${focusPrimary}
+                    </button>
+                  `
+                : null}
+              ${lens === "strike"
+                ? html`
+                    <button class="graph-btn mini" type="button" disabled=${!canJumpToStrikeTerminal} onClick=${() => canJumpToStrikeTerminal && setSelectedIndex(strikeTerminalIndex)}>
+                      Jump to strike remainder
+                    </button>
+                  `
+                : null}
+            </div>
             <div class="graph-formula">${questionBlock.formula}</div>
             ${lens === "strike"
               ? html`
-                  <div class="graph-path-strip">
+                  <div class="graph-path-strip" data-testid="graph-path-strip">
                     ${strikePath.map((index, step) => html`
-                      <span key=${`step-${index}`} class="graph-path-node">
+                      <button
+                        key=${`step-${index}`}
+                        class="graph-btn mini graph-path-node"
+                        type="button"
+                        onClick=${() => setSelectedIndex(index)}
+                      >
                         ${label(subsets[index] || [])}${step < strikePath.length - 1 ? " ->" : ""}
-                      </span>
+                      </button>
                     `)}
                   </div>
                 `
@@ -740,12 +778,19 @@ function App() {
             <div class="graph-neighbor-columns">
               <div>
                 <div class="graph-neighbor-title">Single deletions</div>
-                <ul class="graph-neighbor-list">
+                <ul class="graph-neighbor-list" data-testid="graph-removal-neighbors">
                   ${removalWalks.length
                     ? removalWalks.map((entry) => html`
                         <li key=${`drop-${entry.token}`}>
-                          <span class="graph-neighbor-main">-${entry.token} -> ${entry.nextLabel}</span>
-                          <span class="graph-neighbor-meta">${entry.kind} | ${formatSigned(-entry.delta)}</span>
+                          <button
+                            class="graph-neighbor-button"
+                            type="button"
+                            onClick=${() => entry.nextIndex >= 0 && setSelectedIndex(entry.nextIndex)}
+                            disabled=${entry.nextIndex < 0}
+                          >
+                            <span class="graph-neighbor-main">-${entry.token} -> ${entry.nextLabel}</span>
+                            <span class="graph-neighbor-meta">${entry.kind} | ${formatSigned(-entry.delta)}</span>
+                          </button>
                         </li>
                       `)
                     : html`<li>No deletions available from the empty set.</li>`}
@@ -753,12 +798,19 @@ function App() {
               </div>
               <div>
                 <div class="graph-neighbor-title">Single additions</div>
-                <ul class="graph-neighbor-list">
+                <ul class="graph-neighbor-list" data-testid="graph-addition-neighbors">
                   ${additionWalks.length
                     ? additionWalks.map((entry) => html`
                         <li key=${`add-${entry.token}`}>
-                          <span class="graph-neighbor-main">+${entry.token} -> ${entry.nextLabel}</span>
-                          <span class="graph-neighbor-meta">${entry.kind} | ${formatSigned(entry.delta)}</span>
+                          <button
+                            class="graph-neighbor-button"
+                            type="button"
+                            onClick=${() => entry.nextIndex >= 0 && setSelectedIndex(entry.nextIndex)}
+                            disabled=${entry.nextIndex < 0}
+                          >
+                            <span class="graph-neighbor-main">+${entry.token} -> ${entry.nextLabel}</span>
+                            <span class="graph-neighbor-meta">${entry.kind} | ${formatSigned(entry.delta)}</span>
+                          </button>
                         </li>
                       `)
                     : html`<li>The full training set has no outgoing augmentation edges.</li>`}

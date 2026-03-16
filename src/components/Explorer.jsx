@@ -66,17 +66,22 @@ const metricMeta = {
   jaccard: {
     short: "Jaccard",
     name: "Jaccard overlap",
-    description: "overlap divided by union",
+    description: "normalized overlap; a rough proxy when train and eval look similar",
   },
   inter: {
     short: "|Intersection|",
     name: "Raw overlap count",
-    description: "the number of shared items",
+    description: "raw shared count; a rough coverage proxy that favors larger slices",
   },
   entropy: {
     short: "Entropy",
     name: "Binary entropy of overlap",
-    description: "a noisier-looking uncertainty score derived from the overlap",
+    description: "an uncertainty-style score from overlap, better for ambiguity than accuracy",
+  },
+  real: {
+    short: "Real data",
+    name: "Toy real-data accuracy",
+    description: "accuracy from a tiny fixed dataset and a simple classifier",
   },
 };
 
@@ -88,9 +93,9 @@ const questionMeta = {
   banzhaf: "Banzhaf value",
   beta: "Beta Shapley",
   scaling: "Scaling law",
-  dp: "Differential privacy",
-  unlearning: "Machine unlearning",
-  poison: "Data poisoning",
+  dp: "DP (toy)",
+  unlearning: "Unlearning (toy)",
+  poison: "Poison (toy)",
 };
 
 const conceptOrder = ["explore", "loo", "group", "shapley", "banzhaf", "beta", "scaling", "dp", "unlearning", "poison"];
@@ -141,12 +146,12 @@ const conceptMeta = {
   unlearning: {
     label: "Unlearning",
     description:
-      "Frame deletion as a forget request: compare the current row to the exact retrain world where the requested point was never present.",
+      "Frame deletion as a forget request: compare the current row to the exact retrain world where the requested point was never present, then inspect a toy audit threshold.",
   },
   poison: {
     label: "Poison",
     description:
-      "Switch to an operator lens: corrupt rows containing the chosen point or coalition, then compare the attacked score to the clean reference.",
+      "Switch to an operator lens: apply a toy corruption rule to rows containing the chosen point or coalition, then compare the attacked score to the clean reference.",
   },
 };
 
@@ -178,11 +183,11 @@ const faqEntries = [
   },
 ];
 
-function useGrid(items, metric) {
+function useGrid(items, metric, metricOptions = {}) {
   return useMemo(() => {
-    const grid = buildSubsetGrid(items, metric);
+    const grid = buildSubsetGrid(items, metric, metricOptions);
     return { matrix: grid.matrix, subsets: grid.subsets };
-  }, [items, metric]);
+  }, [items, metric, metricOptions]);
 }
 
 function sparkPath(values, width = 260, height = 50, pad = 4) {
@@ -229,10 +234,10 @@ function csvEscape(value) {
   return text;
 }
 
-function buildMatrixCsv(labels, matrix) {
-  const header = ["train/eval", ...labels].map(csvEscape).join(",");
+function buildMatrixCsv(rowLabels, columnLabels, matrix) {
+  const header = ["train/eval", ...columnLabels].map(csvEscape).join(",");
   const rows = matrix.map((row, rowIndex) =>
-    [labels[rowIndex], ...row.map((value) => value.toFixed(6))].map(csvEscape).join(","),
+    [rowLabels[rowIndex], ...row.map((value) => value.toFixed(6))].map(csvEscape).join(","),
   );
   return [header, ...rows].join("\n");
 }
@@ -267,6 +272,8 @@ function App() {
   const base = useMemo(() => alphabet.slice(0, count), [count]);
 
   const [metric, setMetric] = useState("jaccard");
+  const [realDataMode, setRealDataMode] = useState("precomputed");
+  const [realDataSample, setRealDataSample] = useState(0);
   const [paletteName, setPaletteName] = useState("Clear daylight");
   const palette = palettes[paletteName];
 
@@ -275,6 +282,7 @@ function App() {
   const [focusSet, setFocusSet] = useState(["A"]);
   const [k, setK] = useState(2);
   const [showNums, setShowNums] = useState(false);
+  const [showSingletonEvalCols, setShowSingletonEvalCols] = useState(false);
   const [tutorialKind, setTutorialKind] = useState(null);
   const [tutorialInfo, setTutorialInfo] = useState(null);
   const [pendingSelection, setPendingSelection] = useState(null);
@@ -301,8 +309,24 @@ function App() {
     setSelectionArmed(null);
     setComparePoint(null);
   };
+  const switchToPrecomputedRealData = () => setRealDataMode("precomputed");
+  const switchToLiveRealData = () => {
+    setRealDataMode("live");
+    setRealDataSample((previous) => previous || 1);
+  };
+  const resampleRealData = () => {
+    setRealDataMode("live");
+    setRealDataSample((previous) => (previous || 1) + 1);
+  };
 
-  const { matrix: baseMatrix, subsets: subs } = useGrid(base, metric);
+  const metricOptions = useMemo(
+    () => ({
+      realDataMode,
+      realDataSample,
+    }),
+    [realDataMode, realDataSample],
+  );
+  const { matrix: baseMatrix, subsets: subs } = useGrid(base, metric, metricOptions);
   const [rowIdx, setRowIdx] = useState(1);
   const [colIdx, setColIdx] = useState(1);
 
@@ -324,6 +348,14 @@ function App() {
   const allowsMultiFocus = multiFocusModes.has(conceptMode);
   const focusPrimary = focusSet.find((token) => base.includes(token)) || base[0] || "A";
   const groupSet = allowsMultiFocus ? focusSet.filter((token) => base.includes(token)) : [];
+  const visibleColIndices = useMemo(() => {
+    if (!showSingletonEvalCols) return subs.map((_, index) => index);
+    const singletons = [];
+    subs.forEach((subset, index) => {
+      if (subset.length === 1) singletons.push(index);
+    });
+    return singletons.length ? singletons : subs.map((_, index) => index);
+  }, [showSingletonEvalCols, subs]);
 
   useEffect(() => {
     if (!allowsMultiFocus && focusSet.length > 1) {
@@ -346,6 +378,13 @@ function App() {
   useEffect(() => {
     if (colIdx !== safeColIdx) setColIdx(safeColIdx);
   }, [colIdx, safeColIdx]);
+
+  useEffect(() => {
+    if (!visibleColIndices.length) return;
+    if (!visibleColIndices.includes(colIdx)) {
+      setColIdx(visibleColIndices[0]);
+    }
+  }, [visibleColIndices, colIdx]);
 
   const tutorialPresets = useMemo(
     () =>
@@ -456,6 +495,14 @@ function App() {
       return previous;
     });
   }, [subs.length]);
+
+  useEffect(() => {
+    setComparePoint((previous) => {
+      if (!previous) return previous;
+      if (!visibleColIndices.includes(previous.colIndex)) return null;
+      return previous;
+    });
+  }, [visibleColIndices]);
 
   useEffect(() => {
     setComputedFlash(true);
@@ -601,8 +648,11 @@ function App() {
         : `The current question is about ${focusPrimary}. Clicking another token changes who is being removed, added, or valued, while the selected train row stays ${label(Srow)} until you change it on the grid.`;
 
   const scoreProxyCopy =
-    `Each cell is a toy proxy for "retrain on ${label(Srow)} and evaluate on ${label(evalSet)}." ` +
-    `${metricMeta[metric].short} is just the stand-in score we use so you can inspect the comparison structure without running real retrain experiments.`;
+    metric === "real"
+      ? realDataMode === "precomputed"
+        ? `Each cell comes from a cached precomputed matrix over a tiny fixed toy dataset: train a simple classifier on ${label(Srow)} and score it on ${label(evalSet)}. It feels more like real data, but it is still a toy benchmark rather than a real experiment.`
+        : `Each cell is recomputed live from a lightly resampled toy dataset: train a simple classifier on ${label(Srow)} and score it on ${label(evalSet)}. Use resample to perturb the tiny dataset and watch the grid move slightly.`
+      : `Each cell is a toy proxy for "retrain on ${label(Srow)} and evaluate on ${label(evalSet)}." ${metricMeta[metric].short} summarizes how much the train and eval sets structurally line up, which can loosely track performance when overlap helps. It still ignores labels, features, model choice, and optimization, so treat it as a heuristic rather than true accuracy.`;
 
   let questionSummary;
   let formulaLine;
@@ -1031,6 +1081,7 @@ function App() {
       tutorial: tutorialKind,
       universe: base,
       metric,
+      realData: metric === "real" ? { mode: realDataMode, sample: realDataSample } : null,
       palette: paletteName,
       focus: focusPrimary,
       focusSet,
@@ -1044,6 +1095,7 @@ function App() {
       unlearning: { tolerance: auditTolerance },
       scalingK: k,
       showNumbers: showNums,
+      showSingletonEvalCols,
       gridView: effectiveGridView,
       rows: subs.map((subset) => label(subset)),
     }),
@@ -1052,6 +1104,8 @@ function App() {
       tutorialKind,
       base,
       metric,
+      realDataMode,
+      realDataSample,
       paletteName,
       focusPrimary,
       focusSet,
@@ -1066,24 +1120,36 @@ function App() {
       auditTolerance,
       k,
       showNums,
+      showSingletonEvalCols,
       effectiveGridView,
       subs,
     ],
   );
   const settingsJson = useMemo(() => JSON.stringify(settingsView, null, 2), [settingsView]);
   const subsetLabels = useMemo(() => subs.map((subset) => label(subset)), [subs]);
+  const visibleColumnLabels = useMemo(
+    () => visibleColIndices.map((colIndex) => label(subs[colIndex] || [])),
+    [visibleColIndices, subs],
+  );
+  const visibleMatrix = useMemo(
+    () => analysisMatrix.map((row) => visibleColIndices.map((colIndex) => row[colIndex] ?? 0)),
+    [analysisMatrix, visibleColIndices],
+  );
   const exportPayload = useMemo(
     () => ({
       settings: settingsView,
       currentQuestion: questionSummary,
       formula: formulaLine,
       rowLabels: subsetLabels,
-      columnLabels: subsetLabels,
-      matrix: analysisMatrix,
+      columnLabels: visibleColumnLabels,
+      matrix: visibleMatrix,
     }),
-    [settingsView, questionSummary, formulaLine, subsetLabels, analysisMatrix],
+    [settingsView, questionSummary, formulaLine, subsetLabels, visibleColumnLabels, visibleMatrix],
   );
-  const exportMatrixCsv = useMemo(() => buildMatrixCsv(subsetLabels, analysisMatrix), [subsetLabels, analysisMatrix]);
+  const exportMatrixCsv = useMemo(
+    () => buildMatrixCsv(subsetLabels, visibleColumnLabels, visibleMatrix),
+    [subsetLabels, visibleColumnLabels, visibleMatrix],
+  );
 
   const exportJson = () => {
     downloadTextFile(
@@ -1110,8 +1176,13 @@ function App() {
   const editSummary = activeEditLabels.length
     ? `Active edit layer: ${activeEditLabels.join(" and ")}.`
     : "No attack layer is active, so the operator grid and the untouched reference grid currently match.";
+  const evalColumnSummary = showSingletonEvalCols
+    ? "Only singleton evaluation columns are shown. For pointwise-additive metrics, larger eval slices can be recovered from per-point scores; for other toy metrics this is just a decluttering view."
+    : "All evaluation subsets are shown.";
   const gridSelectionHint =
-    "Click a row label to choose the training world, a column label to choose the evaluation slice, or any cell to set both at once. Use the chooser buttons below the grid to mark a target or comparison point.";
+    showSingletonEvalCols
+      ? "Click a row label to choose the training world, a visible singleton column to choose the evaluation slice, or any cell to set both at once. Larger eval subsets are hidden in this display mode. Use the chooser buttons below the grid to mark a target or comparison point."
+      : "Click a row label to choose the training world, a column label to choose the evaluation slice, or any cell to set both at once. Use the chooser buttons below the grid to mark a target or comparison point.";
 
   useEffect(() => {
     const container = gridWrapRef.current;
@@ -1441,6 +1512,10 @@ function App() {
             <span class="pill">${modeLabel}</span>
             <span class="pill">${currentWorldLabel}</span>
             <span class="pill">${metricMeta[metric].short}</span>
+            ${metric === "real"
+              ? html`<span class="pill">${realDataMode === "precomputed" ? "Precomputed matrix" : `Live sample ${realDataSample}`}</span>`
+              : null}
+            <span class="pill">${showSingletonEvalCols ? "Singleton eval cols" : "All eval cols"}</span>
             <span class="pill">${showNums ? "Raw values on" : "Color scale"}</span>
           </div>
         </div>
@@ -1459,13 +1534,23 @@ function App() {
           <section class="toolbar-group" data-testid="metric-controls">
             <div class="toolbar-label">
               Cell score
-              ${InfoTip("Each cell is a toy proxy for retraining on the row world and evaluating on the column slice. Jaccard = overlap divided by union. |Intersection| = raw count. Entropy = binary entropy of the overlap.")}
+              ${InfoTip("Each cell stands in for 'retrain on the row world, evaluate on the column slice' without actually fitting a model. Jaccard uses normalized overlap, |Intersection| uses raw shared count, and Entropy turns overlap into an uncertainty-style score. These can loosely track performance because more train/eval overlap often helps, but they ignore labels, features, model choice, and optimization, so they are structural proxies rather than true accuracy. Real data = toy accuracy from a tiny fixed dataset and a tiny classifier.")}
             </div>
             <div class="segmented-row">
               <button class="btn" aria-pressed=${metric === "jaccard"} onClick=${() => setMetric("jaccard")}>Jaccard</button>
               <button class="btn" aria-pressed=${metric === "inter"} onClick=${() => setMetric("inter")}>|Intersection|</button>
               <button class="btn" aria-pressed=${metric === "entropy"} onClick=${() => setMetric("entropy")}>Entropy</button>
+              <button class="btn" aria-pressed=${metric === "real"} onClick=${() => setMetric("real")}>Real data</button>
             </div>
+            ${metric === "real"
+              ? html`
+                  <div class="segmented-row">
+                    <button class="btn mini" aria-pressed=${realDataMode === "precomputed"} onClick=${switchToPrecomputedRealData}>Precomputed</button>
+                    <button class="btn mini" aria-pressed=${realDataMode === "live"} onClick=${switchToLiveRealData}>Live</button>
+                    <button class="btn ghost mini" disabled=${realDataMode !== "live"} onClick=${resampleRealData}>Resample</button>
+                  </div>
+                `
+              : null}
             <div class="toolbar-note">${scoreProxyCopy}</div>
           </section>
 
@@ -1478,6 +1563,18 @@ function App() {
               <input type="checkbox" checked=${showNums} onChange=${(event) => setShowNums(event.target.checked)} />
               Show raw values
             </label>
+            <div class="checkbox-row">
+              <input
+                id="show-singleton-eval-cols"
+                type="checkbox"
+                checked=${showSingletonEvalCols}
+                onChange=${(event) => setShowSingletonEvalCols(event.target.checked)}
+              />
+              <label for="show-singleton-eval-cols">Show fewer eval cols (just single points)</label>
+              ${InfoTip(
+                "For pointwise-additive metrics, a larger eval slice can be reconstructed from per-point scores, so singleton columns are enough. This toggle hides multi-point eval subsets to declutter the view; some toy metrics here are not literally pointwise additive, so the full matrix is still computed underneath.",
+              )}
+            </div>
             <select value=${paletteName} onChange=${(event) => setPaletteName(event.target.value)}>
               ${Object.keys(palettes).map((name) => html`<option value=${name}>${name}</option>`)}
             </select>
@@ -1485,7 +1582,11 @@ function App() {
               <button class="btn mini" onClick=${exportJson}>Export JSON</button>
               <button class="btn ghost mini" onClick=${exportCsv}>Export CSV</button>
             </div>
-            <div class="toolbar-note">${conceptMode === "poison" ? editSummary : "Turn raw values on when you want to inspect the exact toy scores instead of just the color field."}</div>
+            <div class="toolbar-note">
+              ${conceptMode === "poison"
+                ? `${editSummary} ${evalColumnSummary}`
+                : `Turn raw values on when you want to inspect the exact toy scores instead of just the color field. ${evalColumnSummary}`}
+            </div>
             <details class="guide-details toolbar-drawer">
               <summary>Inspect live settings</summary>
               <div class="ctrl-note">This is the same state currently driving the figure below.</div>
@@ -1548,10 +1649,14 @@ function App() {
           </div>
           <div class="grid-meta-strip">
             <span class="pill">${metricMeta[metric].short}</span>
+            ${metric === "real"
+              ? html`<span class="pill">${realDataMode === "precomputed" ? "Reference snapshot" : `Live sample ${realDataSample}`}</span>`
+              : null}
             <span class="pill">${modeLabel}</span>
             <span class="pill">Train ${label(Srow)}</span>
             <span class="pill">Eval ${label(evalSet)}</span>
             <span class="pill">${questionMeta[conceptMode]}</span>
+            <span class="pill">${showSingletonEvalCols ? "Singleton eval cols" : "All eval cols"}</span>
             <span class="pill">${showNums ? "Raw values on" : "Color only"}</span>
             <span class="pill">${paletteName}</span>
           </div>
@@ -1593,7 +1698,8 @@ function App() {
                 </div>
               </div>
             </div>
-            ${subs.map((colSet, colIndex) => {
+            ${visibleColIndices.map((colIndex) => {
+              const colSet = subs[colIndex] || [];
               const active = colIndex === safeColIdx;
               return html`
                 <div
@@ -1619,7 +1725,8 @@ function App() {
                   ${formatRowHeader(rowIndex, rowSet)}
                 </div>
                 <div class="rr">
-                  ${subs.map((evSet, colIndex) => {
+                  ${visibleColIndices.map((colIndex) => {
+                    const evSet = subs[colIndex] || [];
                     const value = displayMatrix[rowIndex]?.[colIndex] ?? 0;
                     const normalized = normalizeValue(value, dispMin, dispMax, 0.5);
                     const sizeK = rowSet.length === k;
