@@ -7,33 +7,41 @@ visibility: public
 type: shared_memo
 ---
 
-This piece is doing two jobs at once. It is the soft-launch post for the site, and it is also the memo I want to keep pointing people to when I try to explain the project.
+This is a short "memo" meant to explain the datacounterfactuals.org project/website. I'll also post on Substack as an archived blog post.
 
-I started using the phrase while teaching about data valuation, algorithmic collective action, scaling, selection, poisoning, and related topics. Students would ask some version of: is "data counterfactuals" an actual term, or just your phrase for a bunch of neighboring ideas? I never had a good one-link answer. That is part of why this site exists.
+I found myself using the phrase "data counterfactuals" a *lot* while teaching about data valuation, algorithmic collective action, scaling, selection, poisoning, and related topics. Students and colleagues would ask some version of: is "data counterfactuals" an actual term, or just your phrase for a bunch of neighboring ideas? I never had a good "canonical reference" or one-link answer, so I made this site. (Work on "datamodels" from [Ilyas et al.](https://proceedings.mlr.press/v162/ilyas22a.html) use the term "dataset counterfactuals", and this [talk](https://simons.berkeley.edu/talks/andrew-ilyas-stanford-university-2025-04-03) from Ilyas uses the term directly).
 
-Across those conversations I kept coming back to the same question: **what changes if the training data change?**
+The first draft was an attempt to convert my whiteboard scribblings into an interactive web-app, but then I also decided some additional writing on the topic could be useful.
 
-If we remove one example, add more data, pick a different subset, replace real examples with synthetic ones, corrupt the data, reweight groups, or ask whether a point was in the training set at all, model behavior changes in some way. Many literatures in modern ML are, at root, studying one of those comparisons.
+A single "data counterfactual" explores some variant of the question: **what happens when our training data change?** One change = one counterfactual scenario.
 
-That is the sense in which I use the phrase **data counterfactual**: a "what if" question about the data used to train a model.
+When we're training a machine learning model, all of the following "interventions" can cause model behavior to change:
+
+- add more data
+- pick a different subset of training data
+- replace real examples with synthetic ones
+- corrupt the data
+- reweight group
+
+Many topics of interest in modern ML study one of those comparisons. And, what I want to argue with this post/project, many topics that are not literally about computing leaveo-one-out counterfactuals or similar can still be understood in relation to data counterfactuals.
 
 ## The smallest useful example
 
-Start with a toy world containing just four data objects: A, B, C, and D. Train once on all four. Then train again after removing B. If the second model gets worse on tasks that depend on B, that nearby comparison tells us something about B's role in the original model.
+Consider a toy world containing just four data objects: A, B, C, and D. We train a model on all four data objects. Then we train again after removing B. If the second model gets worse on tasks that depend on B, that nearby comparison tells us something about B's role in the original model. (However, that single comparison is not conclusive; we will still have many open questions about the combinatorial interactions with other data points, the of model multiplicity and sources of variance, etc).
 
-That is the smallest useful data counterfactual. From there the same logic extends to groups, fixed-size subsets, synthetic replacements, corrupted examples, withheld data, or coordinated withdrawal. I do not mean that every field runs the same procedure. I mean that many of them are built around nearby training-world comparisons and then disagree about how to summarize those comparisons.
+A single leave-one-out experiment is the smallest useful data counterfactual. From there the same logic extends to groups, fixed-size subsets, synthetic replacements, corrupted examples, withheld data, or coordinated withdrawal.
 
 ## Why this matters for data leverage
 
-One reason I keep coming back to this frame is that it lets me talk about Shapley values and data strikes in the same breath without pretending they are the same project. In a lot of ML work, the counterfactual is analytical: remove a point, reweight a group, estimate an influence score, fit a scaling curve. But some of the counterfactuals I care most about are social and strategic. Data strikes, boycotts, contribution campaigns, and bargaining efforts try to change what data the world actually produces, or what data an AI developer can access on acceptable terms.
+One reason I keep coming back to this frame is that it lets me easily connect topics like Shapley values and data strikes. In a lot of ML work, the counterfactual is analytical: remove a point, reweight a group, estimate an influence score, fit a scaling curve. But some of the counterfactuals I care most about are social and strategic. Data strikes, boycotts, contribution campaigns, and bargaining efforts try to change what data the world actually produces, or what data an AI developer can access on acceptable terms.
 
-Once people can withhold, redirect, or condition the supply of data, "what if the data were different?" stops being only a measurement question. It becomes a governance question.
+When people can withhold, redirect, or condition the supply of data, "what if the data were different?" it itself a core governance question.
 
 A simple strike simulator makes the connection concrete. Pick a subset of data to withhold, retrain or approximate retraining, and compare the result to the baseline world. Run that one point at a time and you are close to leave-one-out. Run it over many coalitions and you get the raw material that Shapley-style methods aggregate over. Run it across different scales or groups and you start learning something about leverage, substitution, and bargaining power. The same scaffold can support both technical measurement and collective-action questions.
 
 ## The grid view
 
-The site's main teaching picture is a grid. Imagine possible training sets as rows and possible evaluation slices as columns. Each cell records what happens if we train on that row and evaluate on that column.
+The site's main "interactive explorer" is a grid. Imagine possible training sets as rows and possible evaluation slices as columns. Each cell records what happens if we train on that row and evaluate on that column.
 
 Of course, nobody is literally filling out this giant spreadsheet. The grid is a teaching model, not a claim about how practitioners store or compute things. Its job is simpler: make the comparisons visible. Which training world changed? Where did the effect land at evaluation time? How big was it?
 
@@ -46,9 +54,11 @@ Once that picture is in view, a bunch of literatures that usually live in separa
 
 I do not think these projects collapse into one master formalism. I do think the shared comparison structure makes them easier to line up.
 
-## Where the frame stretches
+## Some limitations
 
-The frame also flattens things it should not flatten. Training dynamics and curriculum learning care about order, not just set membership. Active learning cares about policies for acquiring the next point. Multi-stage pipelines care about sequence and stage boundaries. Privacy, memorization, poisoning, and backdoor work usually need a more detailed state space than one scalar in each cell. Strategic or performative settings care about feedback loops in which deploying the model changes the future data-generating process.
+In some cases, we can literally directly connect two literatures. For instance, running a large number of data strike experiments will give us a bunch of output data that can directly enable us to also compute certain scaling laws or Shapley values.
+
+Some related concepts require a more complex model than the simple "grid" presented in our explorer here. Training dynamics and curriculum learning care about order, not just set membership. Active learning cares about policies for acquiring the next point. Multi-stage pipelines care about sequence and stage boundaries. Privacy, memorization, poisoning, and backdoor work usually need a more detailed state space than one scalar in each cell. Strategic or performative settings care about feedback loops in which deploying the model changes the future data-generating process.
 
 So I do not mean "data counterfactuals" as a master equation. I mean it more as a handle: a way to keep a family of comparisons in view without losing track of where the family resemblance ends.
 
@@ -56,6 +66,4 @@ So I do not mean "data counterfactuals" as a master equation. I mean it more as 
 
 Mostly, I wanted a place where I could put the argument once and then build around it. If you are reading this on Substack, the site adds a toy explorer, a collections page, and a more technical companion note on [formalisms](https://datacounterfactuals.org/memo/formalisms). If you are reading this on the site, think of this page as the blog-post version of the project: the part before the diagrams and controls take over.
 
-The site is still rough. I do not think it is ready yet as a polished general-audience explainer. But it has already helped me explain why the question *what if the data were different?* keeps resurfacing across valuation, scaling, privacy, robustness, and data leverage.
-
-Feedback welcome. I'm especially interested in where this frame clarifies a literature, where it flattens something important, and where it suggests better ways of thinking about data leverage, bargaining, and governance.
+Feedback welcome!
