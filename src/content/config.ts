@@ -12,11 +12,6 @@ const linkItem = z.object({
   body: z.string().optional(),
 });
 
-const titledBodyItem = z.object({
-  title: z.string(),
-  body: z.string(),
-});
-
 const figure = z.object({
   label: z.string().optional(),
   caption: z.string().optional(),
@@ -31,7 +26,6 @@ const pages = defineCollection({
     lede: z.string().optional(),
     intro: z.array(z.string()).optional(),
     notes: z.record(note).optional(),
-    method_families: z.array(titledBodyItem).optional(),
     reading_paths: z.array(linkItem).optional(),
     quick_tips: z.array(z.string()).optional(),
     companion_links: z.array(linkItem).optional(),

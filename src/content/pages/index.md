@@ -2,23 +2,17 @@
 title: Data Counterfactuals
 description: "An interactive explainer for a unifying frame across valuation, scaling, selection, poisoning, privacy, and collective action."
 eyebrow: Interactive explainer
-lede: "A site built around one stubborn question: what would change if the training data were different?"
+lede: "How might AI models if their training data changes in some way?"
 intro:
   - |
-    The project grew out of various discussions on data valuation, algorithmic collective action, scaling, selection, poisoning, and neighboring topics. Counterfactual questions about how data might change are foundational to all these areas (and also connected to some seemingly unrelated areas), and so understanding various questions in terms of data counterfactuals can be practically and academically useful.
-method_families:
-  - title: Value and attribution
-    body: Leave-one-out, influence functions, and Shapley-style methods can all be read as different ways of aggregating over slices of the giant grid showing all the choices for "stuff I can train on" and "stuff I can evaluate on".
-  - title: Scaling and selection
-    body: Scaling laws, active learning, coresets, curriculum learning, and dataset distillation ask how performance changes as we move through different rows, add data, or choose which examples to keep.
-  - title: Robustness, privacy, and repair
-    body: Poisoning, privacy interventions, and some fairness-by-data methods explore nearby counterfactuals in which training data are corrupted, hidden, repaired, or reweighted.
-  - title: Collective action and leverage
-    body: Data strikes, contribution campaigns, and bargaining interventions try to push AI operators toward less favorable rows by changing what data the world actually produces.
+    There are many reasons we might want to understand how a specific piece of data impacts an AI models. Perhaps we want to find particularly valuable data to look at it. Perhaps we want to pay people based on the impact of their data (though this is a tricky endeavor!). Perhaps we need to debug our data. Or perhaps a group of people want to withhold data for bargaining or protest. This web project grew out of discussions on data valuation, algorithmic collective action, data scaling, data selection, data poisoning, privacy, unlearning and neighboring topics. Counterfactual questions about how data might change are foundational to all these areas, and so understanding various questions in terms of data counterfactuals can be practically and academically useful.
 reading_paths:
   - title: Read the launch memo
     href: /memo/data-counterfactuals
     body: More on the motivation for this site
+  - title: Open the glossary
+    href: /glossary
+    body: Quick definitions for the recurring terms without leaving the main thread for long.
   - title: Open the grid explorer
     href: /grid
     body: Explore the data counterfactuals "grid" framing directly.
@@ -27,13 +21,13 @@ reading_paths:
     body: "Walk the subset lattice directly: nodes are training sets and edges are ablations, augmentations, or strike steps."
   - title: Compare formalisms
     href: /memo/formalisms
-    body: A more technical, web-only companion that lines up neighboring formalisms side by side.
+    body: A more technical, web-only companion that lines up neighboring formalisms side by side. WIP.
   - title: Related areas and papers
     href: /collections
     body: A compact shelf of neighboring literatures, representative papers, and quick context.
   - title: Try the 3D view
     href: /advanced.html
-    body: A rougher, more game-like take that treats new data generation like extending the grid.
+    body: A rougher, more game-like take that treats new data generation like extending the grid. WIP.
 figures:
   leave_one_out:
     label: Leave-one-out toy example
@@ -45,19 +39,21 @@ figures:
 
 ## The smallest useful move
 
-Consider a simple thought experiment: imagine you are going to train a machine learning model on a small dataset (or, you can imagine it's a big dataset with distinct subsets). Now imagine a massive grid where every possible training set is a row, every possible evaluation set is a column, and each cell records the performance for that train/eval pairing. In practice it helps to shrink the picture first and imagine just four data objects: A, B, C, and D. Those could be single observations in a toy example, or four large datasets we are considering mixing.
+A **data counterfactual** is a scenario in which the AI training data for a model changes in some way. Often, we are interested in comparing two counterfactual scenarios to understand the impact of some change.
 
-Once that grid is in view, the smallest useful counterfactual is leave-one-out: compare a row that includes one point with the nearby row in which that point is missing. By computing the difference between these two cells, we can learn how much a given data point helped or hurt our model. From there the same logic can be extended to groups of data points, fixed-size subsets, synthetic replacements, corrupted examples, withheld data, or coordinated withdrawal.
+Consider a simple thought experiment: imagine you are going to train a machine learning model on a small dataset (or, you can imagine it's a big dataset with distinct subsets). Now imagine a grid where every possible training set appears as a row, every possible evaluation set appears as a column, and each cell records the performance for that train/eval pairing. In practice it helps to shrink the picture first and imagine a small grid, for instance with just four data objects that we can call A, B, C, and D. (Again, these could literally map to 4 single observations in a toy example, or map to four large datasets we are considering mixing.)
 
-In that sense, a **data counterfactual** is just a concrete version of the question: what changes when the training data change?
+With this grid in mind, we can use the grid to explore the smallest useful counterfactual, leave-one-out: we compare a row that includes one point with the nearby row in which that point is missing. By computing the difference between these two cells, we can learn how much a given data point helped or hurt our model. From there the same logic can be extended to groups of data points, fixed-size subsets, synthetic replacements, corrupted examples, withheld data, or coordinated withdrawal.
+
+(Very simply, we imagine training an LLM with a bunch of fiction books, science articles, and social media posts. If we train a second LLM without the science articles and compare the performance, we are exploring the "no science articles" data counterfactual).
 
 ## A grid for seeing the space
 
-If we could fill in the whole grid, ideas from across different subfields start to show up in one place. Various ways of defining data value can be understood as summaries over particular slices, scaling patterns emerge as we move down the rows, and selection problems become questions about which rows are worth visiting.
+By considering the giant grid of "all training sets" and "all evaluationsets", ideas from across different subfields start to show up in one place. Various ways of defining data value can be understood as summaries over different columns, rows, and slices. We can undeerstand data scaling patterns (how models get better as we get more data). Data selection problems become questions about which rows are worth visiting. As we will see in the full explorer, we can even begin to understand complex privacy interventions, poisoning attacks, and other types of counterfactuals.
 
-Real systems do not literally enumerate this whole object, but understanding this can be conceptually useful. The toy grid is there to make the comparisons visible: which training world changed, where the effect landed at evaluation time, and how large the difference was.
+In real life, we oftentimes cannot actually compute the cell values for this whole grid. For this reason, there are active research agendas seeking to more effiicently estimate certain data values. These approaches can be thought of as sampling from this giant grid.
 
-That same picture also helps with interventions that are not just analytical. Collective action around data can be understood as changing which rows are available or attractive to an AI operator in the first place.
+Finally, a key reason why I think presenting the data counterfactuals grid is useful is because it connects technical, economic, and social data-centric work. Data markets and data-related collective action can be understood as changing which rows are available or attractive to an AI operator in the first place.
 
 ## What the idea helps connect
 
@@ -65,8 +61,4 @@ I think this frame is useful because it connects conversations that often happen
 
 That does not mean the projects are all formally identical. One major distinction is that some techniques only explore counterfactuals over data that already exist: subsets, reweightings, filtering, or held-out removals. Others try to change what data the world produces in the first place, which is part of why collective action matters so much. And many minor distinctions exist.
 
-## How to read the site
-
-The site is currently closer to an interactive research note than a polished landing page. If you want the shared launch-post version of the argument, start with the main memo. If you want the visual intuition, open the grid explorer or the graph explorer and move around the same toy counterfactual space from different angles. If you want the more experimental angle on how new data get produced, try the 3D view. The formalisms note is there as a more technical web companion rather than required reading for the introduction. It's WIP.
-
-The implementation is still early, so it is best treated as a working model rather than a finished explainer. My hope is that it offers a cleaner mental model for why *what if the data were different?* keeps showing up across so many lines of work.
+If you want the running map of adjacent methods, areas, and papers, head to the [related works page](/collections). It is updated dynamically via Semble, an atproto project, so this intro page does not need its own hand-maintained method-family list.

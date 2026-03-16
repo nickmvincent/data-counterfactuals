@@ -537,7 +537,9 @@ function App() {
                         if (lens === "strike") {
                           setFocusSet((previous) =>
                             previous.includes(token)
-                              ? previous.filter((candidate) => candidate !== token)
+                              ? previous.length === 1
+                                ? previous
+                                : previous.filter((candidate) => candidate !== token)
                               : [...previous, token].sort(),
                           );
                           return;

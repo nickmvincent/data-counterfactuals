@@ -6,6 +6,7 @@ import {
   applyGridEdits,
   buildSubsetGrid,
   computeLooDelta,
+  computeSemivalueStats,
   computeScalingStats,
   computeShapleyStats,
   createTutorialPresets,
@@ -82,10 +83,73 @@ const metricMeta = {
 };
 
 const questionMeta = {
+  explore: "Explore",
   loo: "Leave-one-out",
   group: "Group leave-one-out",
   shapley: "Shapley value",
+  banzhaf: "Banzhaf value",
+  beta: "Beta Shapley",
   scaling: "Scaling law",
+  dp: "Differential privacy",
+  unlearning: "Machine unlearning",
+  poison: "Data poisoning",
+};
+
+const conceptOrder = ["explore", "loo", "group", "shapley", "banzhaf", "beta", "scaling", "dp", "unlearning", "poison"];
+const semivalueModes = new Set(["shapley", "banzhaf", "beta"]);
+const multiFocusModes = new Set(["group", "poison"]);
+
+const conceptMeta = {
+  explore: {
+    label: "Explore",
+    description:
+      "Start from one cell at a time. Click a row/column pair and read it directly as train on the row world, evaluate on the column slice.",
+  },
+  loo: {
+    label: "LOO",
+    description:
+      "Ask the most local counterfactual first: keep evaluation fixed and remove one contributor from the selected training world.",
+  },
+  group: {
+    label: "Group LOO",
+    description:
+      "Treat several contributors as one coalition and compare the selected world to the world that remains after removing them together.",
+  },
+  shapley: {
+    label: "Shapley",
+    description:
+      "Average a contributor's marginal gain across all partial worlds, with Shapley's size-balanced weighting.",
+  },
+  banzhaf: {
+    label: "Banzhaf",
+    description:
+      "Use the same subset-pair comparisons as Shapley, but weight every coalition equally instead of every coalition size equally.",
+  },
+  beta: {
+    label: "Beta Shapley",
+    description:
+      "Stay in the semivalue family while reweighting which coalition sizes matter more with alpha/beta controls.",
+  },
+  scaling: {
+    label: "Scaling",
+    description:
+      "Collapse many rows into a size-conditioned summary by averaging every training world with the same number of retained items.",
+  },
+  dp: {
+    label: "DP",
+    description:
+      "Treat neighboring rows as adjacent datasets, measure their output gap, and turn that sensitivity into a toy privacy-noise budget.",
+  },
+  unlearning: {
+    label: "Unlearning",
+    description:
+      "Frame deletion as a forget request: compare the current row to the exact retrain world where the requested point was never present.",
+  },
+  poison: {
+    label: "Poison",
+    description:
+      "Switch to an operator lens: corrupt rows containing the chosen point or coalition, then compare the attacked score to the clean reference.",
+  },
 };
 
 const faqEntries = [

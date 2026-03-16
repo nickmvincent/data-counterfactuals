@@ -11,7 +11,6 @@ const coreMove = getSection(sections, "the-smallest-useful-move");
 const gridSection = getSection(sections, "a-grid-for-seeing-the-space");
 const connections = getSection(sections, "what-the-idea-helps-connect");
 const navigation = getSection(sections, "how-to-read-the-site");
-const methodFamilies = page.data.method_families ?? [];
 const readingPaths = page.data.reading_paths ?? [];
 const figures = page.data.figures ?? {};
 ---
@@ -211,35 +210,6 @@ const figures = page.data.figures ?? {};
       background: rgba(255, 250, 243, 0.92);
       max-width: min(100%, 34rem);
     }
-    .family-list {
-      list-style: none;
-      padding: 0;
-      margin: 1.45rem 0 0;
-      display: grid;
-      gap: 0;
-    }
-    .family-item {
-      padding: 1rem 0;
-      border-top: 1px solid rgba(92, 72, 52, 0.12);
-    }
-    .family-item:first-child {
-      padding-top: 0;
-      border-top: 0;
-    }
-    .family-item h3 {
-      margin: 0 0 0.3rem;
-      font-family: var(--font-ui);
-      font-size: 0.95rem;
-      line-height: 1.4;
-      letter-spacing: 0.02em;
-      color: var(--fg);
-    }
-    .family-item p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 1rem;
-      line-height: 1.82;
-    }
     .start-links {
       margin-top: 1.45rem;
     }
@@ -329,22 +299,13 @@ const figures = page.data.figures ?? {};
       <div class="action-row" style="margin-top: 1.35rem;">
         <a href="/grid" class="btn">Open in Explorer</a>
         <a href="/graph" class="btn secondary">Open the Graph View</a>
-        <a href="/advanced.html" class="btn secondary" target="_blank" rel="noreferrer noopener">Try the 3D view</a>
+        <a href="/advanced.html" class="btn secondary" target="_blank" rel="noreferrer noopener">Try the 3D view (WIP)</a>
       </div>
     </section>
 
     <section class="start-section">
       <h2>{connections.title}</h2>
       <div set:html={connections.html}></div>
-
-      <ul class="family-list">
-        {methodFamilies.map((family) => (
-          <li class="family-item">
-            <h3>{family.title}</h3>
-            <p>{family.body}</p>
-          </li>
-        ))}
-      </ul>
     </section>
 
     <section class="start-section">
