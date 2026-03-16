@@ -102,7 +102,7 @@ const faqEntries = [
   {
     question: "Do I need to read every highlighted cell?",
     answer:
-      "No. Start with the selected row, selected column, and question card. The amber and cyan rings only mark the cells the current statistic compares, so they are there to narrow your attention rather than widen it.",
+      "No. Start with the selected row, selected column, and question card. The ochre and sage rings only mark the cells the current statistic compares, so they are there to narrow your attention rather than widen it.",
   },
   {
     question: "Why do some answers come out as zero?",
@@ -521,6 +521,24 @@ function App() {
         ? "Real world is active, so you are seeing the untouched reference matrix even though edits are toggled on."
         : "No edit toggles are active, so Operator and Real world currently match.";
 
+  const focusTargetBadge =
+    computed === "group"
+      ? groupSet.length
+        ? `Coalition ${label(groupSet)}`
+        : "Choose 2+ tokens"
+      : `Asking about ${focusPrimary}`;
+
+  const focusTargetCopy =
+    computed === "group"
+      ? groupSet.length
+        ? `The current question treats ${label(groupSet)} as one coalition. Changing these tokens changes who gets removed together; it does not move the selected train row ${label(Srow)}.`
+        : `Pick two or more tokens to ask what happens when that coalition leaves train ${label(Srow)} together. This control changes the question, not the selected row.`
+      : `The current question is about ${focusPrimary}. Clicking another token changes who is being removed, added, or valued, while the selected train row stays ${label(Srow)} until you change it below.`;
+
+  const scoreProxyCopy =
+    `Each cell is a toy proxy for "retrain on ${label(Srow)} and evaluate on ${label(evalSet)}." ` +
+    `${metricMeta[metric].short} is just the stand-in score we use so you can inspect the comparison structure without running real retrain experiments.`;
+
   const questionSummary = useMemo(() => {
     if (computed === "loo") {
       return {
@@ -673,18 +691,31 @@ function App() {
 
   const highlightSummary = useMemo(() => {
     if (computed === "loo") {
-      return `On the active evaluation column, cyan marks the selected training world and amber marks the same column after removing ${focusPrimary}.`;
+      return `On the active evaluation column, the sage ring marks the selected training world and the ochre ring marks the comparison row after removing ${focusPrimary}.`;
     }
     if (computed === "group") {
       return groupSet.length
-        ? `On the active evaluation column, cyan marks ${label(Srow)} and amber marks the row after removing ${label(groupSet)}.`
+        ? `On the active evaluation column, the sage ring marks ${label(Srow)} and the ochre ring marks the row after removing ${label(groupSet)}.`
         : "Pick multiple focus chips and the grid will show the selected row beside the row with that whole group removed.";
     }
     if (computed === "shapley") {
-      return `On the active evaluation column, amber rings mark partial worlds S and cyan rings mark the matching worlds S + ${focusPrimary}.`;
+      return `On the active evaluation column, ochre rings mark the source worlds used in the marginal comparisons and sage rings mark the paired worlds after adding ${focusPrimary}. Some rows can play both roles across different pairs.`;
     }
-    return `Amber rings sweep down the active evaluation column for every row whose size is ${k}. The white outline still marks the one row you clicked.`;
+    return `Ochre rings sweep down the active evaluation column for every row whose size is ${k}. The white outline still marks the one row you clicked.`;
   }, [computed, focusPrimary, groupSet, Srow, k]);
+
+  const ringRoleSummary = useMemo(() => {
+    if (computed === "shapley") {
+      return `Ochre rings mark source worlds in the marginal comparisons. Sage rings mark the paired worlds after adding ${focusPrimary}. Some rows wear both because the same world can appear on both sides of different Shapley pairs.`;
+    }
+    if (computed === "scaling") {
+      return `Ochre rings mark the rows that enter the current size bucket. Sage rings are not used in scaling mode.`;
+    }
+    if (computed === "group") {
+      return `Ochre rings mark the comparison row after removing ${groupSet.length ? label(groupSet) : "the chosen group"}. Sage rings mark the active training world.`;
+    }
+    return `Ochre rings mark the comparison row after removing ${focusPrimary}. Sage rings mark the active training world.`;
+  }, [computed, focusPrimary, groupSet]);
 
   const formulaLine = useMemo(() => {
     if (computed === "loo") {
@@ -884,10 +915,6 @@ function App() {
     uiMode === "simple"
       ? "Stay here when you want the cleanest distillation: one reference grid, the essential scene controls, and the explanation of the active question."
       : "Use Advanced mode when you want to compare edited and untouched worlds, layer in toy interventions, inspect raw state, and export the current configuration.";
-  const focusModeCopy =
-    computed === "group"
-      ? "Group mode keeps multiple focus chips active so you can remove a coalition at once."
-      : "Single-point modes keep one focus chip active so the question stays about one contributor at a time.";
   const sceneFacts = [
     { label: "Train world", value: label(Srow) },
     { label: "Evaluation slice", value: label(evalSet) },
@@ -908,16 +935,14 @@ function App() {
       <section class="workspace-toolbar" data-testid="explorer-toolbar">
         <div class="toolbar-bar">
           <div class="toolbar-guide">
-            <span class="summary-kicker">How to read this grid</span>
+            <span class="summary-kicker">Current lens</span>
             <p class="toolbar-guide-copy">
-              Rows are training worlds, columns are evaluation slices, and the rings only mark the cells used by the current
-              comparison.
+              ${questionSummary.question}
             </p>
           </div>
           <div class="summary-inline toolbar-status-row">
             <span class="pill">${modeLabel}</span>
             <span class="pill">${currentWorldLabel}</span>
-            <span class="pill">${questionMeta[computed]}</span>
             <span class="pill">${questionSummary.answerLabel}: ${questionSummary.answerValue}</span>
           </div>
         </div>
@@ -934,16 +959,20 @@ function App() {
 
             <div class="control-cluster">
               <div class="control-head">
-                Focus tokens
-                ${InfoTip("The focus chips choose which point or group the current lens talks about. They do not choose the selected row.")}
+                Question target
+                ${InfoTip("Pick the contributor whose effect you want to ask about. This changes who is being removed, added, or valued; it does not change the selected train row.")}
               </div>
-              <div class="ctrl-note">${focusModeCopy}</div>
+              <div class="ctrl-note">${focusTargetCopy}</div>
               <div class="focus-chip-row">
                 ${base.map((token) => {
                   const active = focusSet.includes(token);
                   const handler = () => (computed === "group" ? toggleFocus(token) : setFocusSet([token]));
                   return html`<button key=${`f-${token}`} class="btn" aria-pressed=${active} onClick=${handler}>${token}</button>`;
                 })}
+              </div>
+              <div class="summary-inline toolbar-pills">
+                <span class="pill">${focusTargetBadge}</span>
+                <span class="pill">${computed === "group" ? "Changes the coalition" : "Changes the contributor"}</span>
               </div>
             </div>
 
@@ -1003,14 +1032,14 @@ function App() {
               <div class="control-field control-field-full">
                 <div class="control-label">
                   Cell score
-                  ${InfoTip("Jaccard = overlap divided by union. |Intersection| = raw count. Entropy = binary entropy of the overlap.")}
+                  ${InfoTip("Each cell is a toy proxy for retraining on the row world and evaluating on the column slice. Jaccard = overlap divided by union. |Intersection| = raw count. Entropy = binary entropy of the overlap.")}
                 </div>
                 <div class="segmented-row">
                   <button class="btn" aria-pressed=${metric === "jaccard"} onClick=${() => setMetric("jaccard")}>Jaccard</button>
                   <button class="btn" aria-pressed=${metric === "inter"} onClick=${() => setMetric("inter")}>|Intersection|</button>
                   <button class="btn" aria-pressed=${metric === "entropy"} onClick=${() => setMetric("entropy")}>Entropy</button>
                 </div>
-                <div class="control-note">Current score means: ${metricMeta[metric].description}.</div>
+                <div class="control-note">${scoreProxyCopy}</div>
               </div>
             </div>
           </section>
@@ -1285,7 +1314,7 @@ function App() {
         <div class="comparison-legend">
           <div>${highlightSummary}</div>
           <div>
-            <b>White outline:</b> selected cell. <b>Ochre ring:</b> comparison source. <b>Sage ring:</b> comparison partner.
+            <b>White outline:</b> selected cell. ${ringRoleSummary}
             ${uiMode === "advanced" ? html` <b>Red corner:</b> toy edit touches that row in operator view.` : null}
           </div>
           <div><b>Axis labels:</b> each header shows the subset id and the specific instance letters in that world or slice.</div>

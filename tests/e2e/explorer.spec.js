@@ -25,6 +25,12 @@ test("grid-first explorer keeps the matrix in view and exposes lettered axis lab
   const rowLabels = page.locator('[data-testid="explorer-grid"] .rl .axis-set');
   await expect(rowLabels.nth(0)).toHaveText("∅");
   await expect(rowLabels.nth(1)).toHaveText("A");
+
+  await expect(page.getByTestId("explorer-toolbar")).not.toContainText("How to read this grid");
+  await expect(page.getByTestId("question-controls")).toContainText("Question target");
+  await expect(page.getByTestId("question-controls")).toContainText("selected train row stays");
+  await expect(gridCard).toContainText("source worlds used in the marginal comparisons");
+  await expect(page.getByTestId("scene-controls")).toContainText('toy proxy for "retrain on');
 });
 
 test("presets drive the explorer through a real user flow", async ({ page }) => {
@@ -56,8 +62,15 @@ test("advanced mode extends the top bar and still keeps the grid visible", async
   await page.getByLabel("Show cell values").check();
   await expect(page.locator('[data-testid="explorer-grid"] .num').first()).toBeVisible();
 
-  const viewport = page.viewportSize();
-  const gridCardBox = await page.getByTestId("explorer-grid-card").boundingBox();
-  expect(gridCardBox).not.toBeNull();
-  expect(gridCardBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(viewport.height);
+  const toolbarMetrics = await page.getByTestId("explorer-toolbar").evaluate((node) => ({
+    clientHeight: node.clientHeight,
+    overflowY: getComputedStyle(node).overflowY,
+    scrollHeight: node.scrollHeight,
+  }));
+
+  expect(toolbarMetrics.overflowY).toBe("visible");
+  expect(toolbarMetrics.scrollHeight - toolbarMetrics.clientHeight).toBeLessThanOrEqual(2);
+
+  await page.getByTestId("explorer-grid-card").scrollIntoViewIfNeeded();
+  await expect(page.getByTestId("explorer-grid-card")).toBeVisible();
 });

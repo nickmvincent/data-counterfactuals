@@ -4,11 +4,11 @@ import networkData from "../data/network.json";
 const { pathname } = Astro.url;
 
 const links = [
-  { href: "/", label: "Overview" },
-  { href: "/grid", label: "Explorer" },
-  { href: "/memo", label: "Memos" },
-  { href: "/collections", label: "Related Areas and Papers" },
-  { href: "/glossary", label: "Glossary" },
+  { href: "/", label: "Overview", title: "What data counterfactuals are and why they matter" },
+  { href: "/grid", label: "Explorer", title: "Interactive toy grid for exploring train/eval counterfactuals" },
+  { href: "/memo", label: "Memos", title: "Written notes: the launch post, formalisms, and more" },
+  { href: "/collections", label: "Related Areas and Papers", title: "Curated shelf of neighboring literatures and representative papers" },
+  { href: "/glossary", label: "Glossary", title: "Short definitions of key terms used throughout the site" },
 ];
 
 const externalLink = { href: "/advanced.html", label: "3D View", external: true };
@@ -33,6 +33,7 @@ function isActive(href: string): boolean {
           <a
             class="nav-link"
             href={link.href}
+            title={link.title}
             aria-current={isActive(link.href) ? "page" : undefined}
           >
             {link.label}
