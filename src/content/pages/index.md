@@ -5,11 +5,11 @@ eyebrow: Interactive explainer
 lede: "What might change in an AI model if its training data changes?"
 intro:
   - |
-    There are many reasons we might want to understand how a specific piece of data impacts an AI model. Perhaps we want to find particularly valuable data to look at it. Perhaps we want to pay people based on the impact of their data (though this is a tricky endeavor!). Perhaps we need to debug our data. Or perhaps a group of people want to withhold data for bargaining or protest. This web project grew out of discussions on data valuation, algorithmic collective action, data scaling, data selection, data poisoning, privacy, unlearning and neighboring topics. Counterfactual questions about how data might change are foundational to all these areas, and so understanding various questions in terms of data counterfactuals can be practically and academically useful.
+    There are many reasons we might want to understand how a specific piece of data impacts an AI model. Perhaps we want to inpsect particularly valuable data, pay people based on the impact of their data (though this is a tricky endeavor!), or check data for errors. Or perhaps a group of people want to withhold data for bargaining or protest. This web project grew out of discussions on . Counterfactual questions about how data might change are foundational to all these areas, and so understanding various questions in terms of data counterfactuals can be practically and academically useful.
   - |
     This site exists to:
 
-    - show how cross-cutting the idea of data counterfactuals is
+    - show how cross-cutting the idea of data counterfactuals is (cutting acrross data valuation, algorithmic collective action, data scaling, data selection, data poisoning, privacy, unlearning and more)
     - make certain data counterfactual measurements easier to understand
     - illustrate connections between technical and social data-centric work
 reading_paths:
@@ -22,18 +22,12 @@ reading_paths:
   - title: Open the grid explorer
     href: /grid
     body: Explore the data counterfactuals "grid" framing directly.
-  - title: Open the graph explorer
-    href: /graph
-    body: "Walk the subset lattice directly: nodes are training sets and edges are ablations, augmentations, or strike steps."
   - title: Compare formalisms
     href: /memo/formalisms
     body: A more technical, web-only companion that lines up neighboring formalisms side by side. WIP.
   - title: Related areas and papers
     href: /collections
     body: A compact shelf of neighboring literatures, representative papers, and quick context.
-  - title: Try the 3D view
-    href: /advanced.html
-    body: A rougher, more game-like take that treats new data generation like extending the grid. WIP.
 figures:
   leave_one_out:
     label: Leave-one-out toy example
@@ -43,7 +37,7 @@ figures:
     caption: Imagine every possible training set as a row and every evaluation slice as a column. The payoff of the metaphor is in comparing nearby cells, rows, and paths through the grid.
 ---
 
-## The smallest useful move
+## What is a data counterfactual?
 
 A **data counterfactual** is a scenario in which the AI training data for a model changes in some way. Often, we are interested in comparing two counterfactual scenarios to understand the impact of some change.
 
@@ -69,8 +63,4 @@ That does not mean the projects are all formally identical. One major distinctio
 
 If you want the running map of adjacent methods, areas, and papers, head to the [related works page](/collections). It is updated dynamically via Semble, an atproto project, so this intro page does not need its own hand-maintained method-family list.
 
-## How to read the site
-
-This site is meant to work in three passes. First, use this overview page to get the basic idea in plain language. Second, open the grid or graph explorer to see toy data counterfactuals more concretely. Third, use the memos and collections pages when you want the longer argument, the neighboring formalisms, and pointers into the literature.
-
-You do not need to move through every page in order. If you already understand the basic frame, jump straight to the explorer. If you want the project motivation first, open the launch memo. If you want definitions without leaving the main thread for long, use the glossary.
+## Some places to start
