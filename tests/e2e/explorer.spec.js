@@ -13,6 +13,8 @@ test("grid explorer defaults to explore mode and exposes lettered axis labels", 
   const gridCard = page.getByTestId("explorer-grid-card");
   await gridCard.scrollIntoViewIfNeeded();
   await expect(gridCard).toBeVisible();
+  const sideRail = page.getByTestId("grid-side-rail");
+  await expect(sideRail).toBeVisible();
 
   const columnLabels = page.locator('[data-testid="explorer-grid"] .cl .axis-set');
   await expect(columnLabels.nth(0)).toHaveText("∅");
@@ -31,10 +33,23 @@ test("grid explorer defaults to explore mode and exposes lettered axis labels", 
   expect(secondCellBox.x).toBeGreaterThan(firstCellBox.x + 20);
   expect(Math.abs(secondCellBox.y - firstCellBox.y)).toBeLessThan(5);
 
-  await expect(page.getByTestId("value-dock").locator(".panel-title")).toHaveText("Read one train/eval cell");
-  await expect(page.getByTestId("question-controls")).toContainText("How to use this mode");
+  const valueDock = page.getByTestId("value-dock");
+  const questionControls = page.getByTestId("question-controls");
+  await expect(valueDock.locator(".panel-title")).toHaveText("Read one train/eval cell");
+  await expect(questionControls).toContainText("How to use this mode");
   await expect(page.getByTestId("grid-marker-controls")).toContainText("Choose the data point we're going to value");
   await expect(page.getByTestId("grid-marker-controls")).toContainText("Click any cell to read it directly as one train/eval world pair");
+  const gridBox = await gridCard.boundingBox();
+  const sideRailBox = await sideRail.boundingBox();
+  const valueDockBox = await valueDock.boundingBox();
+  const questionControlsBox = await questionControls.boundingBox();
+  expect(gridBox).not.toBeNull();
+  expect(sideRailBox).not.toBeNull();
+  expect(valueDockBox).not.toBeNull();
+  expect(questionControlsBox).not.toBeNull();
+  expect(valueDockBox.x).toBeGreaterThan(gridBox.x + gridBox.width * 0.55);
+  expect(Math.abs(sideRailBox.y - gridBox.y)).toBeLessThan(80);
+  expect(Math.abs(questionControlsBox.x - valueDockBox.x)).toBeLessThan(24);
   await expect(page.getByRole("button", { name: "Choose point to compare" })).toBeDisabled();
   const looButton = page.getByRole("button", { name: "LOO", exact: true });
   await expect
@@ -71,8 +86,8 @@ test("mode-specific scenes drive the explorer through a real user flow", async (
   await expect(valueDock.locator(".panel-title")).toHaveText("Remove a group together");
   await expect(valueDock).toContainText("group CD walked out");
   await expect(valueDock).toContainText("Focus CD");
-  await expect(page.getByTestId("explorer-grid-card")).toContainText("Train ABCD");
-  await expect(page.getByTestId("explorer-grid-card")).toContainText("Eval ABCD");
+  await expect(valueDock).toContainText("Train ABCD");
+  await expect(valueDock).toContainText("Eval ABCD");
 });
 
 test("poison mode adds operator-layer controls and still keeps the grid visible", async ({ page }) => {

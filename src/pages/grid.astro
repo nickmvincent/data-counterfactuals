@@ -59,6 +59,113 @@ if (!introSection) {
       color: var(--muted);
       line-height: 1.7;
     }
+    .explorer-page-signpost {
+      display: grid;
+      gap: 0.95rem;
+      padding: 1.05rem 1.15rem;
+      border-radius: 18px;
+      border: 1px solid rgba(92, 72, 52, 0.12);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0)),
+        linear-gradient(135deg, rgba(45, 115, 133, 0.08), rgba(191, 134, 66, 0.08));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.82),
+        0 16px 32px rgba(88, 64, 42, 0.05);
+    }
+    .explorer-page-signpost-head {
+      display: grid;
+      gap: 0.35rem;
+    }
+    .explorer-page-signpost-kicker {
+      color: #2d7385;
+      font-family: var(--font-ui);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .explorer-page-signpost-title {
+      margin: 0;
+      color: #10273d;
+      font-family: var(--font-ui);
+      font-size: clamp(1.08rem, 2vw, 1.4rem);
+      font-weight: 650;
+      line-height: 1.18;
+      letter-spacing: -0.03em;
+    }
+    .explorer-page-signpost-copy {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 70rem;
+    }
+    .explorer-signpost-steps,
+    .explorer-scenario-grid {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    }
+    .explorer-signpost-step,
+    .explorer-scenario-card {
+      display: grid;
+      gap: 0.38rem;
+      padding: 0.88rem 0.95rem;
+      border-radius: 14px;
+      border: 1px solid rgba(33, 65, 95, 0.12);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)),
+        rgba(251, 254, 255, 0.78);
+    }
+    .explorer-signpost-step-number {
+      width: 1.7rem;
+      height: 1.7rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      border: 1px solid rgba(47, 92, 126, 0.18);
+      background: rgba(47, 92, 126, 0.08);
+      color: #2f5c7e;
+      font-family: var(--font-ui);
+      font-size: 0.78rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .explorer-signpost-step-title,
+    .explorer-scenario-card h3 {
+      margin: 0;
+      color: #10273d;
+      font-family: var(--font-ui);
+      font-size: 0.94rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    .explorer-signpost-step-copy,
+    .explorer-scenario-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.62;
+    }
+    .explorer-scenario-drawer {
+      display: grid;
+      gap: 0.9rem;
+      padding: 0.95rem 1rem;
+      border-radius: 16px;
+      border: 1px solid rgba(33, 65, 95, 0.12);
+      background: rgba(255, 255, 255, 0.66);
+    }
+    .explorer-scenario-drawer summary {
+      cursor: pointer;
+      color: #10273d;
+      font-family: var(--font-ui);
+      font-size: 0.92rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    .explorer-scenario-drawer[open] summary {
+      margin-bottom: 0.85rem;
+    }
     .explorer-frame {
       padding: 0.22rem;
       background:
@@ -269,7 +376,6 @@ if (!introSection) {
     .explorer-shell .summary-inline,
     .explorer-shell .segmented-row,
     .explorer-shell .mode-toggle,
-    .explorer-shell .grid-meta-strip,
     .explorer-shell .export-actions,
     .explorer-shell .focus-chip-row,
     .explorer-shell .question-button-row,
@@ -417,8 +523,17 @@ if (!introSection) {
         inset 0 1px 0 rgba(255, 255, 255, 0.78),
         0 28px 50px rgba(88, 64, 42, 0.09);
     }
+    .explorer-shell .workspace-main {
+      grid-template-columns: minmax(0, 1fr) minmax(20rem, 24rem);
+      align-items: start;
+      gap: clamp(1rem, 2vw, 1.35rem);
+    }
     .explorer-shell .control-column {
       align-content: start;
+      align-self: start;
+      position: sticky;
+      top: clamp(0.85rem, 2vw, 1.2rem);
+      z-index: 1;
     }
     .explorer-shell .workspace-toolbar {
       display: grid;
@@ -454,10 +569,6 @@ if (!introSection) {
       font-size: 0.86rem;
       line-height: 1.55;
       max-width: 46rem;
-    }
-    .explorer-shell .toolbar-status-row {
-      justify-content: flex-end;
-      flex: 0 1 auto;
     }
     .explorer-shell .toolbar-summary-label {
       color: var(--explorer-muted);
@@ -706,6 +817,28 @@ if (!introSection) {
       background: linear-gradient(180deg, rgba(47, 92, 126, 0.05), rgba(47, 92, 126, 0.02));
       border-color: rgba(47, 92, 126, 0.12);
       color: var(--explorer-fg);
+    }
+    .explorer-shell .value-dock {
+      border-color: rgba(45, 115, 133, 0.18);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0)),
+        linear-gradient(180deg, rgba(239, 251, 253, 0.98), rgba(228, 242, 246, 0.98));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.82),
+        0 18px 32px rgba(27, 56, 84, 0.08);
+    }
+    .explorer-shell .current-reading-status {
+      display: grid;
+      gap: 0.45rem;
+    }
+    .explorer-shell .question-dock {
+      border-color: rgba(191, 134, 66, 0.16);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0)),
+        linear-gradient(180deg, rgba(252, 248, 239, 0.98), rgba(245, 238, 222, 0.98));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.82),
+        0 18px 32px rgba(88, 64, 42, 0.08);
     }
     .explorer-shell .grid-card-title,
     .explorer-shell .analysis-card .card-title {
@@ -1046,11 +1179,6 @@ if (!introSection) {
       font-size: 0.82rem;
       line-height: 1.55;
     }
-    .explorer-shell .workspace-footer {
-      display: grid;
-      grid-template-columns: minmax(0, 1.08fr) minmax(18rem, 0.92fr);
-      gap: 1rem;
-    }
     .explorer-shell .stage-grid {
       max-height: min(72vh, 48rem);
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
@@ -1264,13 +1392,6 @@ if (!introSection) {
       grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
       gap: 1rem;
     }
-    .explorer-shell .support-drawer {
-      align-content: start;
-      align-self: start;
-    }
-    .explorer-shell .support-drawer[open] summary {
-      margin-bottom: 0.8rem;
-    }
     .explorer-shell table.small {
       width: 100%;
       border-collapse: collapse;
@@ -1305,8 +1426,16 @@ if (!introSection) {
     @media (max-width: 1080px) {
       .explorer-page .page-header,
       .explorer-shell .inspector-grid,
-      .explorer-shell .workspace-footer {
+      .explorer-shell .workspace-main {
         grid-template-columns: 1fr;
+      }
+      .explorer-signpost-steps,
+      .explorer-scenario-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .explorer-shell .control-column {
+        position: static;
+        order: -1;
       }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -1335,6 +1464,10 @@ if (!introSection) {
         font-size: 0.88rem;
         line-height: 1.6;
         margin-bottom: 0.75rem;
+      }
+      .explorer-signpost-steps,
+      .explorer-scenario-grid {
+        grid-template-columns: 1fr;
       }
     }
     @media (max-width: 480px) {
@@ -1385,6 +1518,59 @@ if (!introSection) {
     </header>
 
     <p class="explorer-mobile-notice">The explorer works best on a wider screen. On a phone, scroll the grid horizontally to see all columns — or view on a larger device for the full experience.</p>
+
+    <section class="explorer-page-signpost" aria-label="How to use the grid explorer">
+      <div class="explorer-page-signpost-head">
+        <span class="explorer-page-signpost-kicker">How to use this page</span>
+        <h2 class="explorer-page-signpost-title">Below you'll choose what you're exploring, read the grid itself, check the current reading, and then tune the mode controls.</h2>
+        <p class="explorer-page-signpost-copy">The whole page is organized around one selected train/eval pair. The top controls choose the counterfactual lens, the grid anchors a location in the space, and the sticky right rail keeps the explanation and controls beside that same selection.</p>
+      </div>
+
+      <div class="explorer-signpost-steps">
+        <div class="explorer-signpost-step">
+          <span class="explorer-signpost-step-number">1</span>
+          <h3 class="explorer-signpost-step-title">Choose what you're exploring</h3>
+          <p class="explorer-signpost-step-copy">Use the question family, cell score, example scenes, and display controls to decide what kind of counterfactual you want to ask.</p>
+        </div>
+        <div class="explorer-signpost-step">
+          <span class="explorer-signpost-step-number">2</span>
+          <h3 class="explorer-signpost-step-title">Read the grid</h3>
+          <p class="explorer-signpost-step-copy">Click a row, column, or cell to anchor one training world and one evaluation slice. That shared selection drives the rest of the interface.</p>
+        </div>
+        <div class="explorer-signpost-step">
+          <span class="explorer-signpost-step-number">3</span>
+          <h3 class="explorer-signpost-step-title">Check the current reading</h3>
+          <p class="explorer-signpost-step-copy">The sticky sidebar translates the selected train/eval pair into the headline question and shows the exact statistic the current mode is computing.</p>
+        </div>
+        <div class="explorer-signpost-step">
+          <span class="explorer-signpost-step-number">4</span>
+          <h3 class="explorer-signpost-step-title">Tune the mode controls</h3>
+          <p class="explorer-signpost-step-copy">Adjust focus points, coalition choices, privacy or unlearning thresholds, attack toggles, or scaling buckets without losing your place in the grid.</p>
+        </div>
+      </div>
+
+      <details class="explorer-scenario-drawer">
+        <summary>Exactly what kind of scenario are we exploring here?</summary>
+        <div class="explorer-scenario-grid">
+          <div class="explorer-scenario-card">
+            <h3>One model builder, one tiny data universe</h3>
+            <p>Imagine someone training a model from a small menu of possible data items or data slices named A, B, C, D, and so on. Each row in the grid stands for one possible training world: one subset of that tiny universe that the model could have been trained on.</p>
+          </div>
+          <div class="explorer-scenario-card">
+            <h3>Columns are evaluation questions</h3>
+            <p>Each column stands for one evaluation slice from that same universe. So a single cell means: train on the row subset, then evaluate on the column subset. The score is either a structural proxy such as overlap or a tiny toy accuracy calculation, depending on which score rule you selected above.</p>
+          </div>
+          <div class="explorer-scenario-card">
+            <h3>The modes are different counterfactual questions</h3>
+            <p>Explore mode reads one cell directly. Leave-one-out and group leave-one-out compare nearby rows. Shapley-style modes average many local row comparisons. Scaling averages across rows of the same size. DP, unlearning, and poison reinterpret the same space through privacy, deletion, or attack lenses.</p>
+          </div>
+          <div class="explorer-scenario-card">
+            <h3>This is a teaching model, not a literal training pipeline</h3>
+            <p>Real systems cannot enumerate every possible training set and evaluation slice like this. The toy makes the geometry visible so you can see exactly which worlds are being compared and why. If you prefer to think in nodes and edges instead of rows and columns, the graph page shows the same scenario as a subset lattice.</p>
+          </div>
+        </div>
+      </details>
+    </section>
 
     <section class="section-card explorer-frame" id="explore" aria-label="Explore">
       <div class="explorer-shell">

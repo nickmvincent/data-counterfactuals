@@ -11,6 +11,7 @@ import {
   labelSubset as label,
   normalizeValue,
 } from "../lib/counterfactual-math.js";
+import { scrollChildIntoContainer } from "../lib/scroll-helpers.js";
 
 const html = htm.bind(h);
 
@@ -386,7 +387,7 @@ function App() {
     if (!container) return;
     const selectedNode = container.querySelector('[data-selected="true"]');
     if (!selectedNode) return;
-    selectedNode.scrollIntoView({ block: "nearest", inline: "nearest" });
+    scrollChildIntoContainer(container, selectedNode);
   }, [safeSelectedIndex, safeEvalIndex, lens, count]);
 
   useEffect(() => {

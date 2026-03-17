@@ -7,10 +7,11 @@ import { getRequiredPageEntry, getSection, renderMarkdownBlocks, splitMarkdownSe
 const page = await getRequiredPageEntry("index");
 const sections = splitMarkdownSections(page.body);
 const introBlocks = renderMarkdownBlocks(page.data.intro ?? []);
-const coreMove = getSection(sections, "the-smallest-useful-move");
+const coreMove = sections.find(
+  (section) => section.id === "the-smallest-useful-move" || section.id === "what-is-a-data-counterfactual",
+) ?? getSection(sections, "the-smallest-useful-move");
 const gridSection = getSection(sections, "a-grid-for-seeing-the-space");
 const connections = getSection(sections, "what-the-idea-helps-connect");
-const navigation = getSection(sections, "how-to-read-the-site");
 const readingPaths = page.data.reading_paths ?? [];
 const figures = page.data.figures ?? {};
 ---
@@ -298,20 +299,12 @@ const figures = page.data.figures ?? {};
 
       <div class="action-row" style="margin-top: 1.35rem;">
         <a href="/grid" class="btn">Open in Explorer</a>
-        <a href="/graph" class="btn secondary">Open the Graph View</a>
-        <a href="/advanced.html" class="btn secondary" target="_blank" rel="noreferrer noopener">Try the 3D view (WIP)</a>
       </div>
     </section>
 
     <section class="start-section">
       <h2>{connections.title}</h2>
       <div set:html={connections.html}></div>
-    </section>
-
-    <section class="start-section">
-      <h2>{navigation.title}</h2>
-      <div set:html={navigation.html}></div>
-
       <ul class="link-cluster start-links">
         {readingPaths.map((path) => (
           <li>

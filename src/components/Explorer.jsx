@@ -15,6 +15,7 @@ import {
   normalizeValue,
   selectAnalysisMatrix,
 } from "../lib/counterfactual-math.js";
+import { scrollChildIntoContainer } from "../lib/scroll-helpers.js";
 
 const html = htm.bind(h);
 
@@ -154,34 +155,6 @@ const conceptMeta = {
       "Switch to an operator lens: apply a toy corruption rule to rows containing the chosen point or coalition, then compare the attacked score to the clean reference.",
   },
 };
-
-const faqEntries = [
-  {
-    question: "Why are there so many rows and columns?",
-    answer:
-      "This toy enumerates every subset of A, B, C, and so on so you can see the whole space of training worlds and evaluation slices. Real systems rarely compute the full grid; the powerset here is a teaching scaffold.",
-  },
-  {
-    question: "What is the difference between the focus chips and the selected row?",
-    answer:
-      "The target cell chooses the train/eval location you are looking at right now. The focus chips choose which point or group the question talks about. Picking B does not move you to row B; it tells leave-one-out, semivalue, privacy, unlearning, or poison views which contributor to reason about.",
-  },
-  {
-    question: "Do I need to read every highlighted cell?",
-    answer:
-      "No. Start with the squiggled target cell, the active column, and the current reading card. The extra rings only mark the cells the current concept compares, so they are there to narrow your attention rather than widen it.",
-  },
-  {
-    question: "Why do some answers come out as zero?",
-    answer:
-      "A zero often means the selected point or group is not actually present in the chosen training world, so removing it changes nothing. In scaling mode, the headline average may also stay flat when many same-size worlds behave similarly.",
-  },
-  {
-    question: "What changes in Operator view?",
-    answer:
-      "Operator view applies the toy poisoning edit before the grid is rendered. Reference view always shows the untouched matrix, even if the attack toggle is still switched on.",
-  },
-];
 
 function useGrid(items, metric, metricOptions = {}) {
   return useMemo(() => {
@@ -626,17 +599,6 @@ function App() {
       : activeEditLabels.length
         ? "Reference view is active, so you are seeing the untouched matrix even though the attack toggle is on."
         : "No attack layer is active, so Operator and Reference currently match.";
-
-  const focusTargetBadge =
-    conceptMode === "group"
-      ? groupSet.length
-        ? `Coalition ${label(groupSet)}`
-        : "Choose 2+ tokens"
-      : conceptMode === "poison"
-        ? groupSet.length
-          ? `Attack ${label(groupSet)}`
-          : `Attack ${focusPrimary}`
-        : `Asking about ${focusPrimary}`;
 
   const focusTargetCopy =
     conceptMode === "group"
@@ -1189,7 +1151,7 @@ function App() {
     if (!container) return;
     const selectedCell = container.querySelector('[data-selected="true"]');
     if (!selectedCell) return;
-    selectedCell.scrollIntoView({ block: "nearest", inline: "nearest" });
+    scrollChildIntoContainer(container, selectedCell);
   }, [safeRowIdx, safeColIdx, subs.length]);
 
   const handleCellClick = (rowIndex, colIndex) => {
@@ -1216,12 +1178,15 @@ function App() {
             : conceptMode === "group"
               ? "Focus coalition"
               : "Focus contributor";
-  const focusPillCopy =
-    conceptMode === "poison"
-      ? "Changes which rows are corrupted"
-      : conceptMode === "group"
-        ? "Changes the coalition"
-        : "Changes the contributor";
+  const sidebarStatusChips = [
+    modeLabel,
+    `Train ${label(Srow)}`,
+    `Eval ${label(evalSet)}`,
+    usesFocus ? `Focus ${focusLabel}` : null,
+    metricMeta[metric].short,
+    conceptMode === "poison" ? currentWorldLabel : null,
+    metric === "real" ? (realDataMode === "precomputed" ? "Precomputed matrix" : `Live sample ${realDataSample}`) : null,
+  ].filter(Boolean);
 
   const semivalueTable = semivalueModes.has(conceptMode)
     ? html`
@@ -1262,7 +1227,6 @@ function App() {
           <span class="summary-kicker">Inspector</span>
           <h3 class="card-title">Statistic details</h3>
         </div>
-        <span class="pill">${questionMeta[conceptMode]}</span>
       </div>
       <div class="inspector-banner">
         <div class="inspector-banner-title">${lensGuide.title}</div>
@@ -1373,7 +1337,6 @@ function App() {
           <span class="summary-kicker">Mode controls</span>
           <h3 class="panel-title">${questionMeta[conceptMode]}</h3>
         </div>
-        <span class="pill">${questionMeta[conceptMode]}</span>
       </div>
       <p class="panel-copy">${modeCopy}</p>
 
@@ -1395,10 +1358,6 @@ function App() {
                   const handler = () => (allowsMultiFocus ? toggleFocus(token) : setFocusSet([token]));
                   return html`<button key=${`f-${token}`} class="btn" aria-pressed=${active} onClick=${handler}>${token}</button>`;
                 })}
-              </div>
-              <div class="summary-inline toolbar-pills">
-                <span class="pill">${focusTargetBadge}</span>
-                <span class="pill">${focusPillCopy}</span>
               </div>
             </div>
           `
@@ -1507,16 +1466,6 @@ function App() {
           <div class="toolbar-guide">
             <span class="summary-kicker">Concept mode</span>
             <p class="toolbar-guide-copy">${modeCopy}</p>
-          </div>
-          <div class="summary-inline toolbar-status-row">
-            <span class="pill">${modeLabel}</span>
-            <span class="pill">${currentWorldLabel}</span>
-            <span class="pill">${metricMeta[metric].short}</span>
-            ${metric === "real"
-              ? html`<span class="pill">${realDataMode === "precomputed" ? "Precomputed matrix" : `Live sample ${realDataSample}`}</span>`
-              : null}
-            <span class="pill">${showSingletonEvalCols ? "Singleton eval cols" : "All eval cols"}</span>
-            <span class="pill">${showNums ? "Raw values on" : "Color scale"}</span>
           </div>
         </div>
 
@@ -1647,19 +1596,7 @@ function App() {
             <div>
               <span class="summary-kicker">Counterfactual grid</span>
               <h2 class="grid-card-title">Rows are worlds; columns are slices.</h2>
-            </div>
-            <div class="grid-meta-strip">
-              <span class="pill">${metricMeta[metric].short}</span>
-              ${metric === "real"
-                ? html`<span class="pill">${realDataMode === "precomputed" ? "Reference snapshot" : `Live sample ${realDataSample}`}</span>`
-                : null}
-              <span class="pill">${modeLabel}</span>
-              <span class="pill">Train ${label(Srow)}</span>
-              <span class="pill">Eval ${label(evalSet)}</span>
-              <span class="pill">${questionMeta[conceptMode]}</span>
-              <span class="pill">${showSingletonEvalCols ? "Singleton eval cols" : "All eval cols"}</span>
-              <span class="pill">${showNums ? "Raw values on" : "Color only"}</span>
-              <span class="pill">${paletteName}</span>
+              <p class="grid-card-copy">Click a row label, column label, or cell to anchor one train/eval pairing. The sticky sidebar keeps the current reading and mode controls attached to that same location.</p>
             </div>
           </div>
 
@@ -1811,10 +1748,6 @@ function App() {
                 <span class="summary-kicker">Grid markers</span>
                 <div class="grid-marker-title">Mark the cells you want to talk about.</div>
               </div>
-              <div class="summary-inline toolbar-pills">
-                <span class="pill">Target Train ${label(Srow)} / Eval ${label(evalSet)}</span>
-                ${visibleComparePoint ? html`<span class="pill">Compare ${comparePointLabel}</span>` : null}
-              </div>
             </div>
             <div class="grid-marker-actions">
               <button class="btn mini" aria-pressed=${selectionArmed === "target"} onClick=${() => setSelectionArmed("target")}>
@@ -1834,18 +1767,6 @@ function App() {
         </section>
 
         <aside class="control-column" data-testid="grid-side-rail">
-          <div class="workspace-rail-intro">
-            <span class="summary-kicker">Live guide</span>
-            <div class="workspace-rail-title">The highlighted cell drives both panels.</div>
-            <p class="workspace-rail-copy">Read the selected train/eval pair here, then tune the active question without leaving the grid.</p>
-            <div class="summary-inline toolbar-pills">
-              <span class="pill">${modeLabel}</span>
-              <span class="pill">Train ${label(Srow)}</span>
-              <span class="pill">Eval ${label(evalSet)}</span>
-              ${usesFocus ? html`<span class="pill">Focus ${focusLabel}</span>` : null}
-            </div>
-          </div>
-
           <section class="stage-panel value-dock" data-testid="value-dock">
             <div class="panel-head">
               <div>
@@ -1855,11 +1776,11 @@ function App() {
               <span class="pill">${questionSummary.answerLabel}: ${questionSummary.answerValue}</span>
             </div>
             <p class="panel-copy">${questionSummary.question}</p>
-            <div class="summary-inline toolbar-pills">
-              <span class="pill">Train ${label(Srow)}</span>
-              <span class="pill">Eval ${label(evalSet)}</span>
-              ${usesFocus ? html`<span class="pill">Focus ${focusLabel}</span>` : null}
-              <span class="pill">${metricMeta[metric].short}</span>
+            <div class="current-reading-status">
+              <div class="toolbar-label">Selected state</div>
+              <div class="summary-inline toolbar-pills">
+                ${sidebarStatusChips.map((chip) => html`<span class="pill">${chip}</span>`)}
+              </div>
             </div>
             <div class="stage-summary-grid">
               ${stageReadouts.map(
@@ -1879,21 +1800,6 @@ function App() {
       </div>
 
       ${showInspector ? analysisDetailBlock : null}
-
-      <details class="analysis-card support-drawer" data-testid="reading-help">
-        <summary>Reading help</summary>
-        <p class="analysis-copy">Quick answers stay nearby so you can recover the mental model without leaving the grid.</p>
-        <div class="faq-stack">
-          ${faqEntries.map(
-            (entry) => html`
-              <div key=${entry.question} class="inspector-banner">
-                <div class="inspector-banner-title">${entry.question}</div>
-                <div class="inspector-banner-copy">${entry.answer}</div>
-              </div>
-            `,
-          )}
-        </div>
-      </details>
     </div>
   `;
 }

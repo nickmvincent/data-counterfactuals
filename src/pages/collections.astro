@@ -28,6 +28,42 @@ function summarizeCollectionBody(body?: string): string | null {
   return `${firstSentence.slice(0, 147).replace(/[\s,;:.-]+$/g, "")}...`;
 }
 
+function normalizeCollectionName(title: string): string {
+  return stripCollectionPrefix(title)
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+const VERY_CORE_AREA_ORDER = [
+  "collective action",
+  "influence",
+  "scaling laws",
+  "selection and coresets",
+  "poisoning",
+  "semivalues",
+  "user generated content",
+] as const;
+
+function isVeryCoreCollection(title: string): boolean {
+  const normalized = normalizeCollectionName(title);
+
+  return normalized === "collective action"
+    || normalized === "influence"
+    || normalized.startsWith("scaling")
+    || normalized.startsWith("selection")
+    || normalized === "poisoning"
+    || normalized === "semivalues"
+    || normalized === "user generated content";
+}
+
+function getVeryCoreRank(title: string): number {
+  const normalized = normalizeCollectionName(title);
+  const rank = VERY_CORE_AREA_ORDER.indexOf(normalized as (typeof VERY_CORE_AREA_ORDER)[number]);
+  return rank === -1 ? VERY_CORE_AREA_ORDER.length : rank;
+}
+
 const allCollections = await loadPaperCollections();
 const prefixedCollections = allCollections.filter((collection) => matchesCollectionPrefix(collection.title));
 const collections = prefixedCollections.length ? prefixedCollections : allCollections;
@@ -40,6 +76,26 @@ const collectionsWithPapers = await Promise.all(
     papers: await loadPapersForCollection(collection),
   }))
 );
+
+const veryCoreCollections = collectionsWithPapers
+  .filter((collection) => isVeryCoreCollection(collection.displayTitle))
+  .sort((a, b) => getVeryCoreRank(a.displayTitle) - getVeryCoreRank(b.displayTitle));
+
+const peripheralCollections = collectionsWithPapers
+  .filter((collection) => !isVeryCoreCollection(collection.displayTitle));
+
+const groupedCollections = [
+  {
+    id: "very-core",
+    title: "Very core areas",
+    collections: veryCoreCollections,
+  },
+  {
+    id: "more-peripheral",
+    title: "More peripheral areas",
+    collections: peripheralCollections,
+  },
+].filter((group) => group.collections.length);
 
 const totalPapers = collectionsWithPapers.reduce((sum, collection) => sum + collection.papers.length, 0);
 const page = await getRequiredPageEntry("collections");
@@ -81,6 +137,24 @@ const introHtml = page.body ? renderMarkdown(page.body) : "";
     .collections-copy :global(p) {
       margin: 0;
     }
+    .collection-jump-groups {
+      display: grid;
+      gap: 0.9rem;
+    }
+    .collection-jump-group {
+      display: grid;
+      gap: 0.45rem;
+    }
+    .collection-group-label,
+    .collection-jump-label {
+      margin: 0;
+      color: var(--ring-thick);
+      font-family: var(--font-ui);
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
     .collection-jumps {
       list-style: none;
       padding: 0;
@@ -112,6 +186,25 @@ const introHtml = page.body ? renderMarkdown(page.body) : "";
       transform: translateY(-1px);
       border-color: rgba(177, 79, 31, 0.24);
       background: rgba(255, 250, 243, 0.92);
+    }
+    .collection-groups {
+      display: grid;
+      gap: 1.5rem;
+    }
+    .collection-group {
+      display: grid;
+      gap: 0.9rem;
+    }
+    .collection-group-head {
+      display: grid;
+      gap: 0.25rem;
+    }
+    .collection-group-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: clamp(1.3rem, 2vw, 1.7rem);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
     }
     .collection-stack {
       display: grid;
@@ -224,63 +317,81 @@ const introHtml = page.body ? renderMarkdown(page.body) : "";
 
       <div class="collections-intro">
         {introHtml && <div class="collections-copy" set:html={introHtml}></div>}
-        {collectionsWithPapers.length ? (
-          <ul class="collection-jumps">
-            {collectionsWithPapers.map((collection) => (
-              <li><a href={`#${collection.slug}`}>{collection.displayTitle}</a></li>
+        {groupedCollections.length ? (
+          <div class="collection-jump-groups">
+            {groupedCollections.map((group) => (
+              <div class="collection-jump-group">
+                <p class="collection-jump-label">{group.title}</p>
+                <ul class="collection-jumps">
+                  {group.collections.map((collection) => (
+                    <li><a href={`#${collection.slug}`}>{collection.displayTitle}</a></li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         ) : null}
       </div>
     </header>
 
-    {collectionsWithPapers.length ? (
-      <div class="collection-stack">
-        {collectionsWithPapers.map((collection) => (
-          <section class="collection-section" id={collection.slug}>
-            <div class="collection-heading">
-              <div>
-                <p class="collection-label">Related area</p>
-                <h2 class="collection-title">{collection.displayTitle}</h2>
-              </div>
-              <span class="pill">{collection.papers.length} papers</span>
+    {groupedCollections.length ? (
+      <div class="collection-groups">
+        {groupedCollections.map((group) => (
+          <section class="collection-group" aria-labelledby={`group-${group.id}`}>
+            <div class="collection-group-head">
+              <p class="collection-group-label">Shelf grouping</p>
+              <h2 class="collection-group-title" id={`group-${group.id}`}>{group.title}</h2>
             </div>
 
-            {collection.summary && <p class="collection-summary">{collection.summary}</p>}
+            <div class="collection-stack">
+              {group.collections.map((collection) => (
+                <section class="collection-section" id={collection.slug}>
+                  <div class="collection-heading">
+                    <div>
+                      <p class="collection-label">Related area</p>
+                      <h3 class="collection-title">{collection.displayTitle}</h3>
+                    </div>
+                    <span class="pill">{collection.papers.length} papers</span>
+                  </div>
 
-            {collection.papers.length ? (
-              <ul class="paper-list">
-                {collection.papers.map((paper) => {
-                  const priority = getPriority(paper);
-                  const isPriority = priority !== Infinity;
-                  const priorityLabel = priority === 1 ? "Start here" : `Priority ${priority}`;
-                  const venueAndYear = paper.venue
-                    ? `${paper.venue}${paper.year ? ` (${paper.year})` : ""}`
-                    : paper.year;
-                  const meta = [paper.authors?.length ? paper.authors.join(", ") : null, venueAndYear]
-                    .filter(Boolean)
-                    .join(" / ");
+                  {collection.summary && <p class="collection-summary">{collection.summary}</p>}
 
-                  return (
-                    <li class="paper-item">
-                      <div class="paper-title-row">
-                        {paper.url ? (
-                          <a href={paper.url} target="_blank" rel="noreferrer noopener" class="paper-title">
-                            {paper.title}
-                          </a>
-                        ) : (
-                          <span class="paper-title">{paper.title}</span>
-                        )}
-                        {isPriority && <span class="pill">{priorityLabel}</span>}
-                      </div>
-                      {meta && <div class="paper-meta">{meta}</div>}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <div class="empty-state">This area has not been populated yet.</div>
-            )}
+                  {collection.papers.length ? (
+                    <ul class="paper-list">
+                      {collection.papers.map((paper) => {
+                        const priority = getPriority(paper);
+                        const isPriority = priority !== Infinity;
+                        const priorityLabel = priority === 1 ? "Start here" : `Priority ${priority}`;
+                        const venueAndYear = paper.venue
+                          ? `${paper.venue}${paper.year ? ` (${paper.year})` : ""}`
+                          : paper.year;
+                        const meta = [paper.authors?.length ? paper.authors.join(", ") : null, venueAndYear]
+                          .filter(Boolean)
+                          .join(" / ");
+
+                        return (
+                          <li class="paper-item">
+                            <div class="paper-title-row">
+                              {paper.url ? (
+                                <a href={paper.url} target="_blank" rel="noreferrer noopener" class="paper-title">
+                                  {paper.title}
+                                </a>
+                              ) : (
+                                <span class="paper-title">{paper.title}</span>
+                              )}
+                              {isPriority && <span class="pill">{priorityLabel}</span>}
+                            </div>
+                            {meta && <div class="paper-meta">{meta}</div>}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <div class="empty-state">This area has not been populated yet.</div>
+                  )}
+                </section>
+              ))}
+            </div>
           </section>
         ))}
       </div>

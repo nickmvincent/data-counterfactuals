@@ -27,7 +27,7 @@ reading_paths:
     body: A more technical, web-only companion that lines up neighboring formalisms side by side. WIP.
   - title: Related areas and papers
     href: /collections
-    body: A compact shelf of neighboring literatures, representative papers, and quick context.
+    body: A dynamic, non-exhaustive set of related areas and readings, updated via Semble.
 figures:
   leave_one_out:
     label: Leave-one-out toy example
@@ -62,5 +62,3 @@ I think this frame is useful because it connects conversations that often happen
 That does not mean the projects are all formally identical. One major distinction is that some techniques only explore counterfactuals over data that already exist: subsets, reweightings, filtering, or held-out removals. Others try to change what data the world produces in the first place, which is part of why collective action matters so much. And many minor distinctions exist.
 
 If you want the running map of adjacent methods, areas, and papers, head to the [related works page](/collections). It is updated dynamically via Semble, an atproto project, so this intro page does not need its own hand-maintained method-family list.
-
-## Some places to start

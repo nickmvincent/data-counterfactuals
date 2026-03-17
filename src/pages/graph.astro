@@ -60,6 +60,113 @@ const introSection = getSection(sections, "how-to-read-the-graph");
       color: var(--muted);
       line-height: 1.7;
     }
+    .graph-page-signpost {
+      display: grid;
+      gap: 0.95rem;
+      padding: 1.05rem 1.15rem;
+      border-radius: 18px;
+      border: 1px solid rgba(62, 84, 94, 0.14);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0)),
+        linear-gradient(135deg, rgba(36, 92, 112, 0.08), rgba(177, 119, 51, 0.08));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.82),
+        0 16px 32px rgba(70, 54, 42, 0.05);
+    }
+    .graph-page-signpost-head {
+      display: grid;
+      gap: 0.35rem;
+    }
+    .graph-page-signpost-kicker {
+      color: #24566e;
+      font-family: var(--font-ui);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .graph-page-signpost-title {
+      margin: 0;
+      color: #10273d;
+      font-family: var(--font-ui);
+      font-size: clamp(1.08rem, 2vw, 1.4rem);
+      font-weight: 650;
+      line-height: 1.18;
+      letter-spacing: -0.03em;
+    }
+    .graph-page-signpost-copy {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 70rem;
+    }
+    .graph-signpost-steps,
+    .graph-scenario-grid {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    }
+    .graph-signpost-step,
+    .graph-scenario-card {
+      display: grid;
+      gap: 0.38rem;
+      padding: 0.88rem 0.95rem;
+      border-radius: 14px;
+      border: 1px solid rgba(33, 65, 95, 0.12);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)),
+        rgba(251, 254, 255, 0.78);
+    }
+    .graph-signpost-step-number {
+      width: 1.7rem;
+      height: 1.7rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      border: 1px solid rgba(47, 92, 126, 0.18);
+      background: rgba(47, 92, 126, 0.08);
+      color: #2f5c7e;
+      font-family: var(--font-ui);
+      font-size: 0.78rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .graph-signpost-step-title,
+    .graph-scenario-card h3 {
+      margin: 0;
+      color: #10273d;
+      font-family: var(--font-ui);
+      font-size: 0.94rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    .graph-signpost-step-copy,
+    .graph-scenario-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.62;
+    }
+    .graph-scenario-drawer {
+      display: grid;
+      gap: 0.9rem;
+      padding: 0.95rem 1rem;
+      border-radius: 16px;
+      border: 1px solid rgba(33, 65, 95, 0.12);
+      background: rgba(255, 255, 255, 0.66);
+    }
+    .graph-scenario-drawer summary {
+      cursor: pointer;
+      color: #10273d;
+      font-family: var(--font-ui);
+      font-size: 0.92rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    .graph-scenario-drawer[open] summary {
+      margin-bottom: 0.85rem;
+    }
     .graph-mobile-notice {
       display: none;
       margin: 0;
@@ -505,6 +612,10 @@ const introSection = getSection(sections, "how-to-read-the-graph");
       .graph-page .page-header {
         grid-template-columns: 1fr;
       }
+      .graph-signpost-steps,
+      .graph-scenario-grid {
+        grid-template-columns: 1fr;
+      }
       .graph-mobile-notice {
         display: block;
       }
@@ -535,6 +646,59 @@ const introSection = getSection(sections, "how-to-read-the-graph");
     </header>
 
     <p class="graph-mobile-notice">The graph explorer works best on a wider screen because the middle layers of the subset lattice can get wide.</p>
+
+    <section class="graph-page-signpost" aria-label="How to use the graph explorer">
+      <div class="graph-page-signpost-head">
+        <span class="graph-page-signpost-kicker">How to use this page</span>
+        <h2 class="graph-page-signpost-title">Below you'll choose a graph lens, inspect the lattice itself, read the current lens panel, and then browse one-step edits from the selected node.</h2>
+        <p class="graph-page-signpost-copy">This page is the same toy universe as the grid explorer, but laid out as nodes and edges. The controls choose the lens and score rule, the lattice anchors the selected training world, and the side panels explain the current path or neighborhood.</p>
+      </div>
+
+      <div class="graph-signpost-steps">
+        <div class="graph-signpost-step">
+          <span class="graph-signpost-step-number">1</span>
+          <h3 class="graph-signpost-step-title">Choose the lens</h3>
+          <p class="graph-signpost-step-copy">Pick the graph lens, score rule, training world, evaluation slice, and focus contributor you want the lattice to emphasize.</p>
+        </div>
+        <div class="graph-signpost-step">
+          <span class="graph-signpost-step-number">2</span>
+          <h3 class="graph-signpost-step-title">Read the lattice</h3>
+          <p class="graph-signpost-step-copy">Each node is a training world. Each edge adds or removes one dataset. Highlighted paths or layers show which moves matter for the current lens.</p>
+        </div>
+        <div class="graph-signpost-step">
+          <span class="graph-signpost-step-number">3</span>
+          <h3 class="graph-signpost-step-title">Check the current lens panel</h3>
+          <p class="graph-signpost-step-copy">The right panel turns the highlighted nodes and edges into a specific statistic such as an ablation delta, strike delta, Shapley value, or scaling average.</p>
+        </div>
+        <div class="graph-signpost-step">
+          <span class="graph-signpost-step-number">4</span>
+          <h3 class="graph-signpost-step-title">Browse one-step edits</h3>
+          <p class="graph-signpost-step-copy">The neighbor panel answers the practical question "where can I move next?" by listing every single addition and deletion from the selected training world.</p>
+        </div>
+      </div>
+
+      <details class="graph-scenario-drawer">
+        <summary>Exactly what kind of scenario are we exploring here?</summary>
+        <div class="graph-scenario-grid">
+          <div class="graph-scenario-card">
+            <h3>The same toy training universe, drawn as a graph</h3>
+            <p>Imagine a model builder choosing one subset of data from a tiny universe A, B, C, D, and so on. Here, every possible training subset becomes a node instead of a row in a matrix.</p>
+          </div>
+          <div class="graph-scenario-card">
+            <h3>Fix one evaluation slice first</h3>
+            <p>The graph view holds one evaluation slice constant while you move through training worlds. Node color tells you how that selected eval slice scores on each possible training subset.</p>
+          </div>
+          <div class="graph-scenario-card">
+            <h3>Edges are one-step dataset edits</h3>
+            <p>An edge means exactly one item was added or removed. That makes local ablations, coordinated strikes, Shapley-style edge sweeps, and scaling layers visually explicit instead of hiding them inside row arithmetic.</p>
+          </div>
+          <div class="graph-scenario-card">
+            <h3>This is still a teaching model</h3>
+            <p>Real systems do not literally draw the full subset lattice for large datasets. The point is to make neighborhood structure visible so you can see how local edits compose into longer paths or broader averages.</p>
+          </div>
+        </div>
+      </details>
+    </section>
 
     <section class="section-card graph-frame" id="explore" aria-label="Explore">
       <div class="graph-shell">
