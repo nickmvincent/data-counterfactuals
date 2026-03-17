@@ -270,6 +270,7 @@ function App() {
   const [computedFlash, setComputedFlash] = useState(false);
   const [switchPulse, setSwitchPulse] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [hoverTarget, setHoverTarget] = useState(null);
 
   const presetFlashRef = useRef(null);
   const animRef = useRef(null);
@@ -358,6 +359,16 @@ function App() {
       setColIdx(visibleColIndices[0]);
     }
   }, [visibleColIndices, colIdx]);
+
+  useEffect(() => {
+    setHoverTarget((previous) => {
+      if (!previous) return previous;
+      if (previous.rowIndex >= subs.length) return null;
+      if (previous.colIndex >= subs.length) return null;
+      if (!visibleColIndices.includes(previous.colIndex)) return null;
+      return previous;
+    });
+  }, [subs.length, visibleColIndices]);
 
   const tutorialPresets = useMemo(
     () =>
@@ -1154,6 +1165,24 @@ function App() {
     scrollChildIntoContainer(container, selectedCell);
   }, [safeRowIdx, safeColIdx, subs.length]);
 
+  const hoveredRowIdx = hoverTarget?.rowIndex ?? null;
+  const hoveredColIdx = hoverTarget?.colIndex ?? null;
+
+  const previewGridTarget = (rowIndex, colIndex) => {
+    setHoverTarget({ rowIndex, colIndex });
+  };
+
+  const clearGridPreview = () => {
+    setHoverTarget(null);
+  };
+
+  const handleGridActionKey = (event, callback) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      callback();
+    }
+  };
+
   const handleCellClick = (rowIndex, colIndex) => {
     if (selectionArmed === "compare" && !compareChooserDisabled) {
       setComparePoint({ rowIndex, colIndex });
@@ -1639,12 +1668,22 @@ function App() {
               ${visibleColIndices.map((colIndex) => {
                 const colSet = subs[colIndex] || [];
                 const active = colIndex === safeColIdx;
+                const hovered = hoveredColIdx === colIndex;
                 return html`
                   <div
                     key=${`col-${colIndex}`}
-                    class=${`cl ${active ? "axis-active" : ""}`}
+                    class=${`cl ${active ? "axis-active" : ""} ${hovered ? "axis-hot" : ""}`}
+                    role="button"
+                    tabIndex="0"
+                    aria-pressed=${active}
+                    aria-label=${`Select evaluation slice ${label(colSet)}`}
                     title=${`Select evaluation slice ${label(colSet)}. Click any cell to set both train and eval at once.`}
                     onClick=${() => setColIdx(colIndex)}
+                    onKeyDown=${(event) => handleGridActionKey(event, () => setColIdx(colIndex))}
+                    onMouseEnter=${() => previewGridTarget(safeRowIdx, colIndex)}
+                    onMouseLeave=${clearGridPreview}
+                    onFocus=${() => previewGridTarget(safeRowIdx, colIndex)}
+                    onBlur=${clearGridPreview}
                   >
                     ${formatColumnHeader(colIndex, colSet)}
                   </div>
@@ -1653,12 +1692,22 @@ function App() {
             </div>
             ${subs.map((rowSet, rowIndex) => {
               const rowActive = rowIndex === safeRowIdx;
+              const rowHovered = hoveredRowIdx === rowIndex;
               return html`
                 <div style="display:flex" key=${`row-${rowIndex}`}>
                   <div
-                    class=${`rl ${rowActive ? "axis-active" : ""}`}
+                    class=${`rl ${rowActive ? "axis-active" : ""} ${rowHovered ? "axis-hot" : ""}`}
+                    role="button"
+                    tabIndex="0"
+                    aria-pressed=${rowActive}
+                    aria-label=${`Select training world ${label(rowSet)}`}
                     title=${`Select training world ${label(rowSet)}. Click any cell to set both train and eval at once.`}
                     onClick=${() => setRowIdx(rowIndex)}
+                    onKeyDown=${(event) => handleGridActionKey(event, () => setRowIdx(rowIndex))}
+                    onMouseEnter=${() => previewGridTarget(rowIndex, safeColIdx)}
+                    onMouseLeave=${clearGridPreview}
+                    onFocus=${() => previewGridTarget(rowIndex, safeColIdx)}
+                    onBlur=${clearGridPreview}
                   >
                     ${formatRowHeader(rowIndex, rowSet)}
                   </div>
@@ -1708,9 +1757,14 @@ function App() {
                       }
 
                       const highlight = thin || thick || isSel;
+                      const previewingRow = hoveredRowIdx === rowIndex;
+                      const previewingCol = hoveredColIdx === colIndex;
+                      const previewingCell = previewingRow && previewingCol;
                       const classes = ["cell"];
                       if (isSel) classes.push("sel");
                       if (highlight) classes.push("cell-emph");
+                      if (previewingRow || previewingCol) classes.push("cell-track");
+                      if (previewingCell) classes.push("cell-hot");
                       if (edited) classes.push("cell-edited");
                       if (switchPulse && highlight) classes.push("cell-pulse");
 
@@ -1721,8 +1775,17 @@ function App() {
                           data-selected=${isSel ? "true" : "false"}
                           data-target-cell=${isTargetCell ? "true" : "false"}
                           data-compare-cell=${isCompareCell ? "true" : "false"}
+                          role="button"
+                          tabIndex="0"
+                          aria-pressed=${isSel}
+                          aria-label=${`Train ${label(rowSet)}, evaluate ${label(evSet)}, score ${value.toFixed(3)}`}
                           title=${`Train ${label(rowSet)} | Eval ${label(evSet)} | value ${value.toFixed(3)}`}
                           onClick=${() => handleCellClick(rowIndex, colIndex)}
+                          onKeyDown=${(event) => handleGridActionKey(event, () => handleCellClick(rowIndex, colIndex))}
+                          onMouseEnter=${() => previewGridTarget(rowIndex, colIndex)}
+                          onMouseLeave=${clearGridPreview}
+                          onFocus=${() => previewGridTarget(rowIndex, colIndex)}
+                          onBlur=${clearGridPreview}
                           style=${{ background: palette(normalized) }}
                         >
                           ${isTargetCell ? html`<div class="marker-ring marker-ring-target"></div>` : null}

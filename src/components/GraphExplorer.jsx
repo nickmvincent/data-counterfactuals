@@ -197,6 +197,7 @@ function App() {
   const [focusSet, setFocusSet] = useState(["B"]);
   const [k, setK] = useState(2);
   const [hydrated, setHydrated] = useState(false);
+  const [hoveredNodeIndex, setHoveredNodeIndex] = useState(null);
 
   const scrollRef = useRef(null);
 
@@ -234,6 +235,13 @@ function App() {
     setSelectedIndex(nextFullIndex >= 0 ? nextFullIndex : 0);
     setEvalIndex(nextFullIndex >= 0 ? nextFullIndex : 0);
   }, [count, subsets, base]);
+
+  useEffect(() => {
+    setHoveredNodeIndex((previous) => {
+      if (previous === null) return previous;
+      return previous >= subsets.length ? null : previous;
+    });
+  }, [subsets.length]);
 
   const safeSelectedIndex = clampIndex(selectedIndex, subsets.length);
   const safeEvalIndex = clampIndex(evalIndex, subsets.length);
@@ -454,6 +462,15 @@ function App() {
     k,
   ]);
 
+  const previewNodeIndex = clampIndex(hoveredNodeIndex ?? safeSelectedIndex, subsets.length);
+  const previewSet = subsets[previewNodeIndex] || [];
+  const previewValue = matrix[previewNodeIndex]?.[safeEvalIndex] ?? 0;
+  const graphCommandLabel = hoveredNodeIndex === null ? "Selected target" : "Hover preview";
+  const graphCommandCopy =
+    hoveredNodeIndex === null
+      ? `Train ${label(selectedSet)} is locked in against eval ${label(evalSet)}. Click a node or use the command buttons to move.`
+      : `Previewing train ${label(previewSet)} against eval ${label(evalSet)}. Click to commit this world.`;
+
   return html`
     <div class="graph-workspace" data-ready=${hydrated ? "true" : "false"}>
       <section class="graph-toolbar" data-testid="graph-explorer-toolbar">
@@ -586,6 +603,12 @@ function App() {
             <span class="graph-legend-item"><span class="graph-legend-swatch neutral"></span>Unselected edit edge</span>
           </div>
 
+          <div class="graph-command-readout">
+            <span class="graph-control-label">${graphCommandLabel}</span>
+            <span class="graph-command-value">Train ${label(previewSet)} | Eval ${label(evalSet)} | Score ${previewValue.toFixed(4)}</span>
+            <span class="graph-command-note">${graphCommandCopy}</span>
+          </div>
+
           <div class="graph-scroll" ref=${scrollRef}>
             <svg
               class="graph-lattice"
@@ -618,18 +641,19 @@ function App() {
                 `;
               })}
 
-              ${subsets.map((subset, index) => {
+              ${subsets.map((_, index) => {
                 const node = graph.nodes.get(index);
                 if (!node) return null;
                 const value = matrix[index]?.[safeEvalIndex] ?? 0;
                 const normalized = normalizeValue(value, colMin, colMax, 0.5);
                 const selected = index === safeSelectedIndex;
                 const highlighted = highlightedNodes.has(index);
+                const hovered = index === hoveredNodeIndex;
                 const evalMirrored = index === safeEvalIndex;
                 return html`
                   <g
                     key=${`node-${index}`}
-                    class=${`graph-node ${selected ? "is-selected" : ""} ${highlighted ? "is-highlighted" : ""}`}
+                    class=${`graph-node ${selected ? "is-selected" : ""} ${highlighted ? "is-highlighted" : ""} ${hovered ? "is-hovered" : ""}`}
                     transform=${`translate(${node.x}, ${node.y})`}
                     onClick=${() => setSelectedIndex(index)}
                     onKeyDown=${(event) => {
@@ -638,18 +662,39 @@ function App() {
                         setSelectedIndex(index);
                       }
                     }}
+                    onMouseEnter=${() => setHoveredNodeIndex(index)}
+                    onMouseLeave=${() => setHoveredNodeIndex(null)}
+                    onFocus=${() => setHoveredNodeIndex(index)}
+                    onBlur=${() => setHoveredNodeIndex(null)}
                     data-selected=${selected ? "true" : "false"}
                     role="button"
                     tabIndex="0"
                     aria-label=${`Select training world ${node.label}`}
                   >
                     <rect
+                      class="graph-node-halo"
+                      x=${-node.width / 2 - 5}
+                      y=${-node.height / 2 - 5}
+                      width=${node.width + 10}
+                      height=${node.height + 10}
+                      rx="20"
+                    />
+                    <rect
+                      class="graph-node-plate"
                       x=${-node.width / 2}
                       y=${-node.height / 2}
                       width=${node.width}
                       height=${node.height}
                       rx="16"
                       fill=${palette(normalized)}
+                    />
+                    <rect
+                      class="graph-node-frame"
+                      x=${-node.width / 2 + 2}
+                      y=${-node.height / 2 + 2}
+                      width=${Math.max(0, node.width - 4)}
+                      height=${Math.max(0, node.height - 4)}
+                      rx="13"
                     />
                     ${evalMirrored
                       ? html`<circle class="graph-node-eval" cx=${node.width / 2 - 10} cy=${-node.height / 2 + 10} r="4"></circle>`

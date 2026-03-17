@@ -196,6 +196,8 @@ const introSection = getSection(sections, "how-to-read-the-graph");
       --graph-accent: #2f5c7e;
       --graph-accent-soft: rgba(47, 92, 126, 0.12);
       --graph-highlight: #c9913c;
+      --graph-hud-line: rgba(47, 92, 126, 0.12);
+      --graph-hud-glow: rgba(45, 115, 133, 0.18);
       --graph-radius-xl: 20px;
       --graph-radius-lg: 16px;
       --graph-radius-md: 12px;
@@ -221,6 +223,44 @@ const introSection = getSection(sections, "how-to-read-the-graph");
       box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.82),
         0 18px 32px rgba(88, 64, 42, 0.07);
+    }
+    .graph-shell .graph-toolbar,
+    .graph-shell .graph-canvas-card,
+    .graph-shell .graph-panel,
+    .graph-shell .graph-control-card,
+    .graph-shell .graph-stat,
+    .graph-shell .graph-legend,
+    .graph-shell .graph-command-readout {
+      position: relative;
+      overflow: clip;
+      isolation: isolate;
+    }
+    .graph-shell .graph-toolbar::before,
+    .graph-shell .graph-canvas-card::before,
+    .graph-shell .graph-panel::before,
+    .graph-shell .graph-control-card::before,
+    .graph-shell .graph-command-readout::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.24), transparent 38%),
+        repeating-linear-gradient(90deg, transparent 0 22px, rgba(47, 92, 126, 0.03) 22px 23px),
+        linear-gradient(180deg, rgba(47, 92, 126, 0.08), transparent 22%);
+      pointer-events: none;
+      opacity: 0.72;
+    }
+    .graph-shell .graph-toolbar::after,
+    .graph-shell .graph-canvas-card::after,
+    .graph-shell .graph-panel::after {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border-radius: inherit;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      pointer-events: none;
+      opacity: 0.65;
     }
     .graph-shell .graph-toolbar {
       padding: 1.25rem;
@@ -316,16 +356,25 @@ const introSection = getSection(sections, "how-to-read-the-graph");
       min-height: 2rem;
       padding: 0.38rem 0.72rem;
       border-radius: 999px;
-      border: 1px solid rgba(47, 92, 126, 0.12);
-      background: rgba(250, 253, 255, 0.84);
+      border: 1px solid rgba(33, 65, 95, 0.16);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(238, 246, 250, 0.84)),
+        rgba(250, 253, 255, 0.84);
       color: var(--graph-fg);
       font-family: var(--font-ui);
       font-size: 0.78rem;
       font-weight: 650;
       line-height: 1.3;
+      letter-spacing: 0.04em;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.86),
+        inset 0 -1px 0 rgba(33, 65, 95, 0.05),
+        0 0 0 1px rgba(255, 255, 255, 0.18);
     }
     .graph-shell .graph-answer-pill {
-      background: rgba(255, 247, 230, 0.92);
+      background:
+        linear-gradient(180deg, rgba(255, 249, 239, 0.98), rgba(247, 235, 209, 0.9)),
+        rgba(255, 247, 230, 0.92);
       border-color: rgba(201, 145, 60, 0.22);
     }
     .graph-shell .graph-control-card {
@@ -354,8 +403,10 @@ const introSection = getSection(sections, "how-to-read-the-graph");
     }
     .graph-shell .graph-btn,
     .graph-shell .graph-select-label select {
-      border: 1px solid var(--graph-border);
-      background: var(--graph-surface-strong);
+      border: 1px solid rgba(33, 65, 95, 0.18);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(234, 243, 248, 0.9)),
+        var(--graph-surface-strong);
       color: var(--graph-fg);
       border-radius: var(--graph-radius-sm);
       font-family: var(--font-ui);
@@ -364,7 +415,17 @@ const introSection = getSection(sections, "how-to-read-the-graph");
       line-height: 1.3;
       min-height: 2.4rem;
       padding: 0.55rem 0.8rem;
-      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease,
+        box-shadow 160ms ease,
+        filter 160ms ease;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.84),
+        inset 0 -1px 0 rgba(33, 65, 95, 0.05),
+        0 0 0 1px rgba(255, 255, 255, 0.18),
+        0 10px 18px rgba(19, 38, 58, 0.08);
     }
     .graph-shell .graph-btn {
       cursor: pointer;
@@ -375,11 +436,30 @@ const introSection = getSection(sections, "how-to-read-the-graph");
     .graph-shell .graph-select-label select:focus-visible {
       transform: translateY(-1px);
       border-color: rgba(47, 92, 126, 0.3);
-      background: rgba(255, 255, 255, 1);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(240, 248, 252, 0.96)),
+        rgba(255, 255, 255, 1);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.88),
+        inset 0 -1px 0 rgba(33, 65, 95, 0.04),
+        0 0 0 1px rgba(47, 92, 126, 0.1),
+        0 12px 22px rgba(27, 56, 84, 0.12);
+      filter: saturate(1.04);
     }
     .graph-shell .graph-btn[aria-pressed="true"] {
-      background: var(--graph-accent-soft);
-      border-color: rgba(47, 92, 126, 0.28);
+      background:
+        linear-gradient(180deg, rgba(211, 232, 239, 0.92), rgba(186, 216, 229, 0.72)),
+        var(--graph-accent-soft);
+      border-color: rgba(45, 115, 133, 0.34);
+      box-shadow:
+        inset 0 0 0 1px rgba(47, 92, 126, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 0 0 1px rgba(45, 115, 133, 0.12),
+        0 12px 20px rgba(27, 56, 84, 0.1);
+    }
+    .graph-shell .graph-btn:active,
+    .graph-shell .graph-neighbor-button:active {
+      transform: translateY(0);
     }
     .graph-shell .graph-btn:disabled {
       cursor: not-allowed;
@@ -404,7 +484,12 @@ const introSection = getSection(sections, "how-to-read-the-graph");
       padding: 0.75rem 0.85rem;
       border-radius: var(--graph-radius-md);
       border: 1px solid rgba(33, 65, 95, 0.1);
-      background: rgba(250, 253, 255, 0.82);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(241, 248, 251, 0.72)),
+        rgba(250, 253, 255, 0.82);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.84),
+        0 10px 18px rgba(19, 38, 58, 0.06);
     }
     .graph-shell .graph-legend-item {
       display: inline-flex;
@@ -431,14 +516,46 @@ const introSection = getSection(sections, "how-to-read-the-graph");
     .graph-shell .graph-legend-swatch.neutral {
       background: rgba(196, 206, 214, 0.86);
     }
+    .graph-shell .graph-command-readout {
+      display: grid;
+      gap: 0.18rem;
+      padding: 0.82rem 0.9rem;
+      border-radius: var(--graph-radius-md);
+      border: 1px solid rgba(33, 65, 95, 0.12);
+      background:
+        linear-gradient(180deg, rgba(251, 247, 239, 0.96), rgba(242, 248, 251, 0.86)),
+        rgba(255, 255, 255, 0.74);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.84),
+        0 12px 20px rgba(19, 38, 58, 0.07);
+    }
+    .graph-shell .graph-command-value {
+      color: var(--graph-fg);
+      font-family: var(--font-ui);
+      font-size: 0.9rem;
+      font-weight: 650;
+      line-height: 1.4;
+    }
+    .graph-shell .graph-command-note {
+      color: var(--graph-muted);
+      font-family: var(--font-ui);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
     .graph-shell .graph-scroll {
       overflow: auto;
       border-radius: var(--graph-radius-lg);
       border: 1px solid rgba(33, 65, 95, 0.1);
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)),
+        linear-gradient(90deg, rgba(47, 92, 126, 0.035) 0 1px, transparent 1px 100%),
+        linear-gradient(180deg, rgba(47, 92, 126, 0.03) 0 1px, transparent 1px 100%),
         rgba(240, 246, 250, 0.8);
+      background-size: auto, 30px 30px, 30px 30px, auto;
       padding: 0.65rem;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.86),
+        0 14px 26px rgba(19, 38, 58, 0.08);
     }
     .graph-shell .graph-lattice {
       display: block;
@@ -450,6 +567,7 @@ const introSection = getSection(sections, "how-to-read-the-graph");
     .graph-shell .graph-edge line {
       stroke: rgba(120, 138, 150, 0.42);
       stroke-width: 1.6;
+      stroke-dasharray: 3.4 4.6;
     }
     .graph-shell .graph-edge text {
       fill: var(--graph-highlight);
@@ -462,15 +580,31 @@ const introSection = getSection(sections, "how-to-read-the-graph");
     .graph-shell .graph-edge.is-highlighted line {
       stroke: rgba(201, 145, 60, 0.92);
       stroke-width: 2.4;
+      stroke-dasharray: none;
+      filter: drop-shadow(0 0 4px rgba(201, 145, 60, 0.28));
     }
     .graph-shell .graph-node {
       cursor: pointer;
+      outline: none;
       transition: opacity 160ms ease;
     }
-    .graph-shell .graph-node rect {
+    .graph-shell .graph-node-halo {
+      fill: none;
+      stroke: rgba(47, 92, 126, 0.24);
+      stroke-width: 1.4;
+      opacity: 0;
+      transition: opacity 160ms ease, stroke-width 160ms ease, stroke 160ms ease, filter 160ms ease;
+    }
+    .graph-shell .graph-node-plate {
       stroke: rgba(16, 39, 61, 0.16);
       stroke-width: 1.2;
       transition: stroke-width 160ms ease, stroke 160ms ease, filter 160ms ease;
+    }
+    .graph-shell .graph-node-frame {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.5);
+      stroke-width: 0.9;
+      pointer-events: none;
     }
     .graph-shell .graph-node text {
       fill: #10273d;
@@ -479,17 +613,38 @@ const introSection = getSection(sections, "how-to-read-the-graph");
       font-weight: 700;
       letter-spacing: 0.01em;
       pointer-events: none;
+      paint-order: stroke fill;
+      stroke: rgba(255, 255, 255, 0.42);
+      stroke-width: 0.8;
     }
-    .graph-shell .graph-node:hover rect,
-    .graph-shell .graph-node:focus-visible rect {
-      filter: saturate(1.04);
+    .graph-shell .graph-node:hover .graph-node-halo,
+    .graph-shell .graph-node:focus-visible .graph-node-halo,
+    .graph-shell .graph-node.is-hovered .graph-node-halo {
+      opacity: 1;
+      stroke: rgba(47, 92, 126, 0.5);
+      filter: drop-shadow(0 0 6px rgba(45, 115, 133, 0.2));
+    }
+    .graph-shell .graph-node:hover .graph-node-plate,
+    .graph-shell .graph-node:focus-visible .graph-node-plate,
+    .graph-shell .graph-node.is-hovered .graph-node-plate {
+      filter: saturate(1.05);
       stroke: rgba(47, 92, 126, 0.42);
     }
-    .graph-shell .graph-node.is-highlighted rect {
+    .graph-shell .graph-node.is-highlighted .graph-node-halo {
+      opacity: 1;
+      stroke: rgba(201, 145, 60, 0.56);
+    }
+    .graph-shell .graph-node.is-highlighted .graph-node-plate {
       stroke: rgba(201, 145, 60, 0.72);
       stroke-width: 2;
     }
-    .graph-shell .graph-node.is-selected rect {
+    .graph-shell .graph-node.is-selected .graph-node-halo {
+      opacity: 1;
+      stroke: rgba(16, 39, 61, 0.84);
+      stroke-width: 2.2;
+      filter: drop-shadow(0 0 8px rgba(16, 39, 61, 0.2));
+    }
+    .graph-shell .graph-node.is-selected .graph-node-plate {
       stroke: rgba(16, 39, 61, 0.98);
       stroke-width: 2.6;
     }
@@ -514,7 +669,9 @@ const introSection = getSection(sections, "how-to-read-the-graph");
       padding: 0.8rem 0.85rem;
       border-radius: var(--graph-radius-md);
       border: 1px solid rgba(33, 65, 95, 0.1);
-      background: rgba(250, 253, 255, 0.82);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(241, 248, 251, 0.72)),
+        rgba(250, 253, 255, 0.82);
     }
     .graph-shell .graph-stat-value {
       color: var(--graph-fg);
@@ -561,16 +718,26 @@ const introSection = getSection(sections, "how-to-read-the-graph");
       padding: 0.7rem 0.78rem;
       border-radius: var(--graph-radius-md);
       border: 1px solid rgba(33, 65, 95, 0.1);
-      background: rgba(250, 253, 255, 0.84);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(240, 247, 251, 0.8)),
+        rgba(250, 253, 255, 0.84);
       text-align: left;
       cursor: pointer;
-      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.84),
+        0 10px 16px rgba(19, 38, 58, 0.06);
     }
     .graph-shell .graph-neighbor-button:hover,
     .graph-shell .graph-neighbor-button:focus-visible {
       transform: translateY(-1px);
       border-color: rgba(47, 92, 126, 0.24);
-      background: rgba(255, 255, 255, 0.96);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 249, 252, 0.92)),
+        rgba(255, 255, 255, 0.96);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.88),
+        0 14px 20px rgba(19, 38, 58, 0.1);
     }
     .graph-shell .graph-neighbor-button:disabled {
       cursor: not-allowed;
