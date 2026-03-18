@@ -4,7 +4,7 @@ import htm from "htm";
 import {
   alphabet,
   buildSubsetGrid,
-  computeLooDelta,
+  computeRowRemovalStats,
   computeScalingStats,
   computeShapleyStats,
   findSubsetIndex,
@@ -258,32 +258,36 @@ function App() {
   const { min: colMin, max: colMax } = useMemo(() => columnRange(matrix, safeEvalIndex), [matrix, safeEvalIndex]);
 
   const currentValue = matrix[safeSelectedIndex]?.[safeEvalIndex] ?? 0;
-  const ablationSet = selectedSet.filter((token) => token !== focusPrimary);
-  const ablationIndex = focusPrimary ? findSubsetIndex(subsets, ablationSet) : -1;
-  const ablationDelta = useMemo(
+  const ablationStats = useMemo(
     () =>
-      computeLooDelta({
+      computeRowRemovalStats({
         matrix,
+        subsets,
         rowIndex: safeSelectedIndex,
         colIndex: safeEvalIndex,
-        compareRowIndex: ablationIndex,
+        tokensToRemove: focusPrimary ? [focusPrimary] : [],
       }),
-    [matrix, safeSelectedIndex, safeEvalIndex, ablationIndex],
+    [matrix, subsets, safeSelectedIndex, safeEvalIndex, focusPrimary],
   );
+  const ablationSet = ablationStats.compareSet;
+  const ablationIndex = ablationStats.compareRowIndex;
+  const ablationDelta = ablationStats.delta;
 
-  const strikePresent = focusGroup.filter((token) => selectedSet.includes(token));
-  const strikeTerminalSet = selectedSet.filter((token) => !focusGroup.includes(token));
-  const strikeTerminalIndex = findSubsetIndex(subsets, strikeTerminalSet);
-  const strikeDelta = useMemo(
+  const strikeStats = useMemo(
     () =>
-      computeLooDelta({
+      computeRowRemovalStats({
         matrix,
+        subsets,
         rowIndex: safeSelectedIndex,
         colIndex: safeEvalIndex,
-        compareRowIndex: strikeTerminalIndex,
+        tokensToRemove: focusGroup,
       }),
-    [matrix, safeSelectedIndex, safeEvalIndex, strikeTerminalIndex],
+    [matrix, subsets, safeSelectedIndex, safeEvalIndex, focusGroup],
   );
+  const strikePresent = strikeStats.removedTokens;
+  const strikeTerminalSet = strikeStats.compareSet;
+  const strikeTerminalIndex = strikeStats.compareRowIndex;
+  const strikeDelta = strikeStats.delta;
 
   const strikePath = useMemo(() => {
     if (!strikePresent.length) return [safeSelectedIndex];
@@ -599,6 +603,7 @@ function App() {
 
           <div class="graph-legend">
             <span class="graph-legend-item"><span class="graph-legend-swatch selected"></span>Selected train node</span>
+            <span class="graph-legend-item"><span class="graph-legend-swatch eval"></span>Active eval slice</span>
             <span class="graph-legend-item"><span class="graph-legend-swatch highlighted"></span>Current walk</span>
             <span class="graph-legend-item"><span class="graph-legend-swatch neutral"></span>Unselected edit edge</span>
           </div>
@@ -653,7 +658,7 @@ function App() {
                 return html`
                   <g
                     key=${`node-${index}`}
-                    class=${`graph-node ${selected ? "is-selected" : ""} ${highlighted ? "is-highlighted" : ""} ${hovered ? "is-hovered" : ""}`}
+                    class=${`graph-node ${selected ? "is-selected" : ""} ${highlighted ? "is-highlighted" : ""} ${hovered ? "is-hovered" : ""} ${evalMirrored ? "is-eval" : ""}`}
                     transform=${`translate(${node.x}, ${node.y})`}
                     onClick=${() => setSelectedIndex(index)}
                     onKeyDown=${(event) => {

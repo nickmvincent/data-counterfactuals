@@ -282,7 +282,9 @@ if (!introSection) {
     .explorer-shell .header-main,
     .explorer-shell .preset-dock,
     .explorer-shell .control-column,
-    .explorer-shell .workspace-main {
+    .explorer-shell .workspace-main,
+    .explorer-shell .workspace-support-row,
+    .explorer-shell .workspace-control-row {
       display: grid;
       gap: 1rem;
       min-width: 0;
@@ -649,9 +651,19 @@ if (!introSection) {
         0 28px 50px rgba(88, 64, 42, 0.09);
     }
     .explorer-shell .workspace-main {
-      grid-template-columns: minmax(0, 1fr) minmax(20rem, 24rem);
+      grid-template-columns: minmax(0, 1fr);
       align-items: start;
       gap: clamp(1rem, 2vw, 1.35rem);
+    }
+    .explorer-shell .workspace-support-row {
+      grid-template-columns: minmax(0, 1.55fr) minmax(18rem, 0.95fr);
+      align-items: start;
+      gap: clamp(1rem, 2vw, 1.35rem);
+    }
+    .explorer-shell .workspace-control-row {
+      grid-template-columns: minmax(14rem, 0.9fr) minmax(0, 1.25fr);
+      align-items: start;
+      gap: 0.95rem;
     }
     .explorer-shell .control-column {
       align-content: start;
@@ -686,6 +698,19 @@ if (!introSection) {
       display: grid;
       gap: 0.22rem;
       flex: 1 1 30rem;
+      min-width: 0;
+    }
+    .explorer-shell .toolbar-guide-head,
+    .explorer-shell .panel-heading-group {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+    .explorer-shell .toolbar-guide-head > div,
+    .explorer-shell .panel-heading-group > div {
+      display: grid;
+      gap: 0.12rem;
       min-width: 0;
     }
     .explorer-shell .toolbar-guide-copy {
@@ -851,6 +876,16 @@ if (!introSection) {
     .explorer-shell .control-cluster select {
       width: 100%;
     }
+    .explorer-shell .toolbar-select-field,
+    .explorer-shell .grid-jump-field {
+      display: grid;
+      gap: 0.38rem;
+      min-width: 0;
+    }
+    .explorer-shell .toolbar-select-field select,
+    .explorer-shell .grid-jump-field select {
+      width: 100%;
+    }
     .explorer-shell .panel-step {
       width: 2rem;
       height: 2rem;
@@ -952,9 +987,67 @@ if (!introSection) {
         inset 0 1px 0 rgba(255, 255, 255, 0.82),
         0 18px 32px rgba(27, 56, 84, 0.08);
     }
+    .explorer-shell .value-dock-tight {
+      gap: 0.75rem;
+      padding: 1rem 1.02rem;
+    }
+    .explorer-shell .value-dock-tight .panel-copy {
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+    .explorer-shell .value-dock-tight .stage-summary-grid {
+      grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+      gap: 0.65rem;
+    }
+    .explorer-shell .value-dock-tight .stage-summary {
+      gap: 0.35rem;
+      padding: 0.82rem 0.85rem;
+    }
+    .explorer-shell .value-dock-tight .stage-summary-value {
+      font-size: clamp(1.05rem, 1.5vw, 1.35rem);
+    }
+    .explorer-shell .value-dock-tight .stage-summary-note {
+      font-size: 0.76rem;
+      line-height: 1.45;
+    }
     .explorer-shell .current-reading-status {
       display: grid;
       gap: 0.45rem;
+    }
+    .explorer-shell .stage-takeaway,
+    .explorer-shell .compare-readout {
+      display: grid;
+      gap: 0.35rem;
+      padding: 0.82rem 0.88rem;
+      border-radius: var(--explorer-radius-md);
+      border: 1px solid rgba(33, 65, 95, 0.12);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0)),
+        rgba(255, 255, 255, 0.62);
+    }
+    .explorer-shell .stage-takeaway {
+      color: var(--explorer-fg);
+      font-size: 0.83rem;
+      line-height: 1.58;
+    }
+    .explorer-shell .compare-readout-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+    }
+    .explorer-shell .compare-readout-value {
+      color: var(--explorer-fg);
+      font-family: var(--font-ui);
+      font-size: 0.9rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    .explorer-shell .compare-readout-copy {
+      color: var(--explorer-muted);
+      font-size: 0.8rem;
+      line-height: 1.55;
     }
     .explorer-shell .question-dock {
       border-color: rgba(191, 134, 66, 0.16);
@@ -1362,10 +1455,23 @@ if (!introSection) {
     }
     .explorer-shell .grid-toolbar-strip {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
       gap: 0.8rem;
       flex-wrap: wrap;
+    }
+    .explorer-shell .grid-jump-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      align-items: flex-end;
+      justify-content: flex-end;
+      flex: 1 1 22rem;
+      min-width: 0;
+    }
+    .explorer-shell .grid-jump-field {
+      flex: 1 1 11rem;
+      max-width: 16rem;
     }
     .explorer-shell .grid-selection-note {
       color: var(--explorer-fg);
@@ -1408,6 +1514,12 @@ if (!introSection) {
     }
     .explorer-shell .grid-marker-actions {
       justify-content: flex-start;
+    }
+    .explorer-shell .grid-marker-guide {
+      display: grid;
+      gap: 0.3rem;
+      padding-top: 0.15rem;
+      border-top: 1px solid rgba(33, 65, 95, 0.08);
     }
     .explorer-shell .grid-marker-title {
       color: var(--explorer-fg);
@@ -1624,7 +1736,9 @@ if (!introSection) {
     @media (max-width: 1080px) {
       .explorer-page .page-header,
       .explorer-shell .inspector-grid,
-      .explorer-shell .workspace-main {
+      .explorer-shell .workspace-main,
+      .explorer-shell .workspace-support-row,
+      .explorer-shell .workspace-control-row {
         grid-template-columns: 1fr;
       }
       .explorer-signpost-steps,
@@ -1695,6 +1809,14 @@ if (!introSection) {
       .explorer-shell .stage-summary-grid {
         grid-template-columns: 1fr;
       }
+      .explorer-shell .grid-jump-controls {
+        width: 100%;
+        justify-content: stretch;
+      }
+      .explorer-shell .grid-jump-field {
+        flex: 1 1 100%;
+        max-width: none;
+      }
       .explorer-shell .stage-grid {
         max-height: min(60vh, 24rem);
       }
@@ -1721,7 +1843,7 @@ if (!introSection) {
       <div class="explorer-page-signpost-head">
         <span class="explorer-page-signpost-kicker">How to use this page</span>
         <h2 class="explorer-page-signpost-title">Below you'll choose what you're exploring, read the grid itself, check the current reading, and then tune the mode controls.</h2>
-        <p class="explorer-page-signpost-copy">The whole page is organized around one selected train/eval pair. The top controls choose the counterfactual lens, the grid anchors a location in the space, and the sticky right rail keeps the explanation and controls beside that same selection.</p>
+        <p class="explorer-page-signpost-copy">The whole page is organized around one selected train/eval pair. The top controls choose the counterfactual lens, the grid anchors a location in the space, and the row below keeps the explanation and controls tied to that same selection.</p>
       </div>
 
       <div class="explorer-signpost-steps">
@@ -1738,7 +1860,7 @@ if (!introSection) {
         <div class="explorer-signpost-step">
           <span class="explorer-signpost-step-number">3</span>
           <h3 class="explorer-signpost-step-title">Check the current reading</h3>
-          <p class="explorer-signpost-step-copy">The sticky sidebar translates the selected train/eval pair into the headline question and shows the exact statistic the current mode is computing.</p>
+          <p class="explorer-signpost-step-copy">The reading panel below the grid translates the selected train/eval pair into the headline question and shows the exact statistic the current mode is computing.</p>
         </div>
         <div class="explorer-signpost-step">
           <span class="explorer-signpost-step-number">4</span>

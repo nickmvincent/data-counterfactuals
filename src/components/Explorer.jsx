@@ -5,7 +5,8 @@ import {
   alphabet,
   applyGridEdits,
   buildSubsetGrid,
-  computeLooDelta,
+  computeColumnSensitivity,
+  computeRowRemovalStats,
   computeScalingStats,
   computeSemivalueStats,
   createTutorialPresets,
@@ -231,6 +232,11 @@ function createExportStamp() {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
+function formatSigned(value, digits = 4) {
+  if (!Number.isFinite(value)) return `+${(0).toFixed(digits)}`;
+  return `${value >= 0 ? "+" : ""}${value.toFixed(digits)}`;
+}
+
 function clampIndex(index, total) {
   if (!total) return 0;
   if (index < 0) return 0;
@@ -271,6 +277,7 @@ function App() {
   const [switchPulse, setSwitchPulse] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [hoverTarget, setHoverTarget] = useState(null);
+  const [hydrated, setHydrated] = useState(false);
 
   const presetFlashRef = useRef(null);
   const animRef = useRef(null);
@@ -431,17 +438,47 @@ function App() {
   const Srow = subs[safeRowIdx] || [];
   const evalSet = subs[safeColIdx] || [];
   const hasGroup = conceptMode === "group" && groupSet.length > 0;
-  const strikeMinus = hasGroup ? Srow.filter((token) => !groupSet.includes(token)) : [];
-  const strikeMinusIdx = hasGroup ? findIdx(strikeMinus) : -1;
-  const looMinus = Srow.filter((token) => token !== focusPrimary);
-  const looMinusIdx = findIdx(looMinus);
   const selectedValue = displayMatrix[safeRowIdx]?.[safeColIdx] ?? 0;
   const cleanSelectedValue = baseMatrix[safeRowIdx]?.[safeColIdx] ?? 0;
   const operatorSelectedValue = editedMatrix[safeRowIdx]?.[safeColIdx] ?? cleanSelectedValue;
   const attackDelta = operatorSelectedValue - cleanSelectedValue;
-  const compareValueForLoo = looMinusIdx >= 0 ? (baseMatrix[looMinusIdx]?.[safeColIdx] ?? cleanSelectedValue) : cleanSelectedValue;
-  const compareValueForGroup =
-    strikeMinusIdx >= 0 ? (baseMatrix[strikeMinusIdx]?.[safeColIdx] ?? cleanSelectedValue) : cleanSelectedValue;
+
+  const looStats = useMemo(
+    () =>
+      computeRowRemovalStats({
+        matrix: baseMatrix,
+        subsets: subs,
+        rowIndex: safeRowIdx,
+        colIndex: safeColIdx,
+        tokensToRemove: focusPrimary ? [focusPrimary] : [],
+      }),
+    [baseMatrix, subs, safeRowIdx, safeColIdx, focusPrimary],
+  );
+  const groupStats = useMemo(
+    () =>
+      hasGroup
+        ? computeRowRemovalStats({
+            matrix: baseMatrix,
+            subsets: subs,
+            rowIndex: safeRowIdx,
+            colIndex: safeColIdx,
+            tokensToRemove: groupSet,
+          })
+        : {
+            compareSet: [],
+            compareRowIndex: -1,
+            compareValue: cleanSelectedValue,
+            delta: 0,
+            removedTokens: [],
+          },
+    [baseMatrix, subs, safeRowIdx, safeColIdx, hasGroup, groupSet, cleanSelectedValue],
+  );
+  const strikeMinus = groupStats.compareSet;
+  const strikeMinusIdx = groupStats.compareRowIndex;
+  const looMinus = looStats.compareSet;
+  const looMinusIdx = looStats.compareRowIndex;
+  const compareValueForLoo = looStats.compareValue;
+  const compareValueForGroup = groupStats.compareValue;
 
   useEffect(() => {
     setRowIdx((previous) => {
@@ -504,6 +541,10 @@ function App() {
   }, []);
 
   useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
     if (conceptMode !== "poison") {
       setPoisonActive(false);
       setGridView("real");
@@ -528,13 +569,8 @@ function App() {
 
   const looDelta = useMemo(
     () =>
-      computeLooDelta({
-        matrix: baseMatrix,
-        rowIndex: safeRowIdx,
-        colIndex: safeColIdx,
-        compareRowIndex: conceptMode === "group" ? strikeMinusIdx : looMinusIdx,
-      }),
-    [baseMatrix, safeRowIdx, safeColIdx, conceptMode, strikeMinusIdx, looMinusIdx],
+      conceptMode === "group" ? groupStats.delta : looStats.delta,
+    [conceptMode, groupStats.delta, looStats.delta],
   );
 
   const scalingAll = useMemo(
@@ -553,12 +589,11 @@ function App() {
   const unlearningGap = Math.abs(cleanSelectedValue - compareValueForLoo);
   const unlearningPass = unlearningGap <= auditTolerance;
   const dpLocalGap = Math.abs(cleanSelectedValue - compareValueForLoo);
-  const dpColumnSensitivity = looMinusIdx >= 0
-    ? baseMatrix[safeRowIdx].reduce(
-        (maxGap, value, index) => Math.max(maxGap, Math.abs(value - (baseMatrix[looMinusIdx]?.[index] ?? value))),
-        0,
-      )
-    : 0;
+  const dpColumnSensitivity = computeColumnSensitivity({
+    matrix: baseMatrix,
+    rowIndex: safeRowIdx,
+    compareRowIndex: looMinusIdx,
+  });
   const dpRecommendedScale = epsilon > 0 ? dpColumnSensitivity / epsilon : 0;
 
   const attackTokens = groupSet.length ? groupSet : focusPrimary ? [focusPrimary] : [];
@@ -1005,11 +1040,82 @@ function App() {
       : conceptMode === "poison" && groupSet.length
         ? label(groupSet)
         : focusPrimary;
-  const compareChooserDisabled = !["loo", "group", "dp", "unlearning"].includes(conceptMode);
+  const currentTakeaway = (() => {
+    if (conceptMode === "explore") {
+      return `Train ${label(Srow)} on eval ${label(evalSet)} lands at ${selectedValue.toFixed(3)} on the current toy score.`;
+    }
+    if (conceptMode === "loo") {
+      if (!Srow.includes(focusPrimary)) {
+        return `${focusPrimary} is absent from ${label(Srow)}, so removing it changes nothing for this selected row/eval pair.`;
+      }
+      return `On this row and eval slice, removing ${focusPrimary} changes the score by ${formatSigned(looDelta)}.`;
+    }
+    if (conceptMode === "group") {
+      if (!groupSet.length) {
+        return "Pick a coalition first so the explorer can compare the selected row to the row with that group removed.";
+      }
+      if (!groupSet.some((token) => Srow.includes(token))) {
+        return `${label(groupSet)} are not present in ${label(Srow)}, so the group-removal delta is zero here.`;
+      }
+      return `Removing ${label(groupSet)} together changes the selected score by ${formatSigned(looDelta)} on eval ${label(evalSet)}.`;
+    }
+    if (semivalueModes.has(conceptMode)) {
+      return `${questionSummary.answerLabel} for ${focusPrimary} is ${questionSummary.answerValue} on eval ${label(evalSet)}, averaged across ${semivalueStats.cnt} partial-world comparisons.`;
+    }
+    if (conceptMode === "scaling") {
+      return `Across every train world of size ${k}, the average score on eval ${label(evalSet)} is ${scalingBucket.avg.toFixed(4)}.`;
+    }
+    if (conceptMode === "dp") {
+      return `This adjacent-row comparison suggests sensitivity ${dpColumnSensitivity.toFixed(4)} and a toy Laplace scale ${dpRecommendedScale.toFixed(4)} at epsilon ${epsilon.toFixed(1)}.`;
+    }
+    if (conceptMode === "unlearning") {
+      return `The current row ${unlearningPass ? "stays within" : "exceeds"} the toy forget tolerance by an audit gap of ${unlearningGap.toFixed(4)}.`;
+    }
+    return poisonActive
+      ? `With the attack active, the selected score moves by ${formatSigned(attackDelta)} relative to the clean reference.`
+      : "Turn the attack on to compare the selected cell against its corrupted counterpart.";
+  })();
+  const compareChooserDisabled = !["explore", "loo", "group", "dp", "unlearning"].includes(conceptMode);
   const visibleComparePoint = compareChooserDisabled ? null : comparePoint;
   const comparePointLabel = visibleComparePoint
     ? `Train ${label(subs[visibleComparePoint.rowIndex] || [])} / Eval ${label(subs[visibleComparePoint.colIndex] || [])}`
     : "No comparison point chosen yet.";
+  const comparePointValue = visibleComparePoint
+    ? (displayMatrix[visibleComparePoint.rowIndex]?.[visibleComparePoint.colIndex] ?? 0)
+    : null;
+  const comparePointDelta = visibleComparePoint && comparePointValue !== null ? comparePointValue - selectedValue : null;
+  const canonicalComparePoint =
+    conceptMode === "loo" || conceptMode === "dp" || conceptMode === "unlearning"
+      ? looMinusIdx >= 0 && looMinusIdx !== safeRowIdx
+        ? { rowIndex: looMinusIdx, colIndex: safeColIdx }
+        : null
+      : conceptMode === "group"
+        ? strikeMinusIdx >= 0 && strikeMinusIdx !== safeRowIdx
+          ? { rowIndex: strikeMinusIdx, colIndex: safeColIdx }
+          : null
+        : null;
+  const canonicalCompareLabel = canonicalComparePoint
+    ? `Train ${label(subs[canonicalComparePoint.rowIndex] || [])} / Eval ${label(subs[canonicalComparePoint.colIndex] || [])}`
+    : null;
+  const comparePointMatchesCanonical = Boolean(
+    visibleComparePoint &&
+      canonicalComparePoint &&
+      visibleComparePoint.rowIndex === canonicalComparePoint.rowIndex &&
+      visibleComparePoint.colIndex === canonicalComparePoint.colIndex,
+  );
+  const comparePointKeepsEvalFixed = Boolean(
+    visibleComparePoint &&
+      canonicalComparePoint &&
+      visibleComparePoint.colIndex === canonicalComparePoint.colIndex,
+  );
+  const jumpTrainOptions = useMemo(
+    () => subs.map((subset, index) => ({ index, label: label(subset) })),
+    [subs],
+  );
+  const jumpEvalOptions = useMemo(
+    () => visibleColIndices.map((colIndex) => ({ index: colIndex, label: label(subs[colIndex] || []) })),
+    [visibleColIndices, subs],
+  );
 
   useEffect(() => {
     if (compareChooserDisabled && selectionArmed === "compare") {
@@ -1017,12 +1123,151 @@ function App() {
     }
   }, [compareChooserDisabled, selectionArmed]);
 
+  const compareMarkerGuide = useMemo(() => {
+    if (conceptMode === "explore") {
+      return {
+        summary: "Meaningful here: yes. In Explore mode a comparison marker is a true second cell for side-by-side reading.",
+        rule: "Any second cell makes sense because you are contrasting two train/eval world pairs directly.",
+        prompt: "Click any second cell to mark a manual comparison.",
+        selectedNote: visibleComparePoint && comparePointValue !== null && comparePointDelta !== null
+          ? `${comparePointLabel} scores ${comparePointValue.toFixed(4)}, which is ${formatSigned(comparePointDelta)} relative to the selected cell.`
+          : "No comparison cell marked yet.",
+        canUseCanonical: false,
+      };
+    }
+
+    if (conceptMode === "loo") {
+      return {
+        summary: "Meaningful here: yes. Leave-one-out already has a built-in comparison neighbor, but a manual comparison marker can still help you inspect nearby alternatives.",
+        rule: canonicalCompareLabel
+          ? `Most meaningful cells keep eval ${label(evalSet)} fixed. The canonical leave-one-out cell is ${canonicalCompareLabel}.`
+          : `${focusPrimary} is not in ${label(Srow)}, so there is no distinct leave-one-out comparison cell right now.`,
+        prompt: canonicalCompareLabel
+          ? `Click a cell to mark a manual comparison, or jump straight to ${canonicalCompareLabel}.`
+          : "Click a cell to mark a manual comparison.",
+        selectedNote: visibleComparePoint
+          ? comparePointMatchesCanonical
+            ? "Your marked cell matches the built-in leave-one-out comparison exactly."
+            : comparePointKeepsEvalFixed
+              ? "Your marked cell keeps the eval slice fixed, so it is still a sensible row comparison, but it is not the exact leave-one-out neighbor."
+              : "Your marked cell changes the eval slice, so it will not match the built-in leave-one-out statistic."
+          : "No comparison cell marked yet.",
+        canUseCanonical: Boolean(canonicalComparePoint),
+      };
+    }
+
+    if (conceptMode === "group") {
+      return {
+        summary: "Meaningful here: yes. Group leave-one-out also has one canonical comparison row, with the chosen coalition removed as a block.",
+        rule: canonicalCompareLabel
+          ? `Most meaningful cells keep eval ${label(evalSet)} fixed. The canonical group-removal cell is ${canonicalCompareLabel}.`
+          : groupSet.length
+            ? `None of ${label(groupSet)} are present in ${label(Srow)}, so there is no distinct group-removal comparison cell right now.`
+            : "Choose a coalition first to create a canonical comparison cell.",
+        prompt: canonicalCompareLabel
+          ? `Click a cell to mark a manual comparison, or jump straight to ${canonicalCompareLabel}.`
+          : "Click a cell to mark a manual comparison.",
+        selectedNote: visibleComparePoint
+          ? comparePointMatchesCanonical
+            ? "Your marked cell matches the built-in group-removal comparison exactly."
+            : comparePointKeepsEvalFixed
+              ? "Your marked cell keeps the eval slice fixed, so it is still a sensible row comparison, but it is not the exact coalition-removal cell."
+              : "Your marked cell changes the eval slice, so it will not match the built-in group-removal statistic."
+          : "No comparison cell marked yet.",
+        canUseCanonical: Boolean(canonicalComparePoint),
+      };
+    }
+
+    if (conceptMode === "dp") {
+      return {
+        summary: "Meaningful here: yes. DP mode still starts from one adjacent-row comparison, then turns that row pair into a sensitivity story.",
+        rule: canonicalCompareLabel
+          ? `Most meaningful cells keep eval ${label(evalSet)} fixed. The adjacent-row anchor cell is ${canonicalCompareLabel}.`
+          : `${focusPrimary} is not in ${label(Srow)}, so there is no distinct adjacent-row comparison cell right now.`,
+        prompt: canonicalCompareLabel
+          ? `Click a cell to mark a manual comparison, or jump straight to ${canonicalCompareLabel}.`
+          : "Click a cell to mark a manual comparison.",
+        selectedNote: visibleComparePoint
+          ? comparePointMatchesCanonical
+            ? "Your marked cell matches the current adjacent-row anchor exactly."
+            : comparePointKeepsEvalFixed
+              ? "Your marked cell keeps the eval slice fixed, so it is still a sensible privacy-side comparison, but it is not the exact adjacent-row anchor."
+              : "Your marked cell changes the eval slice, so it will not match the cell-level adjacent-row anchor used in the DP readout."
+          : "No comparison cell marked yet.",
+        canUseCanonical: Boolean(canonicalComparePoint),
+      };
+    }
+
+    if (conceptMode === "unlearning") {
+      return {
+        summary: "Meaningful here: yes. Unlearning compares the current row to the exact retrain world without the forget point.",
+        rule: canonicalCompareLabel
+          ? `Most meaningful cells keep eval ${label(evalSet)} fixed. The exact retrain reference cell is ${canonicalCompareLabel}.`
+          : `${focusPrimary} is not in ${label(Srow)}, so there is no distinct exact-retrain comparison cell right now.`,
+        prompt: canonicalCompareLabel
+          ? `Click a cell to mark a manual comparison, or jump straight to ${canonicalCompareLabel}.`
+          : "Click a cell to mark a manual comparison.",
+        selectedNote: visibleComparePoint
+          ? comparePointMatchesCanonical
+            ? "Your marked cell matches the exact retrain reference used by the current unlearning readout."
+            : comparePointKeepsEvalFixed
+              ? "Your marked cell keeps the eval slice fixed, so it is still a sensible row comparison, but it is not the exact retrain reference."
+              : "Your marked cell changes the eval slice, so it will not match the exact retrain reference used by the current unlearning readout."
+          : "No comparison cell marked yet.",
+        canUseCanonical: Boolean(canonicalComparePoint),
+      };
+    }
+
+    if (semivalueModes.has(conceptMode)) {
+      return {
+        summary: "Meaningful here: not as a primary control. This mode averages many highlighted row pairs, so one extra marked cell does not drive the answer.",
+        rule: "Use the highlighted rows and the inspector table to understand the real comparison set here.",
+        prompt: `${questionMeta[conceptMode]} does not use a single comparison cell.`,
+        selectedNote: `${questionMeta[conceptMode]} uses the whole active evaluation column.`,
+        canUseCanonical: false,
+      };
+    }
+
+    if (conceptMode === "scaling") {
+      return {
+        summary: "Meaningful here: not as a primary control. Scaling averages a whole layer of rows at once.",
+        rule: "A single comparison cell is secondary to the highlighted bucket and the current scaling curve.",
+        prompt: "Scaling mode does not use a single comparison cell.",
+        selectedNote: `Scaling reads every row with |S| = ${k} on the active evaluation slice.`,
+        canUseCanonical: false,
+      };
+    }
+
+    return {
+      summary: "Meaningful here: not much. Poison mode already compares the clean and attacked versions of the selected cell for you.",
+      rule: "If you want a freeform second cell, switch to Explore or one of the local row-comparison modes.",
+      prompt: "Poison mode does not use a separate comparison cell.",
+      selectedNote: "The main comparison in Poison mode is clean versus attacked for the same selected cell.",
+      canUseCanonical: false,
+    };
+  }, [
+    conceptMode,
+    visibleComparePoint,
+    comparePointValue,
+    comparePointDelta,
+    comparePointLabel,
+    comparePointMatchesCanonical,
+    comparePointKeepsEvalFixed,
+    canonicalComparePoint,
+    canonicalCompareLabel,
+    evalSet,
+    focusPrimary,
+    Srow,
+    groupSet,
+    k,
+  ]);
+
   const markerPanelMessage = useMemo(() => {
     if (selectionArmed === "target") {
-      return "Click a cell to mark the data point we are going to value.";
+      return "Click a cell to move the target cell that the rest of the page is currently reading.";
     }
     if (selectionArmed === "compare") {
-      return "Click a cell to mark the point of comparison.";
+      return compareMarkerGuide.prompt;
     }
     if (semivalueModes.has(conceptMode)) {
       return `${questionMeta[conceptMode]} uses the entire active evaluation column.`;
@@ -1043,10 +1288,10 @@ function App() {
       return "Unlearning mode compares the current row to the exact retrain world without the requested point.";
     }
     if (visibleComparePoint) {
-      return `Comparison point marked at ${comparePointLabel}`;
+      return `Marked comparison cell: ${comparePointLabel}`;
     }
-    return "The teal squiggle marks the current target cell. In local comparison modes, you can add an ochre comparison point too.";
-  }, [selectionArmed, conceptMode, k, groupSet, focusPrimary, visibleComparePoint, comparePointLabel]);
+    return "The teal squiggle marks the current target cell. In the supported local modes, you can also mark an ochre comparison cell.";
+  }, [selectionArmed, conceptMode, k, groupSet, focusPrimary, visibleComparePoint, comparePointLabel, compareMarkerGuide.prompt]);
 
   const settingsView = useMemo(
     () => ({
@@ -1362,9 +1607,12 @@ function App() {
   const modeControlsBlock = html`
     <section class=${`stage-panel question-dock ${computedFlash ? "computed-flash" : ""}`} data-testid="question-controls">
       <div class="panel-head">
-        <div>
-          <span class="summary-kicker">Mode controls</span>
-          <h3 class="panel-title">${questionMeta[conceptMode]}</h3>
+        <div class="panel-heading-group">
+          <span class="panel-step">4</span>
+          <div>
+            <span class="summary-kicker">Mode controls</span>
+            <h3 class="panel-title">${questionMeta[conceptMode]}</h3>
+          </div>
         </div>
       </div>
       <p class="panel-copy">${modeCopy}</p>
@@ -1488,13 +1736,66 @@ function App() {
     </section>
   `;
 
+  const currentReadingBlock = html`
+    <section class="stage-panel value-dock value-dock-tight" data-testid="value-dock">
+      <div class="panel-head">
+        <div class="panel-heading-group">
+          <span class="panel-step">3</span>
+          <div>
+            <span class="summary-kicker">Current reading</span>
+            <h3 class="panel-title">${questionSummary.title}</h3>
+          </div>
+        </div>
+        <span class="pill">${questionSummary.answerLabel}: ${questionSummary.answerValue}</span>
+      </div>
+      <p class="panel-copy">${questionSummary.question}</p>
+      <div class="current-reading-status">
+        <div class="toolbar-label">Selected state</div>
+        <div class="summary-inline toolbar-pills">
+          ${sidebarStatusChips.map((chip) => html`<span class="pill">${chip}</span>`)}
+        </div>
+      </div>
+      <div class="stage-takeaway" data-testid="reading-takeaway">${currentTakeaway}</div>
+      ${visibleComparePoint && comparePointValue !== null && comparePointDelta !== null
+        ? html`
+            <div class="compare-readout">
+              <div class="compare-readout-head">
+                <span class="stage-summary-label">Marked comparison</span>
+                <span class="pill">${formatSigned(comparePointDelta)}</span>
+              </div>
+              <div class="compare-readout-value">${comparePointLabel}</div>
+              <div class="compare-readout-copy">
+                Score ${comparePointValue.toFixed(4)}. ${compareMarkerGuide.selectedNote}
+              </div>
+            </div>
+          `
+        : null}
+      <div class="stage-summary-grid">
+        ${stageReadouts.map(
+          (entry) => html`
+            <div key=${entry.key} class=${`stage-summary ${entry.tone}`}>
+              <div class="stage-summary-label">${entry.label}</div>
+              <div class="stage-summary-value">${entry.value}</div>
+              <div class="stage-summary-note">${entry.note}</div>
+            </div>
+          `,
+        )}
+      </div>
+    </section>
+  `;
+
   return html`
-    <div class="workspace-shell">
+    <div class="workspace-shell" data-testid="explorer-workspace" data-ready=${hydrated ? "true" : "false"}>
       <section class="workspace-toolbar" data-testid="explorer-toolbar">
         <div class="toolbar-bar">
           <div class="toolbar-guide">
-            <span class="summary-kicker">Concept mode</span>
-            <p class="toolbar-guide-copy">${modeCopy}</p>
+            <div class="toolbar-guide-head">
+              <span class="panel-step">1</span>
+              <div>
+                <span class="summary-kicker">Choose what you're exploring</span>
+                <p class="toolbar-guide-copy">${modeCopy}</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1548,17 +1849,10 @@ function App() {
                 checked=${showSingletonEvalCols}
                 onChange=${(event) => setShowSingletonEvalCols(event.target.checked)}
               />
-              <label for="show-singleton-eval-cols">Show fewer eval cols (just single points)</label>
+              <label for="show-singleton-eval-cols">Show fewer eval cols</label>
               ${InfoTip(
                 "For pointwise-additive metrics, a larger eval slice can be reconstructed from per-point scores, so singleton columns are enough. This toggle hides multi-point eval subsets to declutter the view; some toy metrics here are not literally pointwise additive, so the full matrix is still computed underneath.",
               )}
-            </div>
-            <select value=${paletteName} onChange=${(event) => setPaletteName(event.target.value)}>
-              ${Object.keys(palettes).map((name) => html`<option value=${name}>${name}</option>`)}
-            </select>
-            <div class="export-actions">
-              <button class="btn mini" onClick=${exportJson}>Export JSON</button>
-              <button class="btn ghost mini" onClick=${exportCsv}>Export CSV</button>
             </div>
             <div class="toolbar-note">
               ${conceptMode === "poison"
@@ -1566,40 +1860,70 @@ function App() {
                 : `Turn raw values on when you want to inspect the exact toy scores instead of just the color field. ${evalColumnSummary}`}
             </div>
             <details class="guide-details toolbar-drawer">
+              <summary>Advanced display and export</summary>
+              <div class="toolbar-expanded">
+                <label class="toolbar-select-field">
+                  <span class="toolbar-label">Palette</span>
+                  <select value=${paletteName} onChange=${(event) => setPaletteName(event.target.value)}>
+                    ${Object.keys(palettes).map((name) => html`<option value=${name}>${name}</option>`)}
+                  </select>
+                </label>
+                <div class="export-actions">
+                  <button class="btn mini" onClick=${exportJson}>Export JSON</button>
+                  <button class="btn ghost mini" onClick=${exportCsv}>Export CSV</button>
+                </div>
+              </div>
+            </details>
+            <details class="guide-details toolbar-drawer">
               <summary>Inspect live settings</summary>
               <div class="ctrl-note">This is the same state currently driving the figure below.</div>
               <pre class="json-block">${settingsJson}</pre>
             </details>
           </section>
 
-          <section class=${`toolbar-group toolbar-expand ${presetFlash ? "preset-flash" : ""}`} data-testid="scene-controls">
-            <div class="toolbar-label">Example scenes</div>
-            <div class="tutorials">
-              ${visibleTutorials.map(
-                (tutorial) => html`
-                  <button
-                    key=${tutorial.id}
-                    class=${`tutorial-btn ${tutorialKind === tutorial.id ? "active" : ""}`}
-                    onClick=${() => runTutorial(tutorial.id)}
-                  >
-                    <span class="tutorial-title">${tutorial.title}</span>
-                    <span class="tutorial-desc">${tutorial.summary}</span>
-                  </button>
-                `,
-              )}
+          <details class=${`toolbar-group toolbar-expand ${presetFlash ? "preset-flash" : ""}`} data-testid="scene-controls">
+            <summary class="toolbar-summary">
+              <div class="toolbar-summary-copy">
+                <span class="toolbar-summary-label">Example scenes</span>
+                <span class="toolbar-summary-title">
+                  ${activeTutorial?.mode === conceptMode
+                    ? activeTutorial.title
+                    : `${visibleTutorials.length} scenes for ${questionMeta[conceptMode]}`}
+                </span>
+              </div>
+              <div class="toolbar-summary-actions">
+                <span class="pill">${visibleTutorials.length} presets</span>
+                <span class="toolbar-summary-caret"></span>
+              </div>
+            </summary>
+            <div class="toolbar-expanded">
+              <div class="tutorials">
+                ${visibleTutorials.map(
+                  (tutorial) => html`
+                    <button
+                      key=${tutorial.id}
+                      class=${`tutorial-btn ${tutorialKind === tutorial.id ? "active" : ""}`}
+                      onClick=${() => runTutorial(tutorial.id)}
+                    >
+                      <span class="tutorial-title">${tutorial.title}</span>
+                      <span class="tutorial-desc">${tutorial.summary}</span>
+                    </button>
+                  `,
+                )}
+              </div>
+              <div class="tutorial-note">
+                ${tutorialInfo && activeTutorial?.mode === conceptMode
+                  ? html`
+                      <div>
+                        <div><b>Goal</b>: ${tutorialInfo.goal}</div>
+                        <div><b>Action</b>: ${tutorialInfo.how}</div>
+                        <div><b>Why it matters</b>: ${tutorialInfo.concept}</div>
+                      </div>
+                    `
+                  : `Scenes for ${questionMeta[conceptMode]} preload a useful train/eval pair and the mode-specific controls.`}
+              </div>
             </div>
-            <div class="tutorial-note">
-              ${tutorialInfo && activeTutorial?.mode === conceptMode
-                ? html`
-                    <div>
-                      <div><b>Goal</b>: ${tutorialInfo.goal}</div>
-                      <div><b>Action</b>: ${tutorialInfo.how}</div>
-                      <div><b>Why it matters</b>: ${tutorialInfo.concept}</div>
-                    </div>
-                  `
-                : `Scenes for ${questionMeta[conceptMode]} preload a useful train/eval pair and the mode-specific controls.`}
-            </div>
-          </section>
+          </details>
 
           ${conceptMode === "poison"
             ? html`
@@ -1622,15 +1946,32 @@ function App() {
       <div class="workspace-main">
         <section class="grid-card grid-card-outer" data-testid="explorer-grid-card">
           <div class="grid-card-head">
-            <div>
-              <span class="summary-kicker">Counterfactual grid</span>
-              <h2 class="grid-card-title">Rows are worlds; columns are slices.</h2>
-              <p class="grid-card-copy">Click a row label, column label, or cell to anchor one train/eval pairing. The sticky sidebar keeps the current reading and mode controls attached to that same location.</p>
+            <div class="panel-heading-group">
+              <span class="panel-step">2</span>
+              <div>
+                <span class="summary-kicker">Counterfactual grid</span>
+                <h2 class="grid-card-title">Rows are worlds; columns are slices.</h2>
+                <p class="grid-card-copy">Click a row label, column label, or cell to anchor one train/eval pairing. The reading and controls below stay locked to that same selection.</p>
+              </div>
             </div>
           </div>
 
           <div class="grid-toolbar-strip">
             <div class="grid-selection-note" title=${gridSelectionHint}>${gridSelectionHint}</div>
+            <div class="grid-jump-controls" data-testid="grid-jump-controls">
+              <label class="grid-jump-field">
+                <span class="toolbar-label">Jump to train</span>
+                <select data-testid="grid-train-select" value=${safeRowIdx} onChange=${(event) => setRowIdx(Number(event.target.value))}>
+                  ${jumpTrainOptions.map((option) => html`<option value=${option.index}>${option.label}</option>`)}
+                </select>
+              </label>
+              <label class="grid-jump-field">
+                <span class="toolbar-label">Jump to eval</span>
+                <select data-testid="grid-eval-select" value=${safeColIdx} onChange=${(event) => setColIdx(Number(event.target.value))}>
+                  ${jumpEvalOptions.map((option) => html`<option value=${option.index}>${option.label}</option>`)}
+                </select>
+              </label>
+            </div>
           </div>
 
           <div class="grid-wrap stage-grid" ref=${gridWrapRef} data-testid="explorer-grid">
@@ -1805,16 +2146,20 @@ function App() {
             })}
           </div>
 
-          <div class="grid-marker-panel" data-testid="grid-marker-controls">
-            <div class="grid-marker-head">
-              <div>
-                <span class="summary-kicker">Grid markers</span>
-                <div class="grid-marker-title">Mark the cells you want to talk about.</div>
+        </section>
+
+        <div class="workspace-support-row" data-testid="grid-side-rail">
+          <div class="workspace-control-row">
+            <div class="grid-marker-panel" data-testid="grid-marker-controls">
+              <div class="grid-marker-head">
+                <div>
+                  <span class="summary-kicker">Grid markers</span>
+                  <div class="grid-marker-title">Mark the cells you want to talk about.</div>
+                </div>
               </div>
-            </div>
             <div class="grid-marker-actions">
               <button class="btn mini" aria-pressed=${selectionArmed === "target"} onClick=${() => setSelectionArmed("target")}>
-                Choose the data point we're going to value
+                Choose target cell
               </button>
               <button
                 class="btn mini"
@@ -1822,44 +2167,30 @@ function App() {
                 disabled=${compareChooserDisabled}
                 onClick=${() => setSelectionArmed("compare")}
               >
-                Choose point to compare
+                Mark comparison cell
               </button>
+              ${compareMarkerGuide.canUseCanonical
+                ? html`
+                    <button class="btn ghost mini" onClick=${() => canonicalComparePoint && setComparePoint(canonicalComparePoint)}>
+                      Use built-in comparison
+                    </button>
+                  `
+                : null}
             </div>
             <div class="toolbar-note">${markerPanelMessage}</div>
+            <div class="grid-marker-guide">
+              <div class="toolbar-label">Comparison marker</div>
+              <div class="toolbar-note">${compareMarkerGuide.summary}</div>
+              <div class="toolbar-note">${compareMarkerGuide.rule}</div>
+              <div class="toolbar-note">${compareMarkerGuide.selectedNote}</div>
+            </div>
           </div>
-        </section>
-
-        <aside class="control-column" data-testid="grid-side-rail">
-          <section class="stage-panel value-dock" data-testid="value-dock">
-            <div class="panel-head">
-              <div>
-                <span class="summary-kicker">Current reading</span>
-                <h3 class="panel-title">${questionSummary.title}</h3>
-              </div>
-              <span class="pill">${questionSummary.answerLabel}: ${questionSummary.answerValue}</span>
-            </div>
-            <p class="panel-copy">${questionSummary.question}</p>
-            <div class="current-reading-status">
-              <div class="toolbar-label">Selected state</div>
-              <div class="summary-inline toolbar-pills">
-                ${sidebarStatusChips.map((chip) => html`<span class="pill">${chip}</span>`)}
-              </div>
-            </div>
-            <div class="stage-summary-grid">
-              ${stageReadouts.map(
-                (entry) => html`
-                  <div key=${entry.key} class=${`stage-summary ${entry.tone}`}>
-                    <div class="stage-summary-label">${entry.label}</div>
-                    <div class="stage-summary-value">${entry.value}</div>
-                    <div class="stage-summary-note">${entry.note}</div>
-                  </div>
-                `,
-              )}
-            </div>
-          </section>
 
           ${modeControlsBlock}
-        </aside>
+          </div>
+
+          ${currentReadingBlock}
+        </div>
       </div>
 
       ${showInspector ? analysisDetailBlock : null}

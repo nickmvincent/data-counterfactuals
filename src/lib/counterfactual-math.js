@@ -403,6 +403,41 @@ export function computeLooDelta({ matrix, rowIndex, colIndex, compareRowIndex })
   return baseValue - compareValue;
 }
 
+export function computeRowRemovalStats({
+  matrix,
+  subsets,
+  rowIndex,
+  colIndex,
+  tokensToRemove = [],
+}) {
+  const selectedSet = subsets[rowIndex] || [];
+  const removedTokens = tokensToRemove.filter((token) => selectedSet.includes(token));
+  const compareSet = selectedSet.filter((token) => !removedTokens.includes(token));
+  const compareRowIndex = findSubsetIndex(subsets, compareSet);
+  const baseValue = matrix[rowIndex]?.[colIndex] ?? 0;
+  const compareValue = compareRowIndex >= 0 ? (matrix[compareRowIndex]?.[colIndex] ?? baseValue) : baseValue;
+
+  return {
+    selectedSet,
+    compareSet,
+    compareRowIndex,
+    baseValue,
+    compareValue,
+    delta: computeLooDelta({ matrix, rowIndex, colIndex, compareRowIndex }),
+    removedTokens,
+  };
+}
+
+export function computeColumnSensitivity({ matrix, rowIndex, compareRowIndex }) {
+  const row = matrix[rowIndex] || [];
+  if (compareRowIndex < 0) return 0;
+
+  return row.reduce(
+    (maxGap, value, index) => Math.max(maxGap, Math.abs(value - (matrix[compareRowIndex]?.[index] ?? value))),
+    0,
+  );
+}
+
 export function computeScalingStats({ matrix, subsets, maxSize, evalColumnIndex }) {
   const rows = [];
   for (let subsetSize = 0; subsetSize <= maxSize; subsetSize += 1) {

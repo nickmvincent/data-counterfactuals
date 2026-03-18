@@ -106,7 +106,16 @@ This is still a data counterfactual, but the comparison is averaged across many 
 
 What makes Shapley-style valuation distinctive, though, is not only that it aggregates many marginal comparisons. It also turns those comparisons into a value assignment under a specific weighting rule and an axiomatic picture of what a fair contribution accounting should look like. So the family resemblance lies in the underlying counterfactual worlds; the Shapley move is the particular way those worlds are weighted and interpreted.
 
-Other semivalues such as Banzhaf value or Beta Shapley keep the same coalitional counterfactual worlds while changing the weighting rule over subset sizes or permutations. That is why this section is better read as an aggregation family than as one single equation.
+Other semivalues keep the same coalitional counterfactual worlds while changing the weighting rule. For the normalized Banzhaf value, every coalition $S \subseteq D \setminus \{i\}$ gets equal weight:
+
+$$
+B_i
+= \frac{1}{2^{n-1}}
+\sum_{S \subseteq D \setminus \{i\}}
+\Bigl(U(A(S \cup \{i\}), E) - U(A(S), E)\Bigr)
+$$
+
+An intuitive way to read this is: hold the evaluation target fixed, look at every possible "background training world" that does not yet contain point $i$, add $i$, and ask how much the score moves. Banzhaf says to average those swings uniformly across worlds. In grid language, it is the simple average of all the before-and-after row pairs for $i$ on the chosen evaluation slice. Shapley instead redistributes weight so that coalition size matters in a more structured way, and Beta Shapley keeps the same marginal comparisons while deliberately tilting weight toward smaller or larger coalitions. That is why this section is better read as an aggregation family than as one single equation.
 
 ## 3. Coresets, subset selection, and pruning
 

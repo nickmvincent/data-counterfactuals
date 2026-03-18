@@ -510,6 +510,11 @@ const introSection = getSection(sections, "how-to-read-the-graph");
     .graph-shell .graph-legend-swatch.selected {
       background: rgba(47, 92, 126, 0.9);
     }
+    .graph-shell .graph-legend-swatch.eval {
+      background: rgba(255, 248, 239, 0.95);
+      border-color: rgba(47, 92, 126, 0.42);
+      box-shadow: 0 0 0 2px rgba(47, 92, 126, 0.16) inset;
+    }
     .graph-shell .graph-legend-swatch.highlighted {
       background: rgba(201, 145, 60, 0.9);
     }
@@ -634,6 +639,15 @@ const introSection = getSection(sections, "how-to-read-the-graph");
       opacity: 1;
       stroke: rgba(201, 145, 60, 0.56);
     }
+    .graph-shell .graph-node.is-eval .graph-node-halo {
+      opacity: 1;
+      stroke: rgba(47, 92, 126, 0.48);
+      stroke-dasharray: 4 3;
+    }
+    .graph-shell .graph-node.is-eval .graph-node-plate {
+      stroke: rgba(47, 92, 126, 0.62);
+      stroke-width: 2;
+    }
     .graph-shell .graph-node.is-highlighted .graph-node-plate {
       stroke: rgba(201, 145, 60, 0.72);
       stroke-width: 2;
@@ -651,7 +665,7 @@ const introSection = getSection(sections, "how-to-read-the-graph");
     .graph-shell .graph-node-eval {
       fill: #fff8ef;
       stroke: rgba(16, 39, 61, 0.48);
-      stroke-width: 1.2;
+      stroke-width: 1.6;
     }
     .graph-shell .graph-formula {
       padding: 0.78rem 0.9rem;

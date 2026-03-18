@@ -4,7 +4,9 @@ import assert from "node:assert/strict";
 import {
   applyGridEdits,
   buildSubsetGrid,
+  computeColumnSensitivity,
   computeLooDelta,
+  computeRowRemovalStats,
   computeScalingStats,
   computeSemivalueStats,
   computeShapleyStats,
@@ -30,6 +32,41 @@ test("leave-one-out matches the direct row difference", () => {
   assert.equal(delta, matrix[rowIndex][colIndex] - matrix[compareRowIndex][colIndex]);
 });
 
+test("row-removal stats centralize the compare-row bookkeeping for single and grouped deletions", () => {
+  const items = ["A", "B", "C", "D"];
+  const { matrix, subsets } = buildSubsetGrid(items, "jaccard");
+  const rowIndex = findSubsetIndex(subsets, ["A", "B", "C"]);
+  const colIndex = findSubsetIndex(subsets, ["A", "B", "C", "D"]);
+
+  const single = computeRowRemovalStats({
+    matrix,
+    subsets,
+    rowIndex,
+    colIndex,
+    tokensToRemove: ["B"],
+  });
+  const grouped = computeRowRemovalStats({
+    matrix,
+    subsets,
+    rowIndex,
+    colIndex,
+    tokensToRemove: ["A", "C"],
+  });
+
+  assert.deepEqual(single.compareSet, ["A", "C"]);
+  assert.equal(single.compareRowIndex, findSubsetIndex(subsets, ["A", "C"]));
+  assert.equal(single.delta, computeLooDelta({
+    matrix,
+    rowIndex,
+    colIndex,
+    compareRowIndex: single.compareRowIndex,
+  }));
+
+  assert.deepEqual(grouped.compareSet, ["B"]);
+  assert.equal(grouped.compareRowIndex, findSubsetIndex(subsets, ["B"]));
+  assert.deepEqual(grouped.removedTokens, ["A", "C"]);
+});
+
 test("Shapley weights sum to 1 and recover the known empty-eval example", () => {
   const items = ["A", "B", "C", "D"];
   const { matrix, subsets } = buildSubsetGrid(items, "jaccard");
@@ -44,6 +81,30 @@ test("Shapley weights sum to 1 and recover the known empty-eval example", () => 
   assert.equal(stats.cnt, 8);
   assert.equal(stats.totalWeight, 1);
   assert.equal(stats.phi, -0.25);
+});
+
+test("Shapley wrapper and semivalue shapley mode stay identical", () => {
+  const items = ["A", "B", "C", "D"];
+  const { matrix, subsets } = buildSubsetGrid(items, "jaccard");
+  const evalColumnIndex = findSubsetIndex(subsets, ["A", "B", "C"]);
+
+  const wrapped = computeShapleyStats({
+    matrix,
+    subsets,
+    focusItem: "B",
+    evalColumnIndex,
+    playerCount: items.length,
+  });
+  const direct = computeSemivalueStats({
+    matrix,
+    subsets,
+    focusItem: "B",
+    evalColumnIndex,
+    playerCount: items.length,
+    mode: "shapley",
+  });
+
+  assert.deepEqual(wrapped, direct);
 });
 
 test("Banzhaf and Beta-Shapley reuse the same pair universe but different weights", () => {
@@ -115,6 +176,24 @@ test("scaling stats preserve one row for the empty subset and combinatorial coun
   });
 
   assert.deepEqual(scaling.map((row) => row.n), [1, 3, 3, 1]);
+});
+
+test("column sensitivity takes the max gap across the comparison row pair", () => {
+  const items = ["A", "B", "C"];
+  const { matrix, subsets } = buildSubsetGrid(items, "entropy");
+  const rowIndex = findSubsetIndex(subsets, ["A", "B", "C"]);
+  const compareRowIndex = findSubsetIndex(subsets, ["A", "C"]);
+
+  const sensitivity = computeColumnSensitivity({
+    matrix,
+    rowIndex,
+    compareRowIndex,
+  });
+  const expected = Math.max(
+    ...matrix[rowIndex].map((value, index) => Math.abs(value - matrix[compareRowIndex][index])),
+  );
+
+  assert.equal(sensitivity, expected);
 });
 
 test("real-data metric stays bounded and rewards fuller training coverage on the toy dataset", () => {

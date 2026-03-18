@@ -1,0 +1,437 @@
+---
+import Layout from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import ApiExplorerComponent from "../components/ApiExplorer.jsx";
+import { getRequiredPageEntry, splitMarkdownSections } from "../lib/page-content";
+
+const page = await getRequiredPageEntry("api-explorer");
+const sections = splitMarkdownSections(page.body);
+const introSection = sections[0];
+---
+
+<Layout title={page.data.title} description={page.data.description}>
+  <style is:global>
+    body:has(.api-page) {
+      background:
+        radial-gradient(circle at top left, rgba(36, 92, 112, 0.16), transparent 30%),
+        radial-gradient(circle at top right, rgba(177, 119, 51, 0.14), transparent 24%),
+        linear-gradient(180deg, #fbf7ef 0%, #f3ebdf 46%, #ebdfcf 100%);
+    }
+    .api-page {
+      display: grid;
+      gap: 1rem;
+    }
+    .api-page .page-header {
+      margin-bottom: 0;
+      display: grid;
+      grid-template-columns: minmax(20rem, 25rem) minmax(0, 1fr);
+      gap: 1.25rem;
+      align-items: start;
+    }
+    .api-read-note {
+      display: grid;
+      gap: 0.35rem;
+      padding: 0.98rem 1.1rem;
+      border-radius: 16px;
+      border: 1px solid rgba(62, 84, 94, 0.14);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0)),
+        rgba(243, 248, 251, 0.88);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.82),
+        0 16px 32px rgba(70, 54, 42, 0.06);
+    }
+    .api-read-note-label,
+    .api-signpost-kicker,
+    .api-shell .api-kicker,
+    .api-shell .api-panel-kicker,
+    .api-shell .api-summary-label {
+      color: #24566e;
+      font-family: var(--font-ui);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .api-read-note :where(p) {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .api-signpost {
+      display: grid;
+      gap: 0.95rem;
+      padding: 1.05rem 1.15rem;
+      border-radius: 18px;
+      border: 1px solid rgba(62, 84, 94, 0.14);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0)),
+        linear-gradient(135deg, rgba(36, 92, 112, 0.08), rgba(177, 119, 51, 0.08));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.82),
+        0 16px 32px rgba(70, 54, 42, 0.05);
+    }
+    .api-signpost-head {
+      display: grid;
+      gap: 0.35rem;
+    }
+    .api-signpost-title {
+      margin: 0;
+      color: #10273d;
+      font-family: var(--font-ui);
+      font-size: clamp(1.08rem, 2vw, 1.4rem);
+      font-weight: 650;
+      line-height: 1.18;
+      letter-spacing: -0.03em;
+    }
+    .api-signpost-copy {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 70rem;
+    }
+    .api-signpost-grid {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    }
+    .api-signpost-card {
+      display: grid;
+      gap: 0.38rem;
+      padding: 0.88rem 0.95rem;
+      border-radius: 14px;
+      border: 1px solid rgba(33, 65, 95, 0.12);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)),
+        rgba(251, 254, 255, 0.78);
+    }
+    .api-signpost-number {
+      width: 1.7rem;
+      height: 1.7rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      border: 1px solid rgba(47, 92, 126, 0.18);
+      background: rgba(47, 92, 126, 0.08);
+      color: #2f5c7e;
+      font-family: var(--font-ui);
+      font-size: 0.78rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .api-signpost-card h3 {
+      margin: 0;
+      color: #10273d;
+      font-family: var(--font-ui);
+      font-size: 0.94rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    .api-signpost-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.62;
+    }
+    .api-frame {
+      padding: 0.22rem;
+      background:
+        linear-gradient(180deg, rgba(34, 29, 25, 0.08), rgba(34, 29, 25, 0.02)),
+        rgba(246, 249, 251, 0.72);
+    }
+    .api-shell {
+      --api-surface: rgba(242, 248, 251, 0.94);
+      --api-surface-strong: rgba(251, 253, 255, 0.98);
+      --api-surface-soft: rgba(225, 234, 240, 0.9);
+      --api-border: rgba(33, 65, 95, 0.14);
+      --api-border-strong: rgba(33, 65, 95, 0.24);
+      --api-fg: #10273d;
+      --api-muted: #5d7083;
+      --api-accent: #2f5c7e;
+      --api-accent-soft: rgba(47, 92, 126, 0.1);
+      --api-warning: rgba(177, 79, 31, 0.14);
+      --api-radius-xl: 20px;
+      --api-radius-lg: 16px;
+      --api-radius-md: 12px;
+      --api-radius-sm: 10px;
+      font-family: var(--font-ui);
+    }
+    .api-shell .api-explorer,
+    .api-shell .api-main-grid,
+    .api-shell .api-side-rail,
+    .api-shell .api-panel-card,
+    .api-shell .api-panel-head,
+    .api-shell .api-action-row,
+    .api-shell .api-summary-grid,
+    .api-shell .api-field-groups,
+    .api-shell .api-field-group ul,
+    .api-shell .api-notes,
+    .api-shell .api-example-bank {
+      display: grid;
+      gap: 0.95rem;
+    }
+    .api-shell .api-hero-card,
+    .api-shell .api-panel-card {
+      padding: 1.15rem;
+      border-radius: var(--api-radius-xl);
+      border: 1px solid var(--api-border);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0)),
+        var(--api-surface);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.82),
+        0 18px 32px rgba(88, 64, 42, 0.07);
+      position: relative;
+      overflow: clip;
+      isolation: isolate;
+    }
+    .api-shell .api-hero-card::before,
+    .api-shell .api-panel-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at top right, rgba(45, 115, 133, 0.12), transparent 28%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0));
+    }
+    .api-shell .api-title,
+    .api-shell .api-panel-title {
+      margin: 0;
+      color: var(--api-fg);
+      font-size: clamp(1.05rem, 2vw, 1.35rem);
+      line-height: 1.2;
+      letter-spacing: -0.03em;
+    }
+    .api-shell .api-copy,
+    .api-shell .api-panel-copy,
+    .api-shell .api-inline-note,
+    .api-shell .api-notes p,
+    .api-shell .api-field-group li span {
+      margin: 0;
+      color: var(--api-muted);
+      line-height: 1.62;
+    }
+    .api-shell .api-main-grid {
+      grid-template-columns: minmax(0, 1.24fr) minmax(19rem, 0.76fr);
+      align-items: start;
+    }
+    .api-shell .api-panel-head {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+    }
+    .api-shell .api-action-row {
+      grid-auto-flow: column;
+      grid-auto-columns: max-content;
+      align-content: start;
+    }
+    .api-shell .api-btn,
+    .api-shell .api-chip {
+      appearance: none;
+      border: 1px solid var(--api-border);
+      border-radius: 999px;
+      padding: 0.62rem 0.95rem;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 250, 252, 0.92)),
+        var(--api-surface-strong);
+      color: var(--api-fg);
+      font: inherit;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .api-shell .api-btn:hover,
+    .api-shell .api-btn:focus-visible,
+    .api-shell .api-chip:hover,
+    .api-shell .api-chip:focus-visible {
+      transform: translateY(-1px);
+      border-color: var(--api-border-strong);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.88),
+        0 12px 18px rgba(19, 38, 58, 0.08);
+    }
+    .api-shell .api-btn.secondary {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(245, 250, 252, 0.84)),
+        rgba(255, 255, 255, 0.78);
+      color: var(--api-muted);
+    }
+    .api-shell .api-chip[aria-pressed="true"] {
+      border-color: rgba(47, 92, 126, 0.28);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 247, 250, 0.94)),
+        var(--api-accent-soft);
+      color: var(--api-accent);
+      font-weight: 700;
+    }
+    .api-shell .api-summary-grid {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    .api-shell .api-summary-card {
+      display: grid;
+      gap: 0.28rem;
+      padding: 0.85rem 0.9rem;
+      border-radius: var(--api-radius-md);
+      border: 1px solid rgba(33, 65, 95, 0.1);
+      background: rgba(255, 255, 255, 0.68);
+    }
+    .api-shell .api-summary-value {
+      color: var(--api-fg);
+      font-size: 0.98rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    .api-shell .api-editor-label {
+      display: block;
+    }
+    .api-shell .api-editor,
+    .api-shell .api-response {
+      width: 100%;
+      min-height: 26rem;
+      margin: 0;
+      padding: 1rem;
+      border-radius: var(--api-radius-lg);
+      border: 1px solid rgba(33, 65, 95, 0.12);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 249, 252, 0.92)),
+        rgba(255, 255, 255, 0.96);
+      color: var(--api-fg);
+      font-family: "SFMono-Regular", "SF Mono", "IBM Plex Mono", "Menlo", "Consolas", monospace;
+      font-size: 0.84rem;
+      line-height: 1.65;
+      white-space: pre;
+      overflow: auto;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    }
+    .api-shell .api-editor {
+      resize: vertical;
+    }
+    .api-shell .api-inline-note,
+    .api-shell .api-error {
+      padding: 0.8rem 0.9rem;
+      border-radius: var(--api-radius-md);
+      border: 1px solid rgba(33, 65, 95, 0.1);
+      background: rgba(255, 255, 255, 0.66);
+    }
+    .api-shell .api-error {
+      border-color: rgba(177, 79, 31, 0.18);
+      background: var(--api-warning);
+      color: #7a3919;
+    }
+    .api-shell .api-field-group h4 {
+      margin: 0;
+      color: var(--api-fg);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+    .api-shell .api-field-group ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .api-shell .api-field-group li {
+      display: grid;
+      gap: 0.22rem;
+      padding: 0.78rem 0.84rem;
+      border-radius: var(--api-radius-md);
+      border: 1px solid rgba(33, 65, 95, 0.08);
+      background: rgba(255, 255, 255, 0.62);
+    }
+    .api-shell .api-field-group li strong {
+      color: var(--api-fg);
+      font-size: 0.88rem;
+    }
+    .api-shell .api-field-group li code,
+    .api-shell .api-copy code,
+    .api-shell .api-panel-copy code,
+    .api-shell .api-notes code {
+      width: fit-content;
+      padding: 0.14rem 0.38rem;
+      border-radius: 999px;
+      background: rgba(47, 92, 126, 0.1);
+      color: var(--api-accent);
+      font-size: 0.8rem;
+    }
+    .api-shell .api-response-card {
+      gap: 1rem;
+    }
+    @media (max-width: 1100px) {
+      .api-shell .api-main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 860px) {
+      .api-page .page-header {
+        grid-template-columns: 1fr;
+      }
+      .api-signpost-grid {
+        grid-template-columns: 1fr;
+      }
+      .api-shell .api-panel-head {
+        grid-template-columns: 1fr;
+      }
+      .api-shell .api-action-row {
+        grid-auto-flow: row;
+        grid-auto-columns: 1fr;
+      }
+      .api-shell .api-btn,
+      .api-shell .api-chip {
+        width: 100%;
+      }
+      .api-shell .api-editor,
+      .api-shell .api-response {
+        min-height: 20rem;
+      }
+    }
+  </style>
+
+  <Nav />
+
+  <main class="page essay-page api-page">
+    <header class="essay-header page-header">
+      <div>
+        {page.data.eyebrow && <span class="page-eyebrow">{page.data.eyebrow}</span>}
+        <h1 class="page-title">{page.data.title}</h1>
+      </div>
+      {introSection && (
+        <div class="api-read-note">
+          <span class="api-read-note-label">{introSection.title}</span>
+          <div set:html={introSection.html}></div>
+        </div>
+      )}
+    </header>
+
+    <section class="api-signpost" aria-label="How to use the API explorer">
+      <div class="api-signpost-head">
+        <span class="api-signpost-kicker">How to use this page</span>
+        <h2 class="api-signpost-title">Treat the explorer state like a request body, then inspect exactly what comes back.</h2>
+        <p class="api-signpost-copy">This page is intentionally lower-level than the grid and graph views. Instead of clicking through controls, you can type the same state directly, see how it gets normalized, and grab the matrix, a selected cell, or the current headline answer.</p>
+      </div>
+
+      <div class="api-signpost-grid">
+        <div class="api-signpost-card">
+          <span class="api-signpost-number">1</span>
+          <h3>Pick a request shape</h3>
+          <p>Start from one of the example buttons if you want a fast template for grid matrices, grid cells, or graph answers.</p>
+        </div>
+        <div class="api-signpost-card">
+          <span class="api-signpost-number">2</span>
+          <h3>Pass in the state you care about</h3>
+          <p>Use the same core knobs as the existing explorers: count, metric, focus tokens, train/eval subsets, and the lens-specific controls.</p>
+        </div>
+        <div class="api-signpost-card">
+          <span class="api-signpost-number">3</span>
+          <h3>Read the normalized response</h3>
+          <p>The output echoes the resolved state first, so it is easy to confirm how labels, indices, defaults, and column filters were interpreted.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card api-frame" aria-label="API explorer">
+      <div class="api-shell">
+        <ApiExplorerComponent client:load />
+      </div>
+    </section>
+  </main>
+</Layout>
