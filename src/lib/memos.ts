@@ -1,6 +1,7 @@
 import { getCollection } from "astro:content";
 
 export const GLOSSARY_MEMO_SLUG = "glossary";
+export const LAUNCH_MEMO_SLUG = "data-counterfactuals";
 export const DIRECT_MEMO_ROUTES = {
   [GLOSSARY_MEMO_SLUG]: "/glossary",
 } as const;

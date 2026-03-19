@@ -42,6 +42,7 @@ const memos = defineCollection({
     date: z.coerce.date().optional(),
     visibility: z.string().optional(),
     type: z.string().optional(),
+    homepageSections: z.number().int().positive().optional(),
   }),
 });
 

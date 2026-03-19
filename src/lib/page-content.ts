@@ -8,6 +8,12 @@ export interface PageSection {
   html: string;
 }
 
+export interface SplitMarkdownDocument {
+  leadMarkdown: string;
+  leadHtml: string;
+  sections: PageSection[];
+}
+
 function slugify(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
@@ -20,9 +26,20 @@ export function renderMarkdownBlocks(blocks: string[] = []): string[] {
   return blocks.map((block) => renderMarkdown(block));
 }
 
-export function splitMarkdownSections(markdown: string): PageSection[] {
+export function splitMarkdownDocument(markdown: string): SplitMarkdownDocument {
+  const trimmedMarkdown = markdown.trim();
+
+  if (!trimmedMarkdown) {
+    return {
+      leadMarkdown: "",
+      leadHtml: "",
+      sections: [],
+    };
+  }
+
   const sections: Array<{ title: string; markdown: string }> = [];
-  const lines = markdown.trim().split("\n");
+  const leadLines: string[] = [];
+  const lines = trimmedMarkdown.split("\n");
   let currentTitle = "";
   let currentLines: string[] = [];
 
@@ -41,20 +58,34 @@ export function splitMarkdownSections(markdown: string): PageSection[] {
       continue;
     }
 
-    if (!currentTitle) continue;
+    if (!currentTitle) {
+      leadLines.push(line);
+      continue;
+    }
+
     currentLines.push(line);
   }
 
   flush();
 
-  return sections
-    .filter((section) => Boolean(section.markdown))
-    .map((section) => ({
-      id: slugify(section.title),
-      title: section.title,
-      markdown: section.markdown,
-      html: renderMarkdown(section.markdown),
-    }));
+  const leadMarkdown = leadLines.join("\n").trim();
+
+  return {
+    leadMarkdown,
+    leadHtml: leadMarkdown ? renderMarkdown(leadMarkdown) : "",
+    sections: sections
+      .filter((section) => Boolean(section.markdown))
+      .map((section) => ({
+        id: slugify(section.title),
+        title: section.title,
+        markdown: section.markdown,
+        html: renderMarkdown(section.markdown),
+      })),
+  };
+}
+
+export function splitMarkdownSections(markdown: string): PageSection[] {
+  return splitMarkdownDocument(markdown).sections;
 }
 
 export function getSection(sections: PageSection[], id: string): PageSection {

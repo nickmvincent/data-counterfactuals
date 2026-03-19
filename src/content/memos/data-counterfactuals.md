@@ -5,23 +5,34 @@ summary: "A shared launch post and site memo arguing that many questions about v
 date: '2026-03-14T00:00:00.000Z'
 visibility: public
 type: shared_memo
+homepageSections: 3
 ---
 
-This is a short "memo" meant to explain the datacounterfactuals.org project and website. It will be cross-posted on the Data Leverage Substack.
+This is a short memo meant to explain the datacounterfactuals.org project and website. It will be cross-posted on the Data Leverage Substack.
+
+A quick piece of context: the data counterfactuals site is part of a broader effort to create informative websites that externalize memos, spreadsheets, and insights that are relevant to various data and AI policy initiatives and discussions. Other projects include a list of data licensing and preference signaling mechanisms (datalicenses.org), napkin math about training data (exploringai.org), and a few more in the works (including a rework of datalevers.org). Of all these sites, the Data Counterfactuals site is, at present, a bit less broadly interesting; the focus here is more on trying to convince people who already might have an interest in data valuation, bargaining, data-centric approaches to privacy, and neighboring topics about connections between different computing research areas. The long-term goal is to make even this site broadly accessible, but in short: if it doesn't seem too interesting yet, consider checking out the other sites listed above.
 
 There are many reasons we might want to understand how a specific piece of data impacts an AI model. Perhaps we want to find particularly valuable data to look at it. Perhaps we want to pay people based on the impact of their data (though this is a tricky endeavor!). Perhaps we need to debug our data. Or perhaps a group of people want to withhold data for bargaining or protest. The datacounterfactuals project grew out of discussions on data valuation, algorithmic collective action, data scaling, data selection, data poisoning, privacy, unlearning and neighboring topics. Counterfactual questions about how data might change are foundational to all these areas, and so understanding various questions in terms of data counterfactuals can be practically and academically useful.
 
 This site exists to:
 
-- show how cross-cutting the idea of data counterfactuals is
+- show how cross-cutting the idea of data counterfactuals is (cutting across data valuation, algorithmic collective action, data scaling, data selection, data poisoning, privacy, unlearning, and more)
 - make certain data counterfactual measurements easier to understand
 - illustrate connections between technical and social data-centric work
 
-In particular, I found myself using the phrase "data counterfactuals" very frequently while teaching about data valuation, algorithmic collective action, data scaling, and related topics. Students and colleagues would ask some version of: is "data counterfactuals" an actual field, area, or official term, or just a convenient phrase for a bunch of neighboring ideas?
+A data counterfactual is a scenario in which the AI training data for a model changes in some way. Often, we care about comparing two counterfactual scenarios to understand the impact of some change on model behavior or capabilities.
 
-Variations of the term appear across the related data valuation and data attribution literature. Work on "datamodels" from [Ilyas et al.](https://proceedings.mlr.press/v162/ilyas22a.html) uses the term "dataset counterfactuals", and this [talk](https://simons.berkeley.edu/talks/andrew-ilyas-stanford-university-2025-04-03) from Ilyas uses the term "data counterfactuals" directly. In early work from Koh and Liang on influence functions, the authors state: "we ask the counterfactual: what would happen if we did not have this training point, or if the values of this training point were changed slightly?"
+One useful way to picture that space is as a grid where possible training sets appear as rows, evaluation slices appear as columns, and each cell records the performance for a given train/eval pairing. The site leans on that metaphor later, but the basic move is simpler: compare nearby worlds in which the data changed.
 
-A single "data counterfactual" explores some variant of the question: **what happens when our training data change?** One change to our data gives us one counterfactual scenario. Often we want to compare one or more different counterfactuals to learn something about the data (e.g., discover a data point that's very influential).
+Some backstory: I found myself using the phrase "data counterfactuals" very frequently while teaching about data valuation, algorithmic collective action, and data scaling. I also found myself drawing various forms of the counterfactual grid, but in a much messier fashion. Students and colleagues would ask some version of: is "data counterfactuals" an actual field, area, or official term? Or is this just a convenient phrase for a bunch of neighboring ideas?
+
+Variations of the term appear across the related data valuation and data attribution literature. In early work from Koh and Liang on influence functions, the authors frame their work like so: "we ask the counterfactual: what would happen if we did not have this training point, or if the values of this training point were changed slightly?" This work was influential in supporting a large body of follow up work that considers other data counterfactuals (touching on, for instance, Shapley values, groups of data, and more). Research on "datamodels" from [Ilyas et al.](https://proceedings.mlr.press/v162/ilyas22a.html) uses the term "dataset counterfactuals", and this [talk](https://simons.berkeley.edu/talks/andrew-ilyas-stanford-university-2025-04-03) from Ilyas uses the term "data counterfactuals" directly. 
+
+So in short -- it is a term that has been used, but it currently isn't the case that every work or technique that explores "data counterfactual scenarios" always bills itself as a "data counterfactual" paper.
+
+A single "data counterfactual" explores some variant of the question: **what happens when the (training) data change?** Training is in parentheses here because we'll mostly focus on training, but we can also consider counterfactual changes to data that's used in other parts of the AI development process, and counterfactuals about what data is available to retrieve at runtime.
+
+For now, let's say this: one change to data gives us one counterfactual scenario. Often we want to compare one or more different counterfactuals to learn something about the data (e.g., discover a data point that's very influential).
 
 When we're training a machine learning model, all of the following "interventions" can cause model behavior to change:
 
@@ -32,9 +43,9 @@ When we're training a machine learning model, all of the following "intervention
 - corrupt, poison, or backdoor the data
 - reweight groups or later remove points through unlearning
 
-Many topics of interest in modern ML study one of those comparisons. And, what I want to argue with this post/project, many topics that are not literally about computing leave-one-out counterfactuals or similar can still be understood in relation to data counterfactuals.
+Many topics of interest in modern ML study one of those comparisons. And, what we want to argue with this post/project is this: many topics that are not literally about computing leave-one-out counterfactuals or similar can still be understood in relation to data counterfactuals.
 
-## The smallest useful example
+## A small example
 
 Consider a toy world containing just four data objects: A, B, C, and D. We train a model on all four data objects. Then we train again after removing B. If the second model gets worse on tasks that depend on B, that nearby comparison tells us something about B's role in the original model. (However, that single comparison is not conclusive; we will still have many open questions about combinatorial interactions with other data points, model multiplicity, and other sources of variance.)
 
@@ -42,17 +53,13 @@ A single leave-one-out experiment is the smallest useful data counterfactual. Fr
 
 ## Why this matters for data leverage
 
-One reason I keep coming back to this frame is that it lets me easily connect topics like Shapley values and data strikes. In ML, we often want to ask questions about removing a point, reweighting a group, estimating an influence score, fitting a scaling curve, etc. with the purpose of just understanding our data and model. But counterfactuals can also be induced by strategic actors. Data strikes, boycotts, contribution campaigns, and bargaining efforts try to change what data the world actually produces, or what data an AI developer can access on acceptable terms.
+One reason I keep coming back to this frame is that it helps us easily connect topics like Shapley values and data strikes. In ML, we often want to ask questions about removing a point, reweighting a group, estimating an influence score, fitting a scaling curve, etc. with the purpose of understanding our data and model. But counterfactuals can also be induced by strategic actors. Data strikes, boycotts, contribution campaigns, and bargaining efforts try to change what data the world actually produces, or what data an AI developer can access on acceptable terms.
 
-When people can withhold, redirect, or condition the supply of data, data counterfactual measurement directly maps to governance power!
-
-A simple strike simulator makes the connection concrete. Pick a subset of data to withhold, retrain or approximate retraining, and compare the result to the baseline world. Run that one point at a time and you are close to leave-one-out. Run it over many coalitions and you get the raw material that Shapley-style methods aggregate over. Run it across different scales or groups and you start learning something about leverage, substitution, and bargaining power. The same scaffold can support both technical measurement and collective action questions.
-
-This becomes especially concrete in systems built from user-generated content. Questions about provenance, licensing, and contribution are not side issues there; they help determine which training rows are legally, socially, or politically available in the first place.
+When people can withhold, redirect, or condition the supply of data, data counterfactual measurement directly maps to governance power! In other words, the kind of experiments we'd want to run if we're just an ML researcher trying to make our model better (via data selection or other data-centric approaches) are the same experiments we'd want to run if we're trying to organize data-related collective action or set up an efficient data market. If we had a shared bank of results from such an experiment, those results would be useful to actors with a wide variety of interests and goals! Furthermore, this frame also makes it very clear where questions about provenance, licensing, and contribution governance directly determine which training rows are legally, socially, or politically available in the first place.
 
 ## The grid view
 
-The site's main "interactive explorer" is a grid. Imagine possible training sets as rows and possible evaluation slices as columns. Each cell records what happens if we train on that row and evaluate on that column.
+The site's main "interactive explorer" is a grid. The grid shows possible training sets as rows and possible evaluation slices as columns. Each cell records what happens if we train on that row and evaluate on that column.
 
 Of course, nobody can completely fill out this "giant spreadsheet" (it's too computationally expensive). The grid can still be useful as a teaching model (and again, not a claim about how practitioners store or compute things).
 

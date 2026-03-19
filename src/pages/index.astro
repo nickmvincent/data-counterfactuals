@@ -2,16 +2,19 @@
 import Layout from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
 import MiniGrid from "../components/MiniGrid.jsx";
-import { getRequiredPageEntry, getSection, renderMarkdownBlocks, splitMarkdownSections } from "../lib/page-content";
+import { getRequiredPageEntry, splitMarkdownDocument } from "../lib/page-content";
+import { getPublicMemoBySlug, LAUNCH_MEMO_SLUG } from "../lib/memos";
 
 const page = await getRequiredPageEntry("index");
-const sections = splitMarkdownSections(page.body);
-const introBlocks = renderMarkdownBlocks(page.data.intro ?? []);
-const coreMove = sections.find(
-  (section) => section.id === "the-smallest-useful-move" || section.id === "what-is-a-data-counterfactual",
-) ?? getSection(sections, "the-smallest-useful-move");
-const gridSection = getSection(sections, "a-grid-for-seeing-the-space");
-const connections = getSection(sections, "what-the-idea-helps-connect");
+const homeMemo = await getPublicMemoBySlug(LAUNCH_MEMO_SLUG);
+
+if (!homeMemo) {
+  throw new Error(`Missing homepage memo '${LAUNCH_MEMO_SLUG}'.`);
+}
+
+const homeExcerpt = splitMarkdownDocument(homeMemo.body);
+const featuredSections = homeExcerpt.sections.slice(0, homeMemo.data.homepageSections ?? 3);
+const introHtml = homeExcerpt.leadHtml;
 const readingPaths = page.data.reading_paths ?? [];
 const readingPathByHref = Object.fromEntries(readingPaths.map((path) => [path.href, path]));
 const quickStartPaths = [
@@ -20,6 +23,17 @@ const quickStartPaths = [
   readingPathByHref["/glossary"],
 ].filter(Boolean);
 const figures = page.data.figures ?? {};
+const leaveOneOutFigureSectionIds = new Set([
+  "a-small-example",
+  "the-smallest-useful-example",
+  "the-smallest-useful-move",
+  "what-is-a-data-counterfactual",
+]);
+const gridFigureSectionIds = new Set([
+  "the-grid-view",
+  "a-grid-for-seeing-the-space",
+  "why-the-grid-visualization-metaphor-is-useful",
+]);
 ---
 
 <Layout
@@ -74,6 +88,15 @@ const figures = page.data.figures ?? {};
       color: var(--muted);
       font-size: 1.04rem;
       line-height: 1.92;
+    }
+    .start-intro .intro-block ul {
+      margin: 0.95rem 0 0;
+      padding-left: 1.3rem;
+      color: var(--muted);
+    }
+    .start-intro .intro-block li {
+      margin: 0.45rem 0;
+      line-height: 1.82;
     }
     .start-utility-row {
       display: flex;
@@ -368,9 +391,7 @@ const figures = page.data.figures ?? {};
       {page.data.eyebrow && <span class="page-eyebrow">{page.data.eyebrow}</span>}
       <h1 class="page-title">{page.data.title}</h1>
       {page.data.lede && <p class="page-lede">{page.data.lede}</p>}
-      {introBlocks.map((html) => (
-        <div class="intro-block" set:html={html}></div>
-      ))}
+      {introHtml && <div class="intro-block" set:html={introHtml}></div>}
       {quickStartPaths.length > 0 && (
         <div class="start-utility-row">
           <button class="btn ghost" type="button" data-quickstart-open>Open quick-start guide</button>
@@ -408,66 +429,73 @@ const figures = page.data.figures ?? {};
       </dialog>
     )}
 
-    <section class="start-section">
-      <h2>{coreMove.title}</h2>
-      <div set:html={coreMove.html}></div>
+    {featuredSections.map((section, index) => {
+      const showLeaveOneOutFigure = leaveOneOutFigureSectionIds.has(section.id);
+      const showGridFigure = gridFigureSectionIds.has(section.id);
+      const showReadingPaths = index === featuredSections.length - 1;
 
-      <div class="essay-figure">
-        {figures.leave_one_out?.label && <p class="note-label">{figures.leave_one_out.label}</p>}
-        <MiniGrid
-          client:load
-          rows={["ABCD", "ACD"]}
-          cols={["A", "B", "C", "D"]}
-          values={[
-            [0.92, 0.88, 0.85, 0.82],
-            [0.78, 0.55, 0.82, 0.8]
-          ]}
-          highlightRow={0}
-          compareRow={1}
-          interactive={false}
-          caption={figures.leave_one_out?.caption}
-        />
-      </div>
-    </section>
+      return (
+        <section class="start-section">
+          <h2>{section.title}</h2>
+          <div set:html={section.html}></div>
 
-    <section class="start-section">
-      <h2>{gridSection.title}</h2>
-      <div set:html={gridSection.html}></div>
+          {showLeaveOneOutFigure && (
+            <div class="essay-figure">
+              {figures.leave_one_out?.label && <p class="note-label">{figures.leave_one_out.label}</p>}
+              <MiniGrid
+                client:load
+                rows={["ABCD", "ACD"]}
+                cols={["A", "B", "C", "D"]}
+                values={[
+                  [0.92, 0.88, 0.85, 0.82],
+                  [0.78, 0.55, 0.82, 0.8]
+                ]}
+                highlightRow={0}
+                compareRow={1}
+                interactive={false}
+                caption={figures.leave_one_out?.caption}
+              />
+            </div>
+          )}
 
-      <div class="essay-figure">
-        {figures.grid?.label && <p class="note-label">{figures.grid.label}</p>}
-        <MiniGrid
-          client:load
-          rows={["AB", "ABC", "ABCD", "ACD"]}
-          cols={["A", "B", "C", "D"]}
-          values={[
-            [0.85, 0.72, 0.45, 0.38],
-            [0.88, 0.8, 0.75, 0.52],
-            [0.92, 0.88, 0.85, 0.82],
-            [0.78, 0.55, 0.82, 0.8]
-          ]}
-          interactive={false}
-          caption={figures.grid?.caption}
-        />
-      </div>
+          {showGridFigure && (
+            <>
+              <div class="essay-figure">
+                {figures.grid?.label && <p class="note-label">{figures.grid.label}</p>}
+                <MiniGrid
+                  client:load
+                  rows={["AB", "ABC", "ABCD", "ACD"]}
+                  cols={["A", "B", "C", "D"]}
+                  values={[
+                    [0.85, 0.72, 0.45, 0.38],
+                    [0.88, 0.8, 0.75, 0.52],
+                    [0.92, 0.88, 0.85, 0.82],
+                    [0.78, 0.55, 0.82, 0.8]
+                  ]}
+                  interactive={false}
+                  caption={figures.grid?.caption}
+                />
+              </div>
 
-      <div class="action-row" style="margin-top: 1.35rem;">
-        <a href="/grid" class="btn">Open in Explorer</a>
-      </div>
-    </section>
+              <div class="action-row" style="margin-top: 1.35rem;">
+                <a href="/grid" class="btn">Open in Explorer</a>
+              </div>
+            </>
+          )}
 
-    <section class="start-section">
-      <h2>{connections.title}</h2>
-      <div set:html={connections.html}></div>
-      <ul class="link-cluster start-links">
-        {readingPaths.map((path) => (
-          <li>
-            <a href={path.href}>{path.title}</a>
-            {path.body && <p>{path.body}</p>}
-          </li>
-        ))}
-      </ul>
-    </section>
+          {showReadingPaths && (
+            <ul class="link-cluster start-links">
+              {readingPaths.map((path) => (
+                <li>
+                  <a href={path.href}>{path.title}</a>
+                  {path.body && <p>{path.body}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      );
+    })}
   </main>
 
   {quickStartPaths.length > 0 && (
