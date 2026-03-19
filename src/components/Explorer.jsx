@@ -22,7 +22,12 @@ import { scrollChildIntoContainer } from "../lib/scroll-helpers.js";
 
 const html = htm.bind(h);
 
-const InfoTip = (text) => html`<span class="info-tip" title=${text}>i</span>`;
+const ToolbarHelp = (summary, body, testId) => html`
+  <details class="toolbar-inline-help" data-testid=${testId}>
+    <summary>${summary}</summary>
+    <div class="toolbar-inline-help-body">${body}</div>
+  </details>
+`;
 
 function clamp01(value) {
   return Math.max(0, Math.min(1, value));
@@ -114,8 +119,7 @@ const multiFocusModes = new Set(["group", "poison"]);
 const conceptMeta = {
   explore: {
     label: "Explore",
-    description:
-      "Start from one cell at a time. Click a row/column pair and read it directly as train on the row world, evaluate on the column slice.",
+    description: "Read one train/eval cell directly.",
   },
   loo: {
     label: "LOO",
@@ -1421,6 +1425,7 @@ function App() {
   const currentWorldLabel = effectiveGridView === "operator" ? "Operator view" : "Reference grid";
   const modeLabel = conceptMeta[conceptMode].label;
   const modeCopy = conceptMeta[conceptMode].description;
+  const toolbarGuideCopy = conceptMode === "explore" ? "" : modeCopy;
   const editSummary = activeEditLabels.length
     ? `Active edit layer: ${activeEditLabels.join(" and ")}.`
     : "No attack layer is active, so the operator grid and the untouched reference grid currently match.";
@@ -1649,14 +1654,7 @@ function App() {
       ${usesFocus
         ? html`
             <div class="control-cluster">
-              <div class="control-head">
-                ${focusHeading}
-                ${InfoTip(
-                  conceptMode === "poison"
-                    ? "Pick the point or coalition whose containing rows should be corrupted. This changes which rows are attacked, not which row is selected."
-                    : "Pick the contributor whose effect you want to ask about. This changes who is being removed, added, or valued; it does not change the selected train row.",
-                )}
-              </div>
+              <div class="control-head">${focusHeading}</div>
               <div class="ctrl-note">${focusTargetCopy}</div>
               <div class="focus-chip-row">
                 ${base.map((token) => {
@@ -1859,7 +1857,6 @@ function App() {
           </div>
         </div>
       </div>
-      <p class="panel-copy">Keep the active reading, marker tools, and mode-specific controls in view while you pan the matrix.</p>
       <div class="selection-dock-grid">
         ${currentReadingSection}
         <div class="selection-dock-aside">
@@ -1879,7 +1876,7 @@ function App() {
               <span class="panel-step">1</span>
               <div>
                 <span class="summary-kicker">Choose what you're exploring</span>
-                <p class="toolbar-guide-copy">${modeCopy}</p>
+                ${toolbarGuideCopy ? html`<p class="toolbar-guide-copy">${toolbarGuideCopy}</p>` : null}
               </div>
             </div>
           </div>
@@ -1893,15 +1890,12 @@ function App() {
                 ${conceptOrder.map((mode) => html`<option value=${mode}>${conceptMeta[mode].label}</option>`)}
               </select>
             </label>
-            <div class="toolbar-note">${modeCopy}</div>
+            ${ToolbarHelp("What does this Question family ask?", modeCopy, "concept-help")}
           </section>
 
           <section class="toolbar-group" data-testid="metric-controls">
             <label class="toolbar-select-field">
-              <span class="toolbar-label">
-                Cell score
-                ${InfoTip("Each cell stands in for 'retrain on the row world, evaluate on the column slice.' Jaccard uses normalized overlap, |Intersection| uses raw shared count, and Entropy turns overlap into an uncertainty-style score. Real data uses a tiny toy classifier over a tiny fixed dataset. Covertype uses a precomputed multiclass experiment over real wilderness-area domains from the UCI Covertype dataset.")}
-              </span>
+              <span class="toolbar-label">Cell score</span>
               <select data-testid="metric-select" value=${metric} onChange=${(event) => setMetric(event.target.value)}>
                 ${Object.entries(metricMeta).map(([value, meta]) => html`<option value=${value}>${meta.short}</option>`)}
               </select>
@@ -1924,20 +1918,16 @@ function App() {
                     </div>
                   `
               : null}
-            <div class="toolbar-note">${scoreProxyCopy}</div>
+            ${ToolbarHelp("What does this Cell score mean?", scoreProxyCopy, "metric-help")}
           </section>
 
           <details class="toolbar-group toolbar-group-actions toolbar-expand" data-testid="display-controls">
             <summary class="toolbar-summary">
               <div class="toolbar-summary-copy">
-                <span class="toolbar-summary-label">
-                  Display
-                  ${InfoTip("These controls only change how the grid is rendered, not the underlying counterfactual question.")}
-                </span>
+                <span class="toolbar-summary-label">Display settings</span>
                 <span class="toolbar-summary-title">${displaySummary}</span>
               </div>
               <div class="toolbar-summary-actions">
-                <span class="pill">${showSingletonEvalCols ? "Compact" : "Expanded"}</span>
                 <span class="toolbar-summary-caret"></span>
               </div>
             </summary>
@@ -1954,9 +1944,6 @@ function App() {
                   onChange=${(event) => setShowSingletonEvalCols(event.target.checked)}
                 />
                 <label for="show-singleton-eval-cols">Fewer cols</label>
-                ${InfoTip(
-                  "For pointwise-additive metrics, a larger eval slice can be reconstructed from per-point scores, so singleton columns are enough. This toggle hides multi-point eval subsets to declutter the view; some toy metrics here are not literally pointwise additive, so the full matrix is still computed underneath.",
-                )}
               </div>
               <div class="toolbar-note">
                 ${conceptMode === "poison"
@@ -1969,19 +1956,13 @@ function App() {
                   ${Object.keys(palettes).map((name) => html`<option value=${name}>${name}</option>`)}
                 </select>
               </label>
-              <div class="export-actions">
-                <button class="btn mini" onClick=${exportJson}>Export JSON</button>
-                <button class="btn ghost mini" onClick=${exportCsv}>Export CSV</button>
-              </div>
-              <div class="ctrl-note">This is the same state currently driving the figure below.</div>
-              <pre class="json-block">${settingsJson}</pre>
             </div>
           </details>
 
           <details class=${`toolbar-group toolbar-expand ${presetFlash ? "preset-flash" : ""}`} data-testid="scene-controls">
             <summary class="toolbar-summary">
               <div class="toolbar-summary-copy">
-                <span class="toolbar-summary-label">Example scenes</span>
+                <span class="toolbar-summary-label">Walk me through an example for this Question family</span>
                 <span class="toolbar-summary-title">
                   ${activeTutorial?.mode === conceptMode
                     ? activeTutorial.title
@@ -2025,10 +2006,7 @@ function App() {
           ${conceptMode === "poison"
             ? html`
                 <section class="toolbar-group" data-testid="world-layer-controls">
-                  <div class="toolbar-label">
-                    World layer
-                    ${InfoTip("Operator view shows the edited matrix; Reference view shows the untouched reference matrix.")}
-                  </div>
+                  <div class="toolbar-label">World layer</div>
                   <div class="segmented-row">
                     <button class="btn mini" aria-pressed=${gridView === "operator"} onClick=${() => setGridView("operator")}>Operator</button>
                     <button class="btn mini" aria-pressed=${gridView === "real"} onClick=${() => setGridView("real")}>Reference</button>
@@ -2047,22 +2025,19 @@ function App() {
               <span class="panel-step">2</span>
               <div>
                 <span class="summary-kicker">Counterfactual grid</span>
-                <h2 class="grid-card-title">Rows are worlds; columns are slices.</h2>
-                <p class="grid-card-copy">Click a row label, column label, or cell to anchor one train/eval pairing. The live dock stays locked to that selection while you pan the matrix.</p>
+                <h2 class="grid-card-title">Choose a train row and eval slice.</h2>
+                <p class="grid-card-copy">Click a row, column, or cell to anchor the pair you want to read.</p>
               </div>
             </div>
-          </div>
-
-          <div class="grid-toolbar-strip">
-            <div class="grid-jump-controls" data-testid="grid-jump-controls">
-              <label class="grid-jump-field">
-                <span class="toolbar-label">Jump to train</span>
+            <div class="grid-jump-controls grid-jump-controls-inline" data-testid="grid-jump-controls">
+              <label class="grid-jump-field grid-jump-field-compact">
+                <span class="toolbar-label">Train</span>
                 <select data-testid="grid-train-select" value=${safeRowIdx} onChange=${(event) => setRowIdx(Number(event.target.value))}>
                   ${jumpTrainOptions.map((option) => html`<option value=${option.index}>${option.label}</option>`)}
                 </select>
               </label>
-              <label class="grid-jump-field">
-                <span class="toolbar-label">Jump to eval</span>
+              <label class="grid-jump-field grid-jump-field-compact">
+                <span class="toolbar-label">Eval</span>
                 <select data-testid="grid-eval-select" value=${safeColIdx} onChange=${(event) => setColIdx(Number(event.target.value))}>
                   ${jumpEvalOptions.map((option) => html`<option value=${option.index}>${option.label}</option>`)}
                 </select>
@@ -2250,10 +2225,6 @@ function App() {
                   })}
                 </div>
               </div>
-              <div class="comparison-legend">
-                <div>The matrix is the playfield.</div>
-                <div>Use the live dock to keep the reading, markers, and mode controls visible while you move around the grid.</div>
-              </div>
             </div>
             ${selectionDockBlock}
           </div>
@@ -2262,6 +2233,26 @@ function App() {
       </div>
 
       ${showInspector ? analysisDetailBlock : null}
+
+      <details class="toolbar-group toolbar-expand json-drawer" data-testid="settings-json">
+        <summary class="toolbar-summary">
+          <div class="toolbar-summary-copy">
+            <span class="toolbar-summary-label">Full JSON</span>
+            <span class="toolbar-summary-title">Current explorer state</span>
+          </div>
+          <div class="toolbar-summary-actions">
+            <span class="pill">Export</span>
+            <span class="toolbar-summary-caret"></span>
+          </div>
+        </summary>
+        <div class="toolbar-expanded">
+          <div class="export-actions">
+            <button class="btn mini" onClick=${exportJson}>Export JSON</button>
+            <button class="btn ghost mini" onClick=${exportCsv}>Export CSV</button>
+          </div>
+          <pre class="json-block">${settingsJson}</pre>
+        </div>
+      </details>
     </div>
   `;
 }

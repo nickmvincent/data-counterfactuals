@@ -24,8 +24,18 @@ notes:
         Keep the main memo or glossary nearby if you want the longer framing or a quick definition while you click through the presets.
 ---
 
-## how to read this
+## What are we simulating?
 
-We are assuming someone is training an ML model, and this explorer is about evaluating that model. The rows stand in for possible training worlds, and the columns stand in for the evaluation slices or questions we use to check how the model behaves.
+A tiny toy universe of data slices named `A`, `B`, `C`, `D`, and so on.
 
-Start by fixing that mental model: rows are possible training worlds and columns are evaluation slices. Once that is in place, the rest of the interface is about moving between nearby rows, nearby columns, or nearby perturbations and asking what changed. If you prefer to think in terms of nodes and edges, try the graph explorer.
+## How do I read one cell?
+
+Rows are training worlds. Columns are evaluation slices. One cell means: train on the row world, then evaluate on the column slice.
+
+## How do I use this page?
+
+Pick a question family and a cell score, then click a row, column, or cell to anchor the pair you want to inspect.
+
+## What questions can I ask here?
+
+Direct cell reading, leave-one-out, group leave-one-out, Shapley-style values, scaling, toy privacy, toy unlearning, and toy poisoning.

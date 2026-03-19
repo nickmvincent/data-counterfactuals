@@ -76,13 +76,13 @@ test("grid explorer defaults to explore mode and exposes lettered axis labels", 
   await displayControls.locator("summary").click();
   await expect(page.getByLabel("Show raw values")).toBeChecked();
   await expect(page.getByLabel("Fewer cols")).not.toBeChecked();
-  await expect(page.getByTitle(/pointwise-additive metrics/i)).toBeVisible();
   await page.getByLabel("Fewer cols").check();
   await expect(columnLabels).toHaveCount(4);
   await expect(columnLabels.nth(0)).toHaveText("A");
   await expect(columnLabels.nth(1)).toHaveText("B");
   await expect(page.getByTestId("metric-controls")).toContainText("Real data");
-  await expect(page.getByTestId("metric-controls")).toContainText('toy proxy for "retrain on');
+  await page.getByTestId("metric-help").locator("summary").click();
+  await expect(page.getByTestId("metric-help")).toContainText('toy proxy for "retrain on');
   await page.getByTestId("metric-select").selectOption("real");
   await expect(page.getByTestId("metric-controls")).toContainText("Precomputed");
   await expect(page.getByTestId("metric-controls")).toContainText("Live");

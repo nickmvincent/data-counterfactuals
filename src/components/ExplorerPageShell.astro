@@ -1,0 +1,223 @@
+---
+interface HelpSection {
+  title: string;
+  html: string;
+}
+
+interface Props {
+  pageClass: string;
+  eyebrow?: string;
+  title: string;
+  lede?: string;
+  helpSections?: HelpSection[];
+  helpAriaLabel?: string;
+  exploreId?: string;
+  exploreLabel?: string;
+  shellClass: string;
+  frameClass?: string;
+  mobileNoticeClass?: string;
+}
+
+const {
+  pageClass,
+  eyebrow,
+  title,
+  lede,
+  helpSections = [],
+  helpAriaLabel = "Explorer page guide",
+  exploreId = "explore",
+  exploreLabel = "Explore",
+  shellClass,
+  frameClass = "",
+  mobileNoticeClass = "",
+} = Astro.props;
+
+const mainClasses = ["page", "essay-page", "explorer-page-shell", pageClass].filter(Boolean).join(" ");
+const frameClasses = ["section-card", "explorer-page-frame", frameClass].filter(Boolean).join(" ");
+const mobileNoticeClasses = ["explorer-page-mobile-notice", mobileNoticeClass].filter(Boolean).join(" ");
+const hasMobileNotice = Astro.slots.has("mobileNotice");
+---
+
+<main class={mainClasses}>
+  <header class="essay-header page-header">
+    {eyebrow && <span class="page-eyebrow">{eyebrow}</span>}
+    <h1 class="page-title">{title}</h1>
+    {lede && <p class="page-lede">{lede}</p>}
+  </header>
+
+  {hasMobileNotice ? (
+    <div class={mobileNoticeClasses} role="note">
+      <slot name="mobileNotice" />
+    </div>
+  ) : null}
+
+  {helpSections.length ? (
+    <section class="explorer-page-help-stack" aria-label={helpAriaLabel}>
+      {helpSections.map((section) => (
+        <details class="explorer-page-help-drawer">
+          <summary>{section.title}</summary>
+          <div class="explorer-page-help-body" set:html={section.html}></div>
+        </details>
+      ))}
+    </section>
+  ) : null}
+
+  <section class={frameClasses} id={exploreId} aria-label={exploreLabel}>
+    <div class={shellClass}>
+      <slot />
+    </div>
+  </section>
+</main>
+
+<style is:global>
+  .explorer-page-shell {
+    --explorer-radius-xxl: 24px;
+    --explorer-radius-xl: 20px;
+    --explorer-radius-lg: 16px;
+    --explorer-radius-md: 12px;
+    --explorer-radius-sm: 10px;
+    --explorer-radius-xs: 6px;
+    --explorer-page-frame-bg:
+      linear-gradient(180deg, rgba(34, 29, 25, 0.08), rgba(34, 29, 25, 0.02)),
+      rgba(255, 250, 243, 0.56);
+    --explorer-page-mobile-border: rgba(92, 72, 52, 0.14);
+    --explorer-page-mobile-bg: rgba(255, 250, 243, 0.84);
+    display: grid;
+    gap: 1rem;
+  }
+
+  .explorer-page-shell .page-header {
+    width: min(100%, 56rem);
+    margin: 0 auto;
+    display: grid;
+    gap: 0.7rem;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .explorer-page-shell .page-header > * {
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .explorer-page-shell .page-title {
+    max-width: 34rem;
+    margin: 0;
+    font-size: clamp(1.65rem, 3.6vw, 2.5rem);
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  .explorer-page-help-stack {
+    width: min(100%, 76rem);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.65rem;
+    align-items: start;
+  }
+
+  .explorer-page-help-drawer {
+    display: grid;
+    gap: 0.8rem;
+    min-height: 100%;
+    padding: 0.8rem 0.85rem;
+    border-radius: var(--explorer-radius-lg);
+    border: 1px solid rgba(33, 65, 95, 0.1);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0)),
+      rgba(255, 251, 246, 0.76);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.82),
+      0 14px 26px rgba(88, 64, 42, 0.04);
+  }
+
+  .explorer-page-help-drawer summary {
+    cursor: pointer;
+    color: #10273d;
+    font-family: var(--font-ui);
+    font-size: 0.84rem;
+    font-weight: 650;
+    line-height: 1.3;
+    text-wrap: balance;
+  }
+
+  .explorer-page-help-drawer[open] summary {
+    margin-bottom: 0.15rem;
+  }
+
+  .explorer-page-help-body {
+    display: grid;
+    gap: 0.55rem;
+    color: var(--muted);
+    font-size: 0.84rem;
+    line-height: 1.6;
+  }
+
+  .explorer-page-help-body :where(p, ul) {
+    margin: 0;
+  }
+
+  .explorer-page-help-body ul {
+    display: grid;
+    gap: 0.45rem;
+    padding-left: 1.1rem;
+  }
+
+  .explorer-page-help-body li {
+    padding-left: 0.08rem;
+  }
+
+  .explorer-page-mobile-notice {
+    display: none;
+    margin: 0;
+    padding: 0.85rem 1rem;
+    border-radius: var(--explorer-radius-lg);
+    border: 1px solid var(--explorer-page-mobile-border);
+    background: var(--explorer-page-mobile-bg);
+    color: var(--muted);
+    font-family: var(--font-ui);
+    font-size: 0.88rem;
+    line-height: 1.6;
+  }
+
+  .explorer-page-mobile-notice p {
+    margin: 0;
+  }
+
+  .explorer-page-mobile-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 0.85rem;
+  }
+
+  .explorer-page-mobile-actions .btn {
+    flex: 1 1 11rem;
+  }
+
+  .explorer-page-frame {
+    padding: 0.22rem;
+    background: var(--explorer-page-frame-bg);
+  }
+
+  @media (max-width: 1180px) {
+    .explorer-page-help-stack {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 920px) {
+    .explorer-page-help-stack {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .explorer-page-mobile-notice {
+      display: grid;
+      gap: 0.85rem;
+      margin-bottom: 0.75rem;
+    }
+  }
+</style>
