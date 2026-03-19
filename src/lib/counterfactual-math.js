@@ -1,7 +1,7 @@
-import paperSubsetMetricData from "../data/paper-subset-metric-data.js";
+import covertypeMetricData from "../data/covertype-metric-data.js";
 
 export const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-export const paperSubsetMaxCount = paperSubsetMetricData.buckets.length;
+export const covertypeDomainMaxCount = covertypeMetricData.domains.length;
 
 export function clamp01(value) {
   return Math.min(1, Math.max(0, value));
@@ -228,39 +228,38 @@ function buildGridFromScoreFn(items, scoreFn) {
 
 const precomputedRealGridCache = new Map();
 
-function clonePaperSubsetBucket(bucket) {
+function cloneCovertypeDomain(domain) {
   return {
-    ...bucket,
-    collections: Array.isArray(bucket.collections) ? [...bucket.collections] : [],
-    citationKeys: Array.isArray(bucket.citationKeys) ? [...bucket.citationKeys] : [],
+    ...domain,
+    classCounts: Array.isArray(domain.classCounts) ? [...domain.classCounts] : [],
   };
 }
 
-function isSupportedPaperSubsetPrefix(items) {
-  if (items.length > paperSubsetMaxCount) return false;
-  return items.every((token, index) => token === paperSubsetMetricData.buckets[index]?.token);
+function isSupportedCovertypePrefix(items) {
+  if (items.length > covertypeDomainMaxCount) return false;
+  return items.every((token, index) => token === covertypeMetricData.domains[index]?.token);
 }
 
-export function getPaperSubsetBuckets(countOrItems = paperSubsetMaxCount) {
+export function getCovertypeDomains(countOrItems = covertypeDomainMaxCount) {
   const count = Array.isArray(countOrItems) ? countOrItems.length : countOrItems;
-  const safeCount = Math.max(0, Math.min(paperSubsetMaxCount, count));
-  return paperSubsetMetricData.buckets.slice(0, safeCount).map(clonePaperSubsetBucket);
+  const safeCount = Math.max(0, Math.min(covertypeDomainMaxCount, count));
+  return covertypeMetricData.domains.slice(0, safeCount).map(cloneCovertypeDomain);
 }
 
-export function getPaperSubsetMetricSource() {
+export function getCovertypeMetricSource() {
   return {
-    ...paperSubsetMetricData.source,
+    ...covertypeMetricData.source,
   };
 }
 
-function buildPaperSubsetGrid(items) {
-  if (!isSupportedPaperSubsetPrefix(items)) {
-    throw new Error(`Paper-subset metric supports the prefix tokens A-${paperSubsetMetricData.buckets[Math.max(0, items.length - 1)]?.token || "A"} only.`);
+function buildCovertypeGrid(items) {
+  if (!isSupportedCovertypePrefix(items)) {
+    throw new Error(`Covertype metric supports the prefix tokens A-${covertypeMetricData.domains[Math.max(0, items.length - 1)]?.token || "A"} only.`);
   }
 
-  const entry = paperSubsetMetricData.matrices[String(items.length)];
+  const entry = covertypeMetricData.matrices[String(items.length)];
   if (!entry) {
-    throw new Error(`Missing precomputed paper-subset matrix for count=${items.length}.`);
+    throw new Error(`Missing precomputed Covertype matrix for count=${items.length}.`);
   }
 
   return {
@@ -274,8 +273,8 @@ function buildPaperSubsetGrid(items) {
 export function buildSubsetGrid(items, metric, options = {}) {
   const { realDataMode = "precomputed", realDataSample = 0 } = options;
 
-  if (metric === "papers") {
-    return buildPaperSubsetGrid(items);
+  if (metric === "covertype") {
+    return buildCovertypeGrid(items);
   }
 
   if (metric === "real" && realDataMode === "precomputed") {

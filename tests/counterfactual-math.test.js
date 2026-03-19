@@ -10,9 +10,10 @@ import {
   computeScalingStats,
   computeSemivalueStats,
   computeShapleyStats,
+  covertypeDomainMaxCount,
   createTutorialPresets,
   findSubsetIndex,
-  getPaperSubsetBuckets,
+  getCovertypeDomains,
   selectAnalysisMatrix,
 } from "../src/lib/counterfactual-math.js";
 
@@ -223,9 +224,9 @@ test("real-data metric supports stable precomputed grids and perturbed live resa
   assert.notDeepEqual(liveA.matrix, liveB.matrix);
 });
 
-test("paper-subset metric stays bounded and uses stable precomputed corpus buckets", () => {
+test("covertype metric stays bounded and uses stable precomputed wilderness-domain matrices", () => {
   const items = ["A", "B", "C", "D"];
-  const { matrix, subsets } = buildSubsetGrid(items, "papers");
+  const { matrix, subsets } = buildSubsetGrid(items, "covertype");
   const fullIndex = findSubsetIndex(subsets, ["A", "B", "C", "D"]);
   const emptyIndex = findSubsetIndex(subsets, []);
 
@@ -236,15 +237,25 @@ test("paper-subset metric stays bounded and uses stable precomputed corpus bucke
   }
 
   assert.ok(matrix[fullIndex][fullIndex] > matrix[emptyIndex][fullIndex]);
-  assert.deepEqual(buildSubsetGrid(items, "papers").matrix, matrix);
+  assert.deepEqual(buildSubsetGrid(items, "covertype").matrix, matrix);
 });
 
-test("paper-subset buckets expose real grouped reading-list metadata", () => {
-  const buckets = getPaperSubsetBuckets(4);
+test("covertype domains expose real cohort metadata", () => {
+  const domains = getCovertypeDomains(4);
 
-  assert.equal(buckets.length, 4);
-  assert.deepEqual(buckets.map((bucket) => bucket.token), ["A", "B", "C", "D"]);
-  assert.ok(buckets.every((bucket) => bucket.paperCount >= 7));
+  assert.equal(covertypeDomainMaxCount, 4);
+  assert.equal(domains.length, 4);
+  assert.deepEqual(domains.map((domain) => domain.token), ["A", "B", "C", "D"]);
+  assert.deepEqual(domains.map((domain) => domain.label), [
+    "Rawah",
+    "Neota",
+    "Comanche Peak",
+    "Cache la Poudre",
+  ]);
+  assert.ok(domains.every((domain) => domain.totalRows >= 29000));
+  assert.ok(domains.every((domain) => domain.trainRows === 1200));
+  assert.ok(domains.every((domain) => domain.evalRows === 600));
+  assert.ok(domains.every((domain) => domain.classCounts.length === 7));
 });
 
 test("concept presets can all execute without missing setters", () => {

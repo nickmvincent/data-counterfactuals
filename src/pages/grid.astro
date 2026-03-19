@@ -946,6 +946,118 @@ if (!introSection) {
       font-size: 0.76rem;
       line-height: 1.45;
     }
+    .explorer-shell .selection-dock {
+      gap: 0.9rem;
+      padding: 1rem 1.02rem;
+      min-width: 0;
+      align-self: start;
+      max-height: min(78vh, 54rem);
+      overflow: auto;
+      scrollbar-gutter: stable;
+    }
+    .explorer-shell .selection-dock-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "reading"
+        "aside";
+      gap: 0.95rem;
+      align-items: start;
+    }
+    .explorer-shell .selection-dock-aside {
+      grid-area: aside;
+      display: grid;
+      gap: 0.75rem;
+      align-content: start;
+      min-width: 0;
+    }
+    .explorer-shell .selection-dock-reading,
+    .explorer-shell .selection-dock-section {
+      display: grid;
+      gap: 0.72rem;
+      min-width: 0;
+      padding: 0.92rem 0.95rem;
+      border-radius: var(--explorer-radius-lg);
+      border: 1px solid rgba(33, 65, 95, 0.1);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)),
+        rgba(255, 255, 255, 0.42);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+      align-content: start;
+    }
+    .explorer-shell .selection-dock-reading {
+      grid-area: reading;
+      border-color: rgba(45, 115, 133, 0.18);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0)),
+        linear-gradient(180deg, rgba(239, 251, 253, 0.94), rgba(228, 242, 246, 0.72));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.82),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+    }
+    .explorer-shell .selection-dock-mode {
+      border-color: rgba(191, 134, 66, 0.16);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0)),
+        linear-gradient(180deg, rgba(252, 248, 239, 0.9), rgba(245, 238, 222, 0.56));
+    }
+    .explorer-shell .selection-dock-section-head,
+    .explorer-shell .selection-dock-reading-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+    }
+    .explorer-shell .selection-dock-section-head > div,
+    .explorer-shell .selection-dock-reading-head > div {
+      display: grid;
+      gap: 0.12rem;
+      min-width: 0;
+    }
+    .explorer-shell .selection-dock-section-title {
+      margin: 0.18rem 0 0;
+      color: var(--explorer-fg);
+      font-family: var(--font-ui);
+      font-size: 0.96rem;
+      font-weight: 650;
+      line-height: 1.24;
+      letter-spacing: -0.02em;
+    }
+    .explorer-shell .selection-dock .panel-copy {
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+    .explorer-shell .selection-dock .control-cluster {
+      gap: 0.55rem;
+      padding: 0.82rem 0.88rem;
+      border-radius: var(--explorer-radius-md);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0)),
+        rgba(255, 255, 255, 0.58);
+    }
+    .explorer-shell .selection-dock .grid-marker-actions {
+      gap: 0.55rem;
+    }
+    .explorer-shell .selection-dock .grid-marker-guide {
+      gap: 0.25rem;
+      padding-top: 0.55rem;
+    }
+    .explorer-shell .selection-dock .stage-summary-grid {
+      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+      gap: 0.65rem;
+    }
+    .explorer-shell .selection-dock .stage-summary {
+      gap: 0.35rem;
+      padding: 0.82rem 0.85rem;
+    }
+    .explorer-shell .selection-dock .stage-summary-value {
+      font-size: clamp(1.05rem, 1.5vw, 1.35rem);
+    }
+    .explorer-shell .selection-dock .stage-summary-note {
+      font-size: 0.76rem;
+      line-height: 1.45;
+    }
     .explorer-shell .current-reading-status {
       display: grid;
       gap: 0.45rem;
@@ -1091,6 +1203,8 @@ if (!introSection) {
         inset 0 0 0 1px rgba(255, 255, 255, 0.35),
         0 18px 34px rgba(17, 37, 56, 0.08);
       scrollbar-gutter: stable both-edges;
+      overscroll-behavior: contain;
+      touch-action: pan-x pan-y;
     }
     .explorer-shell .grid-matrix {
       width: max-content;
@@ -1403,6 +1517,19 @@ if (!introSection) {
       gap: 0.8rem;
       flex-wrap: wrap;
     }
+    .explorer-shell .grid-stage-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(19rem, 23rem);
+      gap: clamp(0.95rem, 1.8vw, 1.15rem);
+      align-items: start;
+      min-width: 0;
+    }
+    .explorer-shell .grid-stage-board {
+      display: grid;
+      gap: 0.75rem;
+      min-width: 0;
+      align-content: start;
+    }
     .explorer-shell .grid-jump-controls {
       display: flex;
       flex-wrap: wrap;
@@ -1416,23 +1543,18 @@ if (!introSection) {
       flex: 1 1 11rem;
       max-width: 16rem;
     }
-    .explorer-shell .grid-selection-note {
-      color: var(--explorer-fg);
-      font-size: 0.82rem;
-      line-height: 1.55;
-      padding: 0.52rem 0.76rem;
-      border-radius: 999px;
-      border: 1px solid rgba(33, 65, 95, 0.12);
-      background: rgba(255, 255, 255, 0.68);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
-    }
     .explorer-shell .stage-grid {
-      max-height: min(72vh, 48rem);
+      min-height: min(32rem, 62vh);
+      max-height: min(78vh, 54rem);
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
     }
     .explorer-shell .comparison-legend {
       display: grid;
       gap: 0.35rem;
+      padding: 0.78rem 0.88rem;
+      border-radius: var(--explorer-radius-md);
+      border: 1px solid rgba(33, 65, 95, 0.1);
+      background: rgba(255, 255, 255, 0.52);
       color: var(--explorer-muted);
       font-size: 0.8rem;
       line-height: 1.6;
@@ -1678,11 +1800,22 @@ if (!introSection) {
     }
     @media (max-width: 1080px) {
       .explorer-page .page-header,
+      .explorer-shell .grid-stage-shell,
       .explorer-shell .inspector-grid,
       .explorer-shell .workspace-main,
       .explorer-shell .workspace-support-row,
       .explorer-shell .workspace-control-row {
         grid-template-columns: 1fr;
+      }
+      .explorer-shell .selection-dock-grid {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "reading"
+          "aside";
+      }
+      .explorer-shell .selection-dock {
+        max-height: none;
+        overflow: visible;
       }
       .explorer-shell .control-column {
         position: static;
@@ -1756,6 +1889,10 @@ if (!introSection) {
       .explorer-shell .stage-summary-grid {
         grid-template-columns: 1fr;
       }
+      .explorer-shell .selection-dock-reading,
+      .explorer-shell .selection-dock-section {
+        padding: 0.82rem 0.84rem;
+      }
       .explorer-shell .grid-jump-controls {
         width: 100%;
         justify-content: stretch;
@@ -1765,6 +1902,7 @@ if (!introSection) {
         max-width: none;
       }
       .explorer-shell .stage-grid {
+        min-height: min(24rem, 56vh);
         max-height: min(60vh, 24rem);
       }
     }

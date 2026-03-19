@@ -1,8 +1,6 @@
 ---
-title: The grid explorer
+title: Grid explorer
 description: Interactive toy explorer for comparing training-data counterfactuals.
-eyebrow: Interactive lab
-lede: This is a toy environment for comparing training-data worlds. It is small enough to inspect by eye, but rich enough to show the logic behind leave-one-out, Shapley-style comparisons, scaling summaries, and simple data edits.
 quick_tips:
   - Rows are training worlds and columns are evaluation slices; that is the core mental model for the whole page.
   - Operator view applies toy edits like poisoning or noise; Real world snaps back to the untouched reference grid.

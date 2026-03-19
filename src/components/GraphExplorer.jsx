@@ -7,11 +7,11 @@ import {
   computeRowRemovalStats,
   computeScalingStats,
   computeShapleyStats,
+  covertypeDomainMaxCount,
   findSubsetIndex,
-  getPaperSubsetBuckets,
+  getCovertypeDomains,
   labelSubset as label,
   normalizeValue,
-  paperSubsetMaxCount,
 } from "../lib/counterfactual-math.js";
 import { scrollChildIntoContainer } from "../lib/scroll-helpers.js";
 
@@ -69,9 +69,9 @@ const metricMeta = {
     short: "Entropy",
     description: "Overlap turned into an uncertainty-style signal: useful for spotting middling overlap, not accuracy itself.",
   },
-  papers: {
-    short: "Paper subsets",
-    description: "Precomputed score from real paper buckets in the local Semble cache.",
+  covertype: {
+    short: "Covertype",
+    description: "Held-out multiclass accuracy over real Covertype wilderness domains.",
   },
 };
 
@@ -206,10 +206,10 @@ function App() {
   const [hoveredNodeIndex, setHoveredNodeIndex] = useState(null);
 
   const scrollRef = useRef(null);
-  const maxCountForMetric = metric === "papers" ? Math.min(countMax, paperSubsetMaxCount) : countMax;
+  const maxCountForMetric = metric === "covertype" ? Math.min(countMax, covertypeDomainMaxCount) : countMax;
   const base = useMemo(() => alphabet.slice(0, Math.min(count, maxCountForMetric)), [count, maxCountForMetric]);
-  const paperSubsetBuckets = useMemo(
-    () => (metric === "papers" ? getPaperSubsetBuckets(base) : []),
+  const covertypeDomains = useMemo(
+    () => (metric === "covertype" ? getCovertypeDomains(base) : []),
     [metric, base],
   );
 
@@ -519,16 +519,16 @@ function App() {
               <button class="graph-btn" type="button" aria-pressed=${metric === "jaccard"} onClick=${() => setMetric("jaccard")}>Jaccard</button>
               <button class="graph-btn" type="button" aria-pressed=${metric === "inter"} onClick=${() => setMetric("inter")}>|Intersection|</button>
               <button class="graph-btn" type="button" aria-pressed=${metric === "entropy"} onClick=${() => setMetric("entropy")}>Entropy</button>
-              <button class="graph-btn" type="button" aria-pressed=${metric === "papers"} onClick=${() => setMetric("papers")}>Paper subsets</button>
+              <button class="graph-btn" type="button" aria-pressed=${metric === "covertype"} onClick=${() => setMetric("covertype")}>Covertype</button>
             </div>
             <div class="graph-control-note">${metricMeta[metric].description}</div>
-            ${metric === "papers"
+            ${metric === "covertype"
               ? html`
                   <div class="graph-control-note">
-                    A/B/C/... now map to real paper buckets from the local Semble cache. This metric supports up to ${maxCountForMetric} buckets in the graph.
+                    A/B/C/D now map to real wilderness-area domains from UCI Covertype. This metric supports up to ${maxCountForMetric} domains in the graph.
                   </div>
                   <div class="graph-pill-row">
-                    ${paperSubsetBuckets.map((bucket) => html`<span class="graph-pill">${bucket.token} = ${bucket.label} (${bucket.paperCount})</span>`)}
+                    ${covertypeDomains.map((domain) => html`<span class="graph-pill">${domain.token} = ${domain.label} (${domain.totalRows} rows)</span>`)}
                   </div>
                 `
               : null}

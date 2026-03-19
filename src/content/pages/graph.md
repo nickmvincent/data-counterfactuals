@@ -1,8 +1,6 @@
 ---
-title: The graph explorer
+title: Graph explorer
 description: Interactive graph/network companion to the grid explorer.
-eyebrow: Interactive lab
-lede: This companion view fixes an evaluation slice and walks the graph of possible training sets directly. Nodes are training worlds, and edges are one-step edits like ablations, augmentations, or steps inside a data strike.
 ---
 
 ## How to read the graph

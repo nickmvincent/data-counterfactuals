@@ -9,13 +9,13 @@ import {
   computeRowRemovalStats,
   computeScalingStats,
   computeSemivalueStats,
+  covertypeDomainMaxCount,
   createTutorialPresets,
   findSubsetIndex,
-  getPaperSubsetBuckets,
+  getCovertypeDomains,
   labelSubset as label,
   matrixRange,
   normalizeValue,
-  paperSubsetMaxCount,
   selectAnalysisMatrix,
 } from "../lib/counterfactual-math.js";
 import { scrollChildIntoContainer } from "../lib/scroll-helpers.js";
@@ -87,10 +87,10 @@ const metricMeta = {
     name: "Toy real-data accuracy",
     description: "accuracy from a tiny fixed dataset and a simple classifier",
   },
-  papers: {
-    short: "Paper subsets",
-    name: "Paper-subset score",
-    description: "precomputed score from real paper buckets in the local Semble cache",
+  covertype: {
+    short: "Covertype",
+    name: "Held-out domain accuracy",
+    description: "held-out multiclass accuracy over real Covertype wilderness domains",
   },
 };
 
@@ -261,7 +261,7 @@ function App() {
   const [realDataSample, setRealDataSample] = useState(0);
   const [paletteName, setPaletteName] = useState("Clear daylight");
   const palette = palettes[paletteName];
-  const maxCountForMetric = metric === "papers" ? Math.min(countMax, paperSubsetMaxCount) : countMax;
+  const maxCountForMetric = metric === "covertype" ? Math.min(countMax, covertypeDomainMaxCount) : countMax;
   const base = useMemo(() => alphabet.slice(0, Math.min(count, maxCountForMetric)), [count, maxCountForMetric]);
 
   const [conceptMode, setConceptMode] = useState("explore");
@@ -269,7 +269,7 @@ function App() {
   const [focusSet, setFocusSet] = useState(["A"]);
   const [k, setK] = useState(2);
   const [showNums, setShowNums] = useState(true);
-  const [showSingletonEvalCols, setShowSingletonEvalCols] = useState(true);
+  const [showSingletonEvalCols, setShowSingletonEvalCols] = useState(false);
   const [tutorialKind, setTutorialKind] = useState(null);
   const [tutorialInfo, setTutorialInfo] = useState(null);
   const [pendingSelection, setPendingSelection] = useState(null);
@@ -316,8 +316,8 @@ function App() {
     [realDataMode, realDataSample],
   );
   const { matrix: baseMatrix, subsets: subs } = useGrid(base, metric, metricOptions);
-  const paperSubsetBuckets = useMemo(
-    () => (metric === "papers" ? getPaperSubsetBuckets(base) : []),
+  const covertypeDomains = useMemo(
+    () => (metric === "covertype" ? getCovertypeDomains(base) : []),
     [metric, base],
   );
   const [rowIdx, setRowIdx] = useState(1);
@@ -677,8 +677,8 @@ function App() {
       ? realDataMode === "precomputed"
         ? `Each cell comes from a cached precomputed matrix over a tiny fixed toy dataset: train a simple classifier on ${label(Srow)} and score it on ${label(evalSet)}. It feels more like real data, but it is still a toy benchmark rather than a real experiment.`
         : `Each cell is recomputed live from a lightly resampled toy dataset: train a simple classifier on ${label(Srow)} and score it on ${label(evalSet)}. Use resample to perturb the tiny dataset and watch the grid move slightly.`
-      : metric === "papers"
-        ? `Each cell comes from a cached paper-corpus experiment over real reading-list subsets. The letters now map to the paper buckets shown below, and the score reads as "train a tiny bucket classifier on the row world, then evaluate it on the column slice."`
+      : metric === "covertype"
+        ? `Each cell comes from a cached Covertype domain experiment. The letters now map to real wilderness-area cohorts shown below, and the score reads as "train a multiclass classifier on the row domains, then evaluate it on held-out examples from the column domains."`
       : `Each cell is a toy proxy for "retrain on ${label(Srow)} and evaluate on ${label(evalSet)}." ${metricMeta[metric].short} summarizes how much the train and eval sets structurally line up, which can loosely track performance when overlap helps. It still ignores labels, features, model choice, and optimization, so treat it as a heuristic rather than true accuracy.`;
 
   let questionSummary;
@@ -1319,12 +1319,14 @@ function App() {
       universe: base,
       metric,
       realData: metric === "real" ? { mode: realDataMode, sample: realDataSample } : null,
-      paperBuckets:
-        metric === "papers"
-          ? paperSubsetBuckets.map(({ token, label: bucketLabel, paperCount }) => ({
+      covertypeDomains:
+        metric === "covertype"
+          ? covertypeDomains.map(({ token, label: domainLabel, totalRows, trainRows, evalRows }) => ({
               token,
-              label: bucketLabel,
-              paperCount,
+              label: domainLabel,
+              totalRows,
+              trainRows,
+              evalRows,
             }))
           : null,
       palette: paletteName,
@@ -1351,7 +1353,7 @@ function App() {
       metric,
       realDataMode,
       realDataSample,
-      paperSubsetBuckets,
+      covertypeDomains,
       paletteName,
       focusPrimary,
       focusSet,
@@ -1426,10 +1428,10 @@ function App() {
     ? "Only singleton evaluation columns are shown. For pointwise-additive metrics, larger eval slices can be recovered from per-point scores; for other toy metrics this is just a decluttering view."
     : "All evaluation subsets are shown.";
   const centerCompactGrid = showSingletonEvalCols && visibleColIndices.length < subs.length;
-  const gridSelectionHint =
-    showSingletonEvalCols
-      ? "Click a row label to choose the training world, a visible singleton column to choose the evaluation slice, or any cell to set both at once. Larger eval subsets are hidden in this display mode. Use the chooser buttons below the grid to mark a target or comparison point."
-      : "Click a row label to choose the training world, a column label to choose the evaluation slice, or any cell to set both at once. Use the chooser buttons below the grid to mark a target or comparison point.";
+  const displaySummary = [
+    showNums ? "Raw values on" : "Raw values off",
+    showSingletonEvalCols ? "singleton cols only" : "all eval cols",
+  ].join(", ");
 
   useEffect(() => {
     const container = gridWrapRef.current;
@@ -1489,7 +1491,7 @@ function App() {
     metricMeta[metric].short,
     conceptMode === "poison" ? currentWorldLabel : null,
     metric === "real" ? (realDataMode === "precomputed" ? "Precomputed matrix" : `Live sample ${realDataSample}`) : null,
-    metric === "papers" ? `${paperSubsetBuckets.length} paper buckets` : null,
+    metric === "covertype" ? `${covertypeDomains.length} real domains` : null,
   ].filter(Boolean);
 
   const semivalueTable = semivalueModes.has(conceptMode)
@@ -1634,15 +1636,12 @@ function App() {
     </section>
   `;
 
-  const modeControlsBlock = html`
-    <section class=${`stage-panel question-dock ${computedFlash ? "computed-flash" : ""}`} data-testid="question-controls">
-      <div class="panel-head">
-        <div class="panel-heading-group">
-          <span class="panel-step">4</span>
-          <div>
-            <span class="summary-kicker">Mode controls</span>
-            <h3 class="panel-title">${questionMeta[conceptMode]}</h3>
-          </div>
+  const modeControlsSection = html`
+    <section class=${`selection-dock-section selection-dock-mode ${computedFlash ? "computed-flash" : ""}`} data-testid="question-controls">
+      <div class="selection-dock-section-head">
+        <div>
+          <span class="summary-kicker">Mode controls</span>
+          <h3 class="selection-dock-section-title">${questionMeta[conceptMode]}</h3>
         </div>
       </div>
       <p class="panel-copy">${modeCopy}</p>
@@ -1766,15 +1765,50 @@ function App() {
     </section>
   `;
 
-  const currentReadingBlock = html`
-    <section class="stage-panel value-dock value-dock-tight" data-testid="value-dock">
-      <div class="panel-head">
-        <div class="panel-heading-group">
-          <span class="panel-step">3</span>
-          <div>
-            <span class="summary-kicker">Current reading</span>
-            <h3 class="panel-title">${questionSummary.title}</h3>
-          </div>
+  const gridMarkerSection = html`
+    <section class="selection-dock-section" data-testid="grid-marker-controls">
+      <div class="selection-dock-section-head">
+        <div>
+          <span class="summary-kicker">Grid markers</span>
+          <h3 class="selection-dock-section-title">Mark the cells you want to talk about.</h3>
+        </div>
+      </div>
+      <div class="grid-marker-actions">
+        <button class="btn mini" aria-pressed=${selectionArmed === "target"} onClick=${() => setSelectionArmed("target")}>
+          Choose target cell
+        </button>
+        <button
+          class="btn mini"
+          aria-pressed=${selectionArmed === "compare"}
+          disabled=${compareChooserDisabled}
+          onClick=${() => setSelectionArmed("compare")}
+        >
+          Mark comparison cell
+        </button>
+        ${compareMarkerGuide.canUseCanonical
+          ? html`
+              <button class="btn ghost mini" onClick=${() => canonicalComparePoint && setComparePoint(canonicalComparePoint)}>
+                Use built-in comparison
+              </button>
+            `
+          : null}
+      </div>
+      <div class="toolbar-note">${markerPanelMessage}</div>
+      <div class="grid-marker-guide">
+        <div class="toolbar-label">Comparison marker</div>
+        <div class="toolbar-note">${compareMarkerGuide.summary}</div>
+        <div class="toolbar-note">${compareMarkerGuide.rule}</div>
+        <div class="toolbar-note">${compareMarkerGuide.selectedNote}</div>
+      </div>
+    </section>
+  `;
+
+  const currentReadingSection = html`
+    <section class="selection-dock-reading value-dock value-dock-tight" data-testid="value-dock">
+      <div class="selection-dock-section-head selection-dock-reading-head">
+        <div>
+          <span class="summary-kicker">Current reading</span>
+          <h3 class="panel-title">${questionSummary.title}</h3>
         </div>
         <span class="pill">${questionSummary.answerLabel}: ${questionSummary.answerValue}</span>
       </div>
@@ -1814,6 +1848,28 @@ function App() {
     </section>
   `;
 
+  const selectionDockBlock = html`
+    <section class="stage-panel selection-dock" data-testid="grid-side-rail">
+      <div class="panel-head">
+        <div class="panel-heading-group">
+          <span class="panel-step">3</span>
+          <div>
+            <span class="summary-kicker">Selection workspace</span>
+            <h3 class="panel-title">Read, compare, and adjust one anchored train/eval pair.</h3>
+          </div>
+        </div>
+      </div>
+      <p class="panel-copy">Keep the active reading, marker tools, and mode-specific controls in view while you pan the matrix.</p>
+      <div class="selection-dock-grid">
+        ${currentReadingSection}
+        <div class="selection-dock-aside">
+          ${modeControlsSection}
+          ${gridMarkerSection}
+        </div>
+      </div>
+    </section>
+  `;
+
   return html`
     <div class="workspace-shell" data-testid="explorer-workspace" data-ready=${hydrated ? "true" : "false"}>
       <section class="workspace-toolbar" data-testid="explorer-toolbar">
@@ -1831,27 +1887,25 @@ function App() {
 
         <div class="toolbar-grid">
           <section class="toolbar-group toolbar-group-compact" data-testid="concept-controls">
-            <div class="toolbar-label">Question family</div>
-            <div class="segmented-row mode-toggle">
-              ${conceptOrder.map((mode) => html`
-                <button class="btn mini" aria-pressed=${conceptMode === mode} onClick=${() => chooseConcept(mode)}>${conceptMeta[mode].label}</button>
-              `)}
-            </div>
+            <label class="toolbar-select-field">
+              <span class="toolbar-label">Question family</span>
+              <select data-testid="concept-select" value=${conceptMode} onChange=${(event) => chooseConcept(event.target.value)}>
+                ${conceptOrder.map((mode) => html`<option value=${mode}>${conceptMeta[mode].label}</option>`)}
+              </select>
+            </label>
             <div class="toolbar-note">${modeCopy}</div>
           </section>
 
           <section class="toolbar-group" data-testid="metric-controls">
-              <div class="toolbar-label">
+            <label class="toolbar-select-field">
+              <span class="toolbar-label">
                 Cell score
-              ${InfoTip("Each cell stands in for 'retrain on the row world, evaluate on the column slice.' Jaccard uses normalized overlap, |Intersection| uses raw shared count, and Entropy turns overlap into an uncertainty-style score. Real data uses a tiny toy classifier over a tiny fixed dataset. Paper subsets uses a precomputed TF-IDF nearest-centroid experiment over real paper abstracts grouped into larger reading-list buckets.")}
-            </div>
-            <div class="segmented-row">
-              <button class="btn" aria-pressed=${metric === "jaccard"} onClick=${() => setMetric("jaccard")}>Jaccard</button>
-              <button class="btn" aria-pressed=${metric === "inter"} onClick=${() => setMetric("inter")}>|Intersection|</button>
-              <button class="btn" aria-pressed=${metric === "entropy"} onClick=${() => setMetric("entropy")}>Entropy</button>
-              <button class="btn" aria-pressed=${metric === "real"} onClick=${() => setMetric("real")}>Real data</button>
-              <button class="btn" aria-pressed=${metric === "papers"} onClick=${() => setMetric("papers")}>Paper subsets</button>
-            </div>
+                ${InfoTip("Each cell stands in for 'retrain on the row world, evaluate on the column slice.' Jaccard uses normalized overlap, |Intersection| uses raw shared count, and Entropy turns overlap into an uncertainty-style score. Real data uses a tiny toy classifier over a tiny fixed dataset. Covertype uses a precomputed multiclass experiment over real wilderness-area domains from the UCI Covertype dataset.")}
+              </span>
+              <select data-testid="metric-select" value=${metric} onChange=${(event) => setMetric(event.target.value)}>
+                ${Object.entries(metricMeta).map(([value, meta]) => html`<option value=${value}>${meta.short}</option>`)}
+              </select>
+            </label>
             ${metric === "real"
               ? html`
                   <div class="segmented-row">
@@ -1860,66 +1914,69 @@ function App() {
                     <button class="btn ghost mini" disabled=${realDataMode !== "live"} onClick=${resampleRealData}>Resample</button>
                   </div>
                 `
-              : metric === "papers"
+              : metric === "covertype"
                 ? html`
                     <div class="toolbar-note">
-                      A/B/C/... now map to real paper buckets from the local Semble cache. This metric supports up to ${paperSubsetMaxCount} buckets in the grid.
+                      A/B/C/D now map to real wilderness-area domains from UCI Covertype. This metric supports up to ${covertypeDomainMaxCount} domains in the grid.
                     </div>
                     <div class="summary-inline toolbar-pills">
-                      ${paperSubsetBuckets.map((bucket) => html`<span class="pill">${bucket.token} = ${bucket.label} (${bucket.paperCount})</span>`)}
+                      ${covertypeDomains.map((domain) => html`<span class="pill">${domain.token} = ${domain.label} (${domain.totalRows} rows)</span>`)}
                     </div>
                   `
               : null}
             <div class="toolbar-note">${scoreProxyCopy}</div>
           </section>
 
-          <section class="toolbar-group toolbar-group-actions" data-testid="display-controls">
-            <div class="toolbar-label">
-              Display
-              ${InfoTip("These controls only change how the grid is rendered, not the underlying counterfactual question.")}
-            </div>
-            <label class="checkbox-row">
-              <input type="checkbox" checked=${showNums} onChange=${(event) => setShowNums(event.target.checked)} />
-              Show raw values
-            </label>
-            <div class="checkbox-row">
-              <input
-                id="show-singleton-eval-cols"
-                type="checkbox"
-                checked=${showSingletonEvalCols}
-                onChange=${(event) => setShowSingletonEvalCols(event.target.checked)}
-              />
-              <label for="show-singleton-eval-cols">Show fewer cols</label>
-              ${InfoTip(
-                "For pointwise-additive metrics, a larger eval slice can be reconstructed from per-point scores, so singleton columns are enough. This toggle hides multi-point eval subsets to declutter the view; some toy metrics here are not literally pointwise additive, so the full matrix is still computed underneath.",
-              )}
-            </div>
-            <div class="toolbar-note">
-              ${conceptMode === "poison"
-                ? `${editSummary} ${evalColumnSummary}`
-                : `${showNums ? "Raw values are visible, so each cell shows its numeric score as well as its color." : "Turn raw values on when you want to inspect the exact toy scores instead of just the color field."} ${evalColumnSummary}`}
-            </div>
-            <details class="guide-details toolbar-drawer">
-              <summary>Advanced display and export</summary>
-              <div class="toolbar-expanded">
-                <label class="toolbar-select-field">
-                  <span class="toolbar-label">Palette</span>
-                  <select value=${paletteName} onChange=${(event) => setPaletteName(event.target.value)}>
-                    ${Object.keys(palettes).map((name) => html`<option value=${name}>${name}</option>`)}
-                  </select>
-                </label>
-                <div class="export-actions">
-                  <button class="btn mini" onClick=${exportJson}>Export JSON</button>
-                  <button class="btn ghost mini" onClick=${exportCsv}>Export CSV</button>
-                </div>
+          <details class="toolbar-group toolbar-group-actions toolbar-expand" data-testid="display-controls">
+            <summary class="toolbar-summary">
+              <div class="toolbar-summary-copy">
+                <span class="toolbar-summary-label">
+                  Display
+                  ${InfoTip("These controls only change how the grid is rendered, not the underlying counterfactual question.")}
+                </span>
+                <span class="toolbar-summary-title">${displaySummary}</span>
               </div>
-            </details>
-            <details class="guide-details toolbar-drawer">
-              <summary>Inspect live settings</summary>
+              <div class="toolbar-summary-actions">
+                <span class="pill">${showSingletonEvalCols ? "Compact" : "Expanded"}</span>
+                <span class="toolbar-summary-caret"></span>
+              </div>
+            </summary>
+            <div class="toolbar-expanded">
+              <label class="checkbox-row">
+                <input type="checkbox" checked=${showNums} onChange=${(event) => setShowNums(event.target.checked)} />
+                Show raw values
+              </label>
+              <div class="checkbox-row">
+                <input
+                  id="show-singleton-eval-cols"
+                  type="checkbox"
+                  checked=${showSingletonEvalCols}
+                  onChange=${(event) => setShowSingletonEvalCols(event.target.checked)}
+                />
+                <label for="show-singleton-eval-cols">Fewer cols</label>
+                ${InfoTip(
+                  "For pointwise-additive metrics, a larger eval slice can be reconstructed from per-point scores, so singleton columns are enough. This toggle hides multi-point eval subsets to declutter the view; some toy metrics here are not literally pointwise additive, so the full matrix is still computed underneath.",
+                )}
+              </div>
+              <div class="toolbar-note">
+                ${conceptMode === "poison"
+                  ? `${editSummary} ${evalColumnSummary}`
+                  : `${showNums ? "Raw values are visible, so each cell shows its numeric score as well as its color." : "Turn raw values on when you want to inspect the exact toy scores instead of just the color field."} ${evalColumnSummary}`}
+              </div>
+              <label class="toolbar-select-field">
+                <span class="toolbar-label">Palette</span>
+                <select value=${paletteName} onChange=${(event) => setPaletteName(event.target.value)}>
+                  ${Object.keys(palettes).map((name) => html`<option value=${name}>${name}</option>`)}
+                </select>
+              </label>
+              <div class="export-actions">
+                <button class="btn mini" onClick=${exportJson}>Export JSON</button>
+                <button class="btn ghost mini" onClick=${exportCsv}>Export CSV</button>
+              </div>
               <div class="ctrl-note">This is the same state currently driving the figure below.</div>
               <pre class="json-block">${settingsJson}</pre>
-            </details>
-          </section>
+            </div>
+          </details>
 
           <details class=${`toolbar-group toolbar-expand ${presetFlash ? "preset-flash" : ""}`} data-testid="scene-controls">
             <summary class="toolbar-summary">
@@ -1991,13 +2048,12 @@ function App() {
               <div>
                 <span class="summary-kicker">Counterfactual grid</span>
                 <h2 class="grid-card-title">Rows are worlds; columns are slices.</h2>
-                <p class="grid-card-copy">Click a row label, column label, or cell to anchor one train/eval pairing. The reading and controls below stay locked to that same selection.</p>
+                <p class="grid-card-copy">Click a row label, column label, or cell to anchor one train/eval pairing. The live dock stays locked to that selection while you pan the matrix.</p>
               </div>
             </div>
           </div>
 
           <div class="grid-toolbar-strip">
-            <div class="grid-selection-note" title=${gridSelectionHint}>${gridSelectionHint}</div>
             <div class="grid-jump-controls" data-testid="grid-jump-controls">
               <label class="grid-jump-field">
                 <span class="toolbar-label">Jump to train</span>
@@ -2014,230 +2070,195 @@ function App() {
             </div>
           </div>
 
-          <div
-            class="grid-wrap stage-grid"
-            ref=${gridWrapRef}
-            data-testid="explorer-grid"
-            data-compact-cols=${centerCompactGrid ? "true" : "false"}
-          >
-            <div class="grid-matrix">
-              <div style="display:flex">
-                <div class="rl axis-corner" style="width:var(--grid-axis-w)" title=${`${gridSelectionHint} Use the plus and minus buttons to grow or shrink the toy universe.`}>
-                  <div class="axis-corner-stack">
-                    <span class="axis-corner-label">Grid controls</span>
-                    <div class="axis-corner-mode">
-                      <span>Rows train</span>
-                      <span>Cols eval</span>
-                    </div>
-                    <div class="axis-corner-actions">
-                      <button
-                        class="axis-corner-btn"
-                        type="button"
-                        disabled=${!canDecreaseCount}
-                        onClick=${() => setCount((previous) => Math.max(countMin, previous - 1))}
-                        title="Remove one base point; rows and columns both shrink."
-                      >
-                        -
-                      </button>
-                      <span class="axis-corner-size" title="Toy universe size">${count}</span>
-                      <button
-                        class="axis-corner-btn"
-                        type="button"
-                        disabled=${!canIncreaseCount}
-                        onClick=${() => setCount((previous) => Math.min(maxCountForMetric, previous + 1))}
-                        title="Add one base point; rows and columns both grow."
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                ${visibleColIndices.map((colIndex) => {
-                  const colSet = subs[colIndex] || [];
-                  const active = colIndex === safeColIdx;
-                  const hovered = hoveredColIdx === colIndex;
-                  return html`
-                    <div
-                      key=${`col-${colIndex}`}
-                      class=${`cl ${active ? "axis-active" : ""} ${hovered ? "axis-hot" : ""}`}
-                      role="button"
-                      tabIndex="0"
-                      aria-pressed=${active}
-                      aria-label=${`Select evaluation slice ${label(colSet)}`}
-                      title=${`Select evaluation slice ${label(colSet)}. Click any cell to set both train and eval at once.`}
-                      onClick=${() => setColIdx(colIndex)}
-                      onKeyDown=${(event) => handleGridActionKey(event, () => setColIdx(colIndex))}
-                      onMouseEnter=${() => previewGridTarget(safeRowIdx, colIndex)}
-                      onMouseLeave=${clearGridPreview}
-                      onFocus=${() => previewGridTarget(safeRowIdx, colIndex)}
-                      onBlur=${clearGridPreview}
-                    >
-                      ${formatColumnHeader(colIndex, colSet)}
-                    </div>
-                  `;
-                })}
-              </div>
-              ${subs.map((rowSet, rowIndex) => {
-                const rowActive = rowIndex === safeRowIdx;
-                const rowHovered = hoveredRowIdx === rowIndex;
-                return html`
-                  <div style="display:flex" key=${`row-${rowIndex}`}>
-                    <div
-                      class=${`rl ${rowActive ? "axis-active" : ""} ${rowHovered ? "axis-hot" : ""}`}
-                      role="button"
-                      tabIndex="0"
-                      aria-pressed=${rowActive}
-                      aria-label=${`Select training world ${label(rowSet)}`}
-                      title=${`Select training world ${label(rowSet)}. Click any cell to set both train and eval at once.`}
-                      onClick=${() => setRowIdx(rowIndex)}
-                      onKeyDown=${(event) => handleGridActionKey(event, () => setRowIdx(rowIndex))}
-                      onMouseEnter=${() => previewGridTarget(rowIndex, safeColIdx)}
-                      onMouseLeave=${clearGridPreview}
-                      onFocus=${() => previewGridTarget(rowIndex, safeColIdx)}
-                      onBlur=${clearGridPreview}
-                    >
-                      ${formatRowHeader(rowIndex, rowSet)}
-                    </div>
-                    <div class="rr">
-                      ${visibleColIndices.map((colIndex) => {
-                        const evSet = subs[colIndex] || [];
-                        const value = displayMatrix[rowIndex]?.[colIndex] ?? 0;
-                        const normalized = normalizeValue(value, dispMin, dispMax, 0.5);
-                        const sizeK = rowSet.length === k;
-                        const isSel = rowIndex === safeRowIdx && colIndex === safeColIdx;
-                        const isTargetCell =
-                          selectionArmed === "target" &&
-                          pendingSelection === null &&
-                          rowIndex === safeRowIdx &&
-                          colIndex === safeColIdx;
-                        const isCompareCell = Boolean(
-                          visibleComparePoint &&
-                            visibleComparePoint.rowIndex === rowIndex &&
-                            visibleComparePoint.colIndex === colIndex,
-                        );
-                        const edited =
-                          conceptMode === "poison" &&
-                          effectiveGridView === "operator" &&
-                          poisonRows.has(rowIndex) &&
-                          colIndex === safeColIdx;
-
-                        let thin = false;
-                        let thick = false;
-                        if (semivalueModes.has(conceptMode) && colIndex === safeColIdx) {
-                          thin = thin || semivalueThinRows.has(rowIndex);
-                          thick = thick || semivalueThickRows.has(rowIndex);
-                        }
-                        if (["loo", "dp", "unlearning"].includes(conceptMode) && colIndex === safeColIdx) {
-                          if (rowIndex === safeRowIdx) thick = true;
-                          if (looMinusIdx >= 0 && rowIndex === looMinusIdx) thin = true;
-                        }
-                        if (conceptMode === "group" && colIndex === safeColIdx) {
-                          if (rowIndex === safeRowIdx) thick = true;
-                          if (strikeMinusIdx >= 0 && rowIndex === strikeMinusIdx) thin = true;
-                        }
-                        if (conceptMode === "scaling" && colIndex === safeColIdx && sizeK) {
-                          thin = true;
-                        }
-                        if (conceptMode === "poison" && colIndex === safeColIdx) {
-                          if (rowIndex === safeRowIdx) thick = true;
-                          if (poisonRows.has(rowIndex)) thin = true;
-                        }
-
-                        const highlight = thin || thick || isSel;
-                        const previewingRow = hoveredRowIdx === rowIndex;
-                        const previewingCol = hoveredColIdx === colIndex;
-                        const previewingCell = previewingRow && previewingCol;
-                        const classes = ["cell"];
-                        if (isSel) classes.push("sel");
-                        if (highlight) classes.push("cell-emph");
-                        if (previewingRow || previewingCol) classes.push("cell-track");
-                        if (previewingCell) classes.push("cell-hot");
-                        if (edited) classes.push("cell-edited");
-                        if (switchPulse && highlight) classes.push("cell-pulse");
-
-                        return html`
-                          <div
-                            key=${`cell-${rowIndex}-${colIndex}`}
-                            class=${classes.join(" ")}
-                            data-selected=${isSel ? "true" : "false"}
-                            data-target-cell=${isTargetCell ? "true" : "false"}
-                            data-compare-cell=${isCompareCell ? "true" : "false"}
-                            role="button"
-                            tabIndex="0"
-                            aria-pressed=${isSel}
-                            aria-label=${`Train ${label(rowSet)}, evaluate ${label(evSet)}, score ${value.toFixed(3)}`}
-                            title=${`Train ${label(rowSet)} | Eval ${label(evSet)} | value ${value.toFixed(3)}`}
-                            onClick=${() => handleCellClick(rowIndex, colIndex)}
-                            onKeyDown=${(event) => handleGridActionKey(event, () => handleCellClick(rowIndex, colIndex))}
-                            onMouseEnter=${() => previewGridTarget(rowIndex, colIndex)}
-                            onMouseLeave=${clearGridPreview}
-                            onFocus=${() => previewGridTarget(rowIndex, colIndex)}
-                            onBlur=${clearGridPreview}
-                            style=${{ background: palette(normalized) }}
+          <div class="grid-stage-shell">
+            <div class="grid-stage-board">
+              <div
+                class="grid-wrap stage-grid"
+                ref=${gridWrapRef}
+                data-testid="explorer-grid"
+                data-compact-cols=${centerCompactGrid ? "true" : "false"}
+              >
+                <div class="grid-matrix">
+                  <div style="display:flex">
+                    <div class="rl axis-corner" style="width:var(--grid-axis-w)" title="Use the plus and minus buttons to grow or shrink the toy universe.">
+                      <div class="axis-corner-stack">
+                        <span class="axis-corner-label">Grid controls</span>
+                        <div class="axis-corner-mode">
+                          <span>Rows train</span>
+                          <span>Cols eval</span>
+                        </div>
+                        <div class="axis-corner-actions">
+                          <button
+                            class="axis-corner-btn"
+                            type="button"
+                            disabled=${!canDecreaseCount}
+                            onClick=${() => setCount((previous) => Math.max(countMin, previous - 1))}
+                            title="Remove one base point; rows and columns both shrink."
                           >
-                            ${isTargetCell ? html`<div class="marker-ring marker-ring-target"></div>` : null}
-                            ${isCompareCell ? html`<div class="marker-ring marker-ring-compare"></div>` : null}
-                            ${thin ? html`<div class="ring ring-thin"></div>` : null}
-                            ${thick ? html`<div class="ring ring-thick"></div>` : null}
-                            ${edited ? html`<div class="edit-flag" title="Toy edit affects this row in operator view"></div>` : null}
-                            ${showNums
-                              ? html`<div class="num" style=${{ color: normalized > 0.48 ? "#10273d" : "#f7fbff" }}>${value.toFixed(2)}</div>`
-                              : null}
-                          </div>
-                        `;
-                      })}
+                            -
+                          </button>
+                          <span class="axis-corner-size" title="Toy universe size">${count}</span>
+                          <button
+                            class="axis-corner-btn"
+                            type="button"
+                            disabled=${!canIncreaseCount}
+                            onClick=${() => setCount((previous) => Math.min(maxCountForMetric, previous + 1))}
+                            title="Add one base point; rows and columns both grow."
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
                     </div>
+                    ${visibleColIndices.map((colIndex) => {
+                      const colSet = subs[colIndex] || [];
+                      const active = colIndex === safeColIdx;
+                      const hovered = hoveredColIdx === colIndex;
+                      return html`
+                        <div
+                          key=${`col-${colIndex}`}
+                          class=${`cl ${active ? "axis-active" : ""} ${hovered ? "axis-hot" : ""}`}
+                          role="button"
+                          tabIndex="0"
+                          aria-pressed=${active}
+                          aria-label=${`Select evaluation slice ${label(colSet)}`}
+                          title=${`Select evaluation slice ${label(colSet)}. Click any cell to set both train and eval at once.`}
+                          onClick=${() => setColIdx(colIndex)}
+                          onKeyDown=${(event) => handleGridActionKey(event, () => setColIdx(colIndex))}
+                          onMouseEnter=${() => previewGridTarget(safeRowIdx, colIndex)}
+                          onMouseLeave=${clearGridPreview}
+                          onFocus=${() => previewGridTarget(safeRowIdx, colIndex)}
+                          onBlur=${clearGridPreview}
+                        >
+                          ${formatColumnHeader(colIndex, colSet)}
+                        </div>
+                      `;
+                    })}
                   </div>
-                `;
-              })}
+                  ${subs.map((rowSet, rowIndex) => {
+                    const rowActive = rowIndex === safeRowIdx;
+                    const rowHovered = hoveredRowIdx === rowIndex;
+                    return html`
+                      <div style="display:flex" key=${`row-${rowIndex}`}>
+                        <div
+                          class=${`rl ${rowActive ? "axis-active" : ""} ${rowHovered ? "axis-hot" : ""}`}
+                          role="button"
+                          tabIndex="0"
+                          aria-pressed=${rowActive}
+                          aria-label=${`Select training world ${label(rowSet)}`}
+                          title=${`Select training world ${label(rowSet)}. Click any cell to set both train and eval at once.`}
+                          onClick=${() => setRowIdx(rowIndex)}
+                          onKeyDown=${(event) => handleGridActionKey(event, () => setRowIdx(rowIndex))}
+                          onMouseEnter=${() => previewGridTarget(rowIndex, safeColIdx)}
+                          onMouseLeave=${clearGridPreview}
+                          onFocus=${() => previewGridTarget(rowIndex, safeColIdx)}
+                          onBlur=${clearGridPreview}
+                        >
+                          ${formatRowHeader(rowIndex, rowSet)}
+                        </div>
+                        <div class="rr">
+                          ${visibleColIndices.map((colIndex) => {
+                            const evSet = subs[colIndex] || [];
+                            const value = displayMatrix[rowIndex]?.[colIndex] ?? 0;
+                            const normalized = normalizeValue(value, dispMin, dispMax, 0.5);
+                            const sizeK = rowSet.length === k;
+                            const isSel = rowIndex === safeRowIdx && colIndex === safeColIdx;
+                            const isTargetCell =
+                              selectionArmed === "target" &&
+                              pendingSelection === null &&
+                              rowIndex === safeRowIdx &&
+                              colIndex === safeColIdx;
+                            const isCompareCell = Boolean(
+                              visibleComparePoint &&
+                                visibleComparePoint.rowIndex === rowIndex &&
+                                visibleComparePoint.colIndex === colIndex,
+                            );
+                            const edited =
+                              conceptMode === "poison" &&
+                              effectiveGridView === "operator" &&
+                              poisonRows.has(rowIndex) &&
+                              colIndex === safeColIdx;
+
+                            let thin = false;
+                            let thick = false;
+                            if (semivalueModes.has(conceptMode) && colIndex === safeColIdx) {
+                              thin = thin || semivalueThinRows.has(rowIndex);
+                              thick = thick || semivalueThickRows.has(rowIndex);
+                            }
+                            if (["loo", "dp", "unlearning"].includes(conceptMode) && colIndex === safeColIdx) {
+                              if (rowIndex === safeRowIdx) thick = true;
+                              if (looMinusIdx >= 0 && rowIndex === looMinusIdx) thin = true;
+                            }
+                            if (conceptMode === "group" && colIndex === safeColIdx) {
+                              if (rowIndex === safeRowIdx) thick = true;
+                              if (strikeMinusIdx >= 0 && rowIndex === strikeMinusIdx) thin = true;
+                            }
+                            if (conceptMode === "scaling" && colIndex === safeColIdx && sizeK) {
+                              thin = true;
+                            }
+                            if (conceptMode === "poison" && colIndex === safeColIdx) {
+                              if (rowIndex === safeRowIdx) thick = true;
+                              if (poisonRows.has(rowIndex)) thin = true;
+                            }
+
+                            const highlight = thin || thick || isSel;
+                            const previewingRow = hoveredRowIdx === rowIndex;
+                            const previewingCol = hoveredColIdx === colIndex;
+                            const previewingCell = previewingRow && previewingCol;
+                            const classes = ["cell"];
+                            if (isSel) classes.push("sel");
+                            if (highlight) classes.push("cell-emph");
+                            if (previewingRow || previewingCol) classes.push("cell-track");
+                            if (previewingCell) classes.push("cell-hot");
+                            if (edited) classes.push("cell-edited");
+                            if (switchPulse && highlight) classes.push("cell-pulse");
+
+                            return html`
+                              <div
+                                key=${`cell-${rowIndex}-${colIndex}`}
+                                class=${classes.join(" ")}
+                                data-selected=${isSel ? "true" : "false"}
+                                data-target-cell=${isTargetCell ? "true" : "false"}
+                                data-compare-cell=${isCompareCell ? "true" : "false"}
+                                role="button"
+                                tabIndex="0"
+                                aria-pressed=${isSel}
+                                aria-label=${`Train ${label(rowSet)}, evaluate ${label(evSet)}, score ${value.toFixed(3)}`}
+                                title=${`Train ${label(rowSet)} | Eval ${label(evSet)} | value ${value.toFixed(3)}`}
+                                onClick=${() => handleCellClick(rowIndex, colIndex)}
+                                onKeyDown=${(event) => handleGridActionKey(event, () => handleCellClick(rowIndex, colIndex))}
+                                onMouseEnter=${() => previewGridTarget(rowIndex, colIndex)}
+                                onMouseLeave=${clearGridPreview}
+                                onFocus=${() => previewGridTarget(rowIndex, colIndex)}
+                                onBlur=${clearGridPreview}
+                                style=${{ background: palette(normalized) }}
+                              >
+                                ${isTargetCell ? html`<div class="marker-ring marker-ring-target"></div>` : null}
+                                ${isCompareCell ? html`<div class="marker-ring marker-ring-compare"></div>` : null}
+                                ${thin ? html`<div class="ring ring-thin"></div>` : null}
+                                ${thick ? html`<div class="ring ring-thick"></div>` : null}
+                                ${edited ? html`<div class="edit-flag" title="Toy edit affects this row in operator view"></div>` : null}
+                                ${showNums
+                                  ? html`<div class="num" style=${{ color: normalized > 0.48 ? "#10273d" : "#f7fbff" }}>${value.toFixed(2)}</div>`
+                                  : null}
+                              </div>
+                            `;
+                          })}
+                        </div>
+                      </div>
+                    `;
+                  })}
+                </div>
+              </div>
+              <div class="comparison-legend">
+                <div>The matrix is the playfield.</div>
+                <div>Use the live dock to keep the reading, markers, and mode controls visible while you move around the grid.</div>
+              </div>
             </div>
+            ${selectionDockBlock}
           </div>
 
         </section>
-
-        <div class="workspace-support-row" data-testid="grid-side-rail">
-          <div class="workspace-control-row">
-            <div class="grid-marker-panel" data-testid="grid-marker-controls">
-              <div class="grid-marker-head">
-                <div>
-                  <span class="summary-kicker">Grid markers</span>
-                  <div class="grid-marker-title">Mark the cells you want to talk about.</div>
-                </div>
-              </div>
-            <div class="grid-marker-actions">
-              <button class="btn mini" aria-pressed=${selectionArmed === "target"} onClick=${() => setSelectionArmed("target")}>
-                Choose target cell
-              </button>
-              <button
-                class="btn mini"
-                aria-pressed=${selectionArmed === "compare"}
-                disabled=${compareChooserDisabled}
-                onClick=${() => setSelectionArmed("compare")}
-              >
-                Mark comparison cell
-              </button>
-              ${compareMarkerGuide.canUseCanonical
-                ? html`
-                    <button class="btn ghost mini" onClick=${() => canonicalComparePoint && setComparePoint(canonicalComparePoint)}>
-                      Use built-in comparison
-                    </button>
-                  `
-                : null}
-            </div>
-            <div class="toolbar-note">${markerPanelMessage}</div>
-            <div class="grid-marker-guide">
-              <div class="toolbar-label">Comparison marker</div>
-              <div class="toolbar-note">${compareMarkerGuide.summary}</div>
-              <div class="toolbar-note">${compareMarkerGuide.rule}</div>
-              <div class="toolbar-note">${compareMarkerGuide.selectedNote}</div>
-            </div>
-          </div>
-
-          ${modeControlsBlock}
-          </div>
-
-          ${currentReadingBlock}
-        </div>
       </div>
 
       ${showInspector ? analysisDetailBlock : null}

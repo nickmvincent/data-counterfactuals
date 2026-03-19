@@ -61,12 +61,12 @@ test("graph answer requests mirror the graph explorer's ablation lens", () => {
   assert.match(response.answer.formula, /ABCD/);
 });
 
-test("paper-subset requests expose the real bucket mapping in graph responses", () => {
+test("covertype requests expose the real domain legend in graph responses", () => {
   const response = runExplorerApiRequest({
     explorer: "graph",
     response: "answer",
     count: 4,
-    metric: "papers",
+    metric: "covertype",
     lens: "strike",
     focusSet: ["B"],
     train: "ABCD",
@@ -74,11 +74,11 @@ test("paper-subset requests expose the real bucket mapping in graph responses", 
   });
 
   assert.equal(response.explorer, "graph");
-  assert.equal(response.normalizedState.metric, "papers");
-  assert.equal(response.subsetBuckets.length, 4);
+  assert.equal(response.normalizedState.metric, "covertype");
+  assert.equal(response.subsetLegend.length, 4);
   assert.deepEqual(
-    response.subsetBuckets.map((bucket) => bucket.token),
+    response.subsetLegend.map((domain) => domain.token),
     ["A", "B", "C", "D"],
   );
-  assert.match(response.subsetBuckets[0].label, /Acquisition/);
+  assert.equal(response.subsetLegend[0].label, "Rawah");
 });
