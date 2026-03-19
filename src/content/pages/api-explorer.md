@@ -7,4 +7,4 @@ lede: Treat the explorer controls like a request body. This page accepts the sam
 
 ## how to read this
 
-This page is the fastest way to ask, "what does the explorer return for this exact combination of controls?" The left side is a raw JSON request, the right rail documents the accepted keys, and the response panel echoes the normalized state so you can see how subset labels, indices, and defaults were resolved.
+This page provides an "API explorer" view into the underlying numbers that make up our data counterfactual exploration tools.

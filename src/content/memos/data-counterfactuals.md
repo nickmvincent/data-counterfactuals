@@ -14,8 +14,6 @@ This is a short memo meant to explain the datacounterfactuals.org project and we
 - make certain data counterfactual measurements easier to understand
 - illustrate connections between technical and social data-centric work
 
-A quick piece of context: the Data Counterfactuals site is part of a broader effort to create informative websites that externalize memos, spreadsheets, and insights that are relevant to various data and AI policy initiatives and discussions. Other projects include a list of data licensing and preference signaling mechanisms (datalicenses.org), napkin math about training data (exploringai.org), and a few more in the works (including a rework of datalevers.org). Of all these sites, Data Counterfactuals is, at present, a bit less broadly interesting than the others; the focus here is on trying to convince people who already might have an interest in data valuation, bargaining, data-centric approaches to privacy, and neighboring topics about undervalued connections between different computing research areas. A long-term goal is to make this site broadly accessible, but in short: if it doesn't seem too interesting yet, consider checking out the other sites listed above.
-
 There are many reasons we might want to understand how a specific piece of data impacts an AI model. Perhaps we want to inspect particularly valuable data, pay people based on the impact of their data (though this is a tricky endeavor!), or check data for errors. Or perhaps a group of people want to withhold data for bargaining or protest. This web project grew out of discussions on data valuation, algorithmic collective action, data scaling, data selection, data poisoning, privacy, unlearning, and neighboring topics. Counterfactual questions about how data might change are foundational to all these areas, and so understanding various questions in terms of data counterfactuals can be practically and academically useful.
 
 ## What is a data counterfactual?
@@ -28,11 +26,15 @@ With this grid in mind, we can explore the most basic useful data counterfactual
 
 Very simply, we can imagine training an LLM with a bunch of fiction books, science articles, and social media posts. If we train a second LLM without the science articles and compare the performance, we are exploring the "no science articles" data counterfactual.
 
-## Why this matters for data leverage
+## Why data counterfactuals are relevant to data leverage
 
-This frame helps us connect topics like Shapley values and data strikes. In ML, we often want to ask questions about removing a point, reweighting a group, estimating an influence score, fitting a scaling curve, etc. with the purpose of understanding our data and model. But counterfactuals can also be induced by strategic actors. Data strikes, boycotts, contribution campaigns, and bargaining efforts try to change what data the world actually produces, or what data an AI developer can access on acceptable terms.
+This frame helps us connect topics that might seem distinct, for instance connecting influence estimation and Shapley values with data strikes and data contribution campaigns. In ML, we often want to ask questions about removing a point, reweighting a group, estimating an influence score, fitting a scaling curve, etc. with the purpose of understanding our data and model. But counterfactuals can also be induced by strategic actors. Data strikes, boycotts, contribution campaigns, and bargaining efforts try to change what data the world actually produces, or what data an AI developer can access on acceptable terms.
 
 When people can withhold, redirect, or condition the supply of data, data counterfactual measurement directly maps to governance power! In other words, the kind of experiments we'd want to run if we're just an ML researcher trying to make our model better (via data selection or other data-centric approaches) are the same experiments we'd want to run if we're trying to organize data-related collective action or set up an efficient data market. If we had a shared bank of results from such an experiment, those results would be useful to actors with a wide variety of interests and goals! Furthermore, this frame also makes it very clear where questions about provenance, licensing, and contribution governance directly determine which training rows are legally, socially, or politically available in the first place.
+
+## Why data counterfactuals are relevant to core AI
+
+...
 
 ## The grid view
 
@@ -54,7 +56,9 @@ Variations of the term appear across the related data valuation and data attribu
 
 So in short -- it is a term that has been used, but it currently isn't the case that every work or technique that explores "data counterfactual scenarios" always bills itself as a "data counterfactual" paper.
 
-## Some limitations
+A quick piece of context: the Data Counterfactuals site is part of a broader effort to create informative websites that externalize memos, spreadsheets, and insights that are relevant to various data and AI policy initiatives and discussions. Other projects include a list of data licensing and preference signaling mechanisms (datalicenses.org), napkin math about training data (exploringai.org), and a few more in the works (including a rework of datalevers.org). Of all these sites, Data Counterfactuals is, at present, a bit less broadly interesting than the others; the focus here is on trying to convince people who already might have an interest in data valuation, bargaining, data-centric approaches to privacy, and neighboring topics about undervalued connections between different computing research areas. A long-term goal is to make this site broadly accessible, but in short: if it doesn't seem too interesting yet, consider checking out the other sites listed above.
+
+## Some limitations of the grid view
 
 Of course, with this site we are not trying to claim these projects are all formally identical. There are many details that make the tasks and concepts different in important ways. Very critically, it is important to understand the distinction between techniques that only explore counterfactuals over data that already exist, approaches that try to change the data available to an AI operator, and approaches that try to change the world itself.
 
@@ -70,6 +74,20 @@ Some related concepts require a more complex model than the simple "grid" presen
 - Strategic or performative settings care about feedback loops in which deploying the model changes the future data-generating process.
 
 (If you're interested in adding more papers on these to the collection, or have ideas for extending the grid, please reach out!)
+
+## An important distinction
+
+...
+
+distinction between techniques that edit data an operator has, change the data an operator has, and edit the real world
+
+## Some exciting connections
+
+...
+
+explain how differential privacy can be understood in terms of data counterfactuals
+
+Also machine unlearning, also data scaling, also data ablations, also a participant in a data market
 
 ## Why build this site?
 
