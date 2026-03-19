@@ -15,6 +15,7 @@
     "check": "astro check",
     "semble:status": "node scripts/semble-status.mjs",
     "semble:manage": "node scripts/semble-client.mjs",
+    "generate:paper-metric": "node scripts/generate-paper-subset-metric.mjs",
     "test": "node --test",
     "test:e2e": "playwright test"
   },

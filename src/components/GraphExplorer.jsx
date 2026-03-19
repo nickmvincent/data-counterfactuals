@@ -8,8 +8,10 @@ import {
   computeScalingStats,
   computeShapleyStats,
   findSubsetIndex,
+  getPaperSubsetBuckets,
   labelSubset as label,
   normalizeValue,
+  paperSubsetMaxCount,
 } from "../lib/counterfactual-math.js";
 import { scrollChildIntoContainer } from "../lib/scroll-helpers.js";
 
@@ -66,6 +68,10 @@ const metricMeta = {
   entropy: {
     short: "Entropy",
     description: "Overlap turned into an uncertainty-style signal: useful for spotting middling overlap, not accuracy itself.",
+  },
+  papers: {
+    short: "Paper subsets",
+    description: "Precomputed score from real paper buckets in the local Semble cache.",
   },
 };
 
@@ -200,14 +206,23 @@ function App() {
   const [hoveredNodeIndex, setHoveredNodeIndex] = useState(null);
 
   const scrollRef = useRef(null);
+  const maxCountForMetric = metric === "papers" ? Math.min(countMax, paperSubsetMaxCount) : countMax;
+  const base = useMemo(() => alphabet.slice(0, Math.min(count, maxCountForMetric)), [count, maxCountForMetric]);
+  const paperSubsetBuckets = useMemo(
+    () => (metric === "papers" ? getPaperSubsetBuckets(base) : []),
+    [metric, base],
+  );
 
-  const base = useMemo(() => alphabet.slice(0, count), [count]);
   const { matrix, subsets } = useMemo(() => buildSubsetGrid(base, metric), [base, metric]);
   const fullSetIndex = useMemo(() => findSubsetIndex(subsets, base), [subsets, base]);
   const emptySetIndex = useMemo(() => findSubsetIndex(subsets, []), [subsets]);
 
   const [selectedIndex, setSelectedIndex] = useState(fullSetIndex >= 0 ? fullSetIndex : 0);
   const [evalIndex, setEvalIndex] = useState(fullSetIndex >= 0 ? fullSetIndex : 0);
+
+  useEffect(() => {
+    if (count > maxCountForMetric) setCount(maxCountForMetric);
+  }, [count, maxCountForMetric]);
 
   useEffect(() => {
     const nextFocus = focusSet.filter((token) => base.includes(token));
@@ -493,7 +508,7 @@ function App() {
             <div class="graph-stepper">
               <button class="graph-btn mini" type="button" data-testid="graph-count-decrease" disabled=${count <= countMin} onClick=${() => setCount((previous) => Math.max(countMin, previous - 1))}>-</button>
               <span class="graph-stepper-value" data-testid="graph-count-value">${count} datasets</span>
-              <button class="graph-btn mini" type="button" data-testid="graph-count-increase" disabled=${count >= countMax} onClick=${() => setCount((previous) => Math.min(countMax, previous + 1))}>+</button>
+              <button class="graph-btn mini" type="button" data-testid="graph-count-increase" disabled=${count >= maxCountForMetric} onClick=${() => setCount((previous) => Math.min(maxCountForMetric, previous + 1))}>+</button>
             </div>
             <div class="graph-control-note">The graph has ${subsets.length} nodes once every possible subset is enumerated.</div>
           </section>
@@ -504,8 +519,19 @@ function App() {
               <button class="graph-btn" type="button" aria-pressed=${metric === "jaccard"} onClick=${() => setMetric("jaccard")}>Jaccard</button>
               <button class="graph-btn" type="button" aria-pressed=${metric === "inter"} onClick=${() => setMetric("inter")}>|Intersection|</button>
               <button class="graph-btn" type="button" aria-pressed=${metric === "entropy"} onClick=${() => setMetric("entropy")}>Entropy</button>
+              <button class="graph-btn" type="button" aria-pressed=${metric === "papers"} onClick=${() => setMetric("papers")}>Paper subsets</button>
             </div>
             <div class="graph-control-note">${metricMeta[metric].description}</div>
+            ${metric === "papers"
+              ? html`
+                  <div class="graph-control-note">
+                    A/B/C/... now map to real paper buckets from the local Semble cache. This metric supports up to ${maxCountForMetric} buckets in the graph.
+                  </div>
+                  <div class="graph-pill-row">
+                    ${paperSubsetBuckets.map((bucket) => html`<span class="graph-pill">${bucket.token} = ${bucket.label} (${bucket.paperCount})</span>`)}
+                  </div>
+                `
+              : null}
           </section>
 
           <section class="graph-control-card">

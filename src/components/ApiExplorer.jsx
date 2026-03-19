@@ -34,6 +34,7 @@ function buildSummary(response) {
     return [
       { label: "Explorer", value: response.explorer },
       { label: "Shape", value: `${response.rowLabels.length} x ${response.columnLabels.length}` },
+      { label: "Buckets", value: response.subsetBuckets?.length ? response.subsetBuckets.map((bucket) => bucket.token).join(", ") : "Toy letters" },
       { label: "Selection", value: `${response.selection.train} -> ${response.selection.eval}` },
       { label: "Headline", value: `${response.answer.label}: ${response.answer.value.toFixed(4)}` },
     ];
@@ -42,6 +43,7 @@ function buildSummary(response) {
   if (response.response === "cell") {
     return [
       { label: "Explorer", value: response.explorer },
+      { label: "Buckets", value: response.subsetBuckets?.length ? response.subsetBuckets.map((bucket) => bucket.token).join(", ") : "Toy letters" },
       { label: "Train", value: response.selection.train },
       { label: "Eval", value: response.selection.eval },
       { label: "Value", value: response.value.toFixed(4) },
@@ -50,6 +52,7 @@ function buildSummary(response) {
 
   return [
     { label: "Explorer", value: response.explorer },
+    { label: "Buckets", value: response.subsetBuckets?.length ? response.subsetBuckets.map((bucket) => bucket.token).join(", ") : "Toy letters" },
     { label: "Train", value: response.selection.train },
     { label: "Eval", value: response.selection.eval },
     { label: response.answer.label, value: response.answer.value.toFixed(4) },
@@ -251,8 +254,8 @@ export default function ApiExplorer() {
                 <code>"answer"</code> when you only need the selected result.
               </p>
               <p>
-                The grid explorer accepts the score rule <code>real</code>; the graph explorer keeps the smaller
-                structural set of metrics from the current UI.
+                Both explorers accept <code>papers</code>, which uses a shared precomputed matrix over real paper
+                buckets from the local Semble cache. The grid still also supports the older toy <code>real</code> score.
               </p>
               <p>
                 In the grid explorer, <code>showSingletonEvalCols: true</code> filters the returned columns the same

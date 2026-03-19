@@ -12,6 +12,7 @@ import {
   computeShapleyStats,
   createTutorialPresets,
   findSubsetIndex,
+  getPaperSubsetBuckets,
   selectAnalysisMatrix,
 } from "../src/lib/counterfactual-math.js";
 
@@ -220,6 +221,30 @@ test("real-data metric supports stable precomputed grids and perturbed live resa
 
   assert.deepEqual(precomputedA.matrix, precomputedB.matrix);
   assert.notDeepEqual(liveA.matrix, liveB.matrix);
+});
+
+test("paper-subset metric stays bounded and uses stable precomputed corpus buckets", () => {
+  const items = ["A", "B", "C", "D"];
+  const { matrix, subsets } = buildSubsetGrid(items, "papers");
+  const fullIndex = findSubsetIndex(subsets, ["A", "B", "C", "D"]);
+  const emptyIndex = findSubsetIndex(subsets, []);
+
+  for (const row of matrix) {
+    for (const value of row) {
+      assert.ok(value >= 0 && value <= 1);
+    }
+  }
+
+  assert.ok(matrix[fullIndex][fullIndex] > matrix[emptyIndex][fullIndex]);
+  assert.deepEqual(buildSubsetGrid(items, "papers").matrix, matrix);
+});
+
+test("paper-subset buckets expose real grouped reading-list metadata", () => {
+  const buckets = getPaperSubsetBuckets(4);
+
+  assert.equal(buckets.length, 4);
+  assert.deepEqual(buckets.map((bucket) => bucket.token), ["A", "B", "C", "D"]);
+  assert.ok(buckets.every((bucket) => bucket.paperCount >= 7));
 });
 
 test("concept presets can all execute without missing setters", () => {

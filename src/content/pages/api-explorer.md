@@ -1,6 +1,6 @@
 ---
 title: The API explorer
-description: Query the grid and graph state directly with a JSON request body.
+description: An API for the numbers underlying the data counterfactuals grid
 eyebrow: Interactive lab
 lede: Treat the explorer controls like a request body. This page accepts the same state values used by the grid and graph explorers, then returns either the matrix, the selected cell, or the current headline answer.
 ---

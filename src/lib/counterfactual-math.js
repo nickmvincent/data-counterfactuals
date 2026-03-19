@@ -1,4 +1,7 @@
+import paperSubsetMetricData from "../data/paper-subset-metric-data.js";
+
 export const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+export const paperSubsetMaxCount = paperSubsetMetricData.buckets.length;
 
 export function clamp01(value) {
   return Math.min(1, Math.max(0, value));
@@ -225,8 +228,55 @@ function buildGridFromScoreFn(items, scoreFn) {
 
 const precomputedRealGridCache = new Map();
 
+function clonePaperSubsetBucket(bucket) {
+  return {
+    ...bucket,
+    collections: Array.isArray(bucket.collections) ? [...bucket.collections] : [],
+    citationKeys: Array.isArray(bucket.citationKeys) ? [...bucket.citationKeys] : [],
+  };
+}
+
+function isSupportedPaperSubsetPrefix(items) {
+  if (items.length > paperSubsetMaxCount) return false;
+  return items.every((token, index) => token === paperSubsetMetricData.buckets[index]?.token);
+}
+
+export function getPaperSubsetBuckets(countOrItems = paperSubsetMaxCount) {
+  const count = Array.isArray(countOrItems) ? countOrItems.length : countOrItems;
+  const safeCount = Math.max(0, Math.min(paperSubsetMaxCount, count));
+  return paperSubsetMetricData.buckets.slice(0, safeCount).map(clonePaperSubsetBucket);
+}
+
+export function getPaperSubsetMetricSource() {
+  return {
+    ...paperSubsetMetricData.source,
+  };
+}
+
+function buildPaperSubsetGrid(items) {
+  if (!isSupportedPaperSubsetPrefix(items)) {
+    throw new Error(`Paper-subset metric supports the prefix tokens A-${paperSubsetMetricData.buckets[Math.max(0, items.length - 1)]?.token || "A"} only.`);
+  }
+
+  const entry = paperSubsetMetricData.matrices[String(items.length)];
+  if (!entry) {
+    throw new Error(`Missing precomputed paper-subset matrix for count=${items.length}.`);
+  }
+
+  return {
+    matrix: entry.matrix,
+    subsets: allSubsets(items),
+    min: entry.min,
+    max: entry.max,
+  };
+}
+
 export function buildSubsetGrid(items, metric, options = {}) {
   const { realDataMode = "precomputed", realDataSample = 0 } = options;
+
+  if (metric === "papers") {
+    return buildPaperSubsetGrid(items);
+  }
 
   if (metric === "real" && realDataMode === "precomputed") {
     const cacheKey = items.join("");

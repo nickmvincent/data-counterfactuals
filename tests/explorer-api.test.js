@@ -60,3 +60,25 @@ test("graph answer requests mirror the graph explorer's ablation lens", () => {
   assert.equal(response.answer.value, 0.25);
   assert.match(response.answer.formula, /ABCD/);
 });
+
+test("paper-subset requests expose the real bucket mapping in graph responses", () => {
+  const response = runExplorerApiRequest({
+    explorer: "graph",
+    response: "answer",
+    count: 4,
+    metric: "papers",
+    lens: "strike",
+    focusSet: ["B"],
+    train: "ABCD",
+    eval: "ABCD",
+  });
+
+  assert.equal(response.explorer, "graph");
+  assert.equal(response.normalizedState.metric, "papers");
+  assert.equal(response.subsetBuckets.length, 4);
+  assert.deepEqual(
+    response.subsetBuckets.map((bucket) => bucket.token),
+    ["A", "B", "C", "D"],
+  );
+  assert.match(response.subsetBuckets[0].label, /Acquisition/);
+});

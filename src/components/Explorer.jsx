@@ -11,9 +11,11 @@ import {
   computeSemivalueStats,
   createTutorialPresets,
   findSubsetIndex,
+  getPaperSubsetBuckets,
   labelSubset as label,
   matrixRange,
   normalizeValue,
+  paperSubsetMaxCount,
   selectAnalysisMatrix,
 } from "../lib/counterfactual-math.js";
 import { scrollChildIntoContainer } from "../lib/scroll-helpers.js";
@@ -84,6 +86,11 @@ const metricMeta = {
     short: "Real data",
     name: "Toy real-data accuracy",
     description: "accuracy from a tiny fixed dataset and a simple classifier",
+  },
+  papers: {
+    short: "Paper subsets",
+    name: "Paper-subset score",
+    description: "precomputed score from real paper buckets in the local Semble cache",
   },
 };
 
@@ -248,13 +255,14 @@ function App() {
   const countMin = 2;
   const countMax = 8;
   const [count, setCount] = useState(4);
-  const base = useMemo(() => alphabet.slice(0, count), [count]);
 
   const [metric, setMetric] = useState("jaccard");
   const [realDataMode, setRealDataMode] = useState("precomputed");
   const [realDataSample, setRealDataSample] = useState(0);
   const [paletteName, setPaletteName] = useState("Clear daylight");
   const palette = palettes[paletteName];
+  const maxCountForMetric = metric === "papers" ? Math.min(countMax, paperSubsetMaxCount) : countMax;
+  const base = useMemo(() => alphabet.slice(0, Math.min(count, maxCountForMetric)), [count, maxCountForMetric]);
 
   const [conceptMode, setConceptMode] = useState("explore");
   const [gridView, setGridView] = useState("real");
@@ -308,8 +316,16 @@ function App() {
     [realDataMode, realDataSample],
   );
   const { matrix: baseMatrix, subsets: subs } = useGrid(base, metric, metricOptions);
+  const paperSubsetBuckets = useMemo(
+    () => (metric === "papers" ? getPaperSubsetBuckets(base) : []),
+    [metric, base],
+  );
   const [rowIdx, setRowIdx] = useState(1);
   const [colIdx, setColIdx] = useState(1);
+
+  useEffect(() => {
+    if (count > maxCountForMetric) setCount(maxCountForMetric);
+  }, [count, maxCountForMetric]);
 
   useEffect(() => {
     setRowIdx(1);
@@ -661,6 +677,8 @@ function App() {
       ? realDataMode === "precomputed"
         ? `Each cell comes from a cached precomputed matrix over a tiny fixed toy dataset: train a simple classifier on ${label(Srow)} and score it on ${label(evalSet)}. It feels more like real data, but it is still a toy benchmark rather than a real experiment.`
         : `Each cell is recomputed live from a lightly resampled toy dataset: train a simple classifier on ${label(Srow)} and score it on ${label(evalSet)}. Use resample to perturb the tiny dataset and watch the grid move slightly.`
+      : metric === "papers"
+        ? `Each cell comes from a cached paper-corpus experiment over real reading-list subsets. The letters now map to the paper buckets shown below, and the score reads as "train a tiny bucket classifier on the row world, then evaluate it on the column slice."`
       : `Each cell is a toy proxy for "retrain on ${label(Srow)} and evaluate on ${label(evalSet)}." ${metricMeta[metric].short} summarizes how much the train and eval sets structurally line up, which can loosely track performance when overlap helps. It still ignores labels, features, model choice, and optimization, so treat it as a heuristic rather than true accuracy.`;
 
   let questionSummary;
@@ -1301,6 +1319,14 @@ function App() {
       universe: base,
       metric,
       realData: metric === "real" ? { mode: realDataMode, sample: realDataSample } : null,
+      paperBuckets:
+        metric === "papers"
+          ? paperSubsetBuckets.map(({ token, label: bucketLabel, paperCount }) => ({
+              token,
+              label: bucketLabel,
+              paperCount,
+            }))
+          : null,
       palette: paletteName,
       focus: focusPrimary,
       focusSet,
@@ -1325,6 +1351,7 @@ function App() {
       metric,
       realDataMode,
       realDataSample,
+      paperSubsetBuckets,
       paletteName,
       focusPrimary,
       focusSet,
@@ -1388,7 +1415,7 @@ function App() {
 
   const showInspector = conceptMode !== "explore";
   const canDecreaseCount = count > countMin;
-  const canIncreaseCount = count < countMax;
+  const canIncreaseCount = count < maxCountForMetric;
   const currentWorldLabel = effectiveGridView === "operator" ? "Operator view" : "Reference grid";
   const modeLabel = conceptMeta[conceptMode].label;
   const modeCopy = conceptMeta[conceptMode].description;
@@ -1462,6 +1489,7 @@ function App() {
     metricMeta[metric].short,
     conceptMode === "poison" ? currentWorldLabel : null,
     metric === "real" ? (realDataMode === "precomputed" ? "Precomputed matrix" : `Live sample ${realDataSample}`) : null,
+    metric === "papers" ? `${paperSubsetBuckets.length} paper buckets` : null,
   ].filter(Boolean);
 
   const semivalueTable = semivalueModes.has(conceptMode)
@@ -1813,15 +1841,16 @@ function App() {
           </section>
 
           <section class="toolbar-group" data-testid="metric-controls">
-            <div class="toolbar-label">
-              Cell score
-              ${InfoTip("Each cell stands in for 'retrain on the row world, evaluate on the column slice' without actually fitting a model. Jaccard uses normalized overlap, |Intersection| uses raw shared count, and Entropy turns overlap into an uncertainty-style score. These can loosely track performance because more train/eval overlap often helps, but they ignore labels, features, model choice, and optimization, so they are structural proxies rather than true accuracy. Real data = toy accuracy from a tiny fixed dataset and a tiny classifier.")}
+              <div class="toolbar-label">
+                Cell score
+              ${InfoTip("Each cell stands in for 'retrain on the row world, evaluate on the column slice.' Jaccard uses normalized overlap, |Intersection| uses raw shared count, and Entropy turns overlap into an uncertainty-style score. Real data uses a tiny toy classifier over a tiny fixed dataset. Paper subsets uses a precomputed TF-IDF nearest-centroid experiment over real paper abstracts grouped into larger reading-list buckets.")}
             </div>
             <div class="segmented-row">
               <button class="btn" aria-pressed=${metric === "jaccard"} onClick=${() => setMetric("jaccard")}>Jaccard</button>
               <button class="btn" aria-pressed=${metric === "inter"} onClick=${() => setMetric("inter")}>|Intersection|</button>
               <button class="btn" aria-pressed=${metric === "entropy"} onClick=${() => setMetric("entropy")}>Entropy</button>
               <button class="btn" aria-pressed=${metric === "real"} onClick=${() => setMetric("real")}>Real data</button>
+              <button class="btn" aria-pressed=${metric === "papers"} onClick=${() => setMetric("papers")}>Paper subsets</button>
             </div>
             ${metric === "real"
               ? html`
@@ -1831,6 +1860,15 @@ function App() {
                     <button class="btn ghost mini" disabled=${realDataMode !== "live"} onClick=${resampleRealData}>Resample</button>
                   </div>
                 `
+              : metric === "papers"
+                ? html`
+                    <div class="toolbar-note">
+                      A/B/C/... now map to real paper buckets from the local Semble cache. This metric supports up to ${paperSubsetMaxCount} buckets in the grid.
+                    </div>
+                    <div class="summary-inline toolbar-pills">
+                      ${paperSubsetBuckets.map((bucket) => html`<span class="pill">${bucket.token} = ${bucket.label} (${bucket.paperCount})</span>`)}
+                    </div>
+                  `
               : null}
             <div class="toolbar-note">${scoreProxyCopy}</div>
           </section>
@@ -2006,7 +2044,7 @@ function App() {
                         class="axis-corner-btn"
                         type="button"
                         disabled=${!canIncreaseCount}
-                        onClick=${() => setCount((previous) => Math.min(countMax, previous + 1))}
+                        onClick=${() => setCount((previous) => Math.min(maxCountForMetric, previous + 1))}
                         title="Add one base point; rows and columns both grow."
                       >
                         +

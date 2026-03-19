@@ -8,7 +8,9 @@ import {
   computeSemivalueStats,
   computeShapleyStats,
   findSubsetIndex,
+  getPaperSubsetBuckets,
   labelSubset,
+  paperSubsetMaxCount,
   selectAnalysisMatrix,
 } from "./counterfactual-math.js";
 
@@ -25,8 +27,8 @@ const GRID_CONCEPT_MODES = [
   "poison",
 ];
 const GRAPH_LENSES = ["ablation", "strike", "shapley", "scaling"];
-const GRID_METRICS = ["jaccard", "inter", "entropy", "real"];
-const GRAPH_METRICS = ["jaccard", "inter", "entropy"];
+const GRID_METRICS = ["jaccard", "inter", "entropy", "real", "papers"];
+const GRAPH_METRICS = ["jaccard", "inter", "entropy", "papers"];
 const RESPONSE_TYPES = ["matrix", "cell", "answer"];
 const SINGLE_FOCUS_GRID_MODES = new Set(["explore", "loo", "shapley", "banzhaf", "beta", "dp", "unlearning"]);
 const MULTI_FOCUS_GRID_MODES = new Set(["group", "poison"]);
@@ -62,7 +64,7 @@ export const apiExplorerExamples = {
     explorer: "graph",
     response: "answer",
     count: 4,
-    metric: "jaccard",
+    metric: "papers",
     lens: "strike",
     focusSet: ["B", "C"],
     train: "ABCD",
@@ -106,8 +108,8 @@ export const apiExplorerFieldGroups = [
     fields: [
       {
         name: "metric",
-        type: '"jaccard" | "inter" | "entropy" | "real"',
-        description: "Matches the score rule buttons in the grid explorer.",
+        type: '"jaccard" | "inter" | "entropy" | "real" | "papers"',
+        description: 'Matches the score rule buttons in the grid explorer. "papers" uses precomputed scores from real paper subsets.',
       },
       {
         name: "conceptMode",
@@ -146,8 +148,8 @@ export const apiExplorerFieldGroups = [
     fields: [
       {
         name: "metric",
-        type: '"jaccard" | "inter" | "entropy"',
-        description: "Matches the graph score rule buttons.",
+        type: '"jaccard" | "inter" | "entropy" | "papers"',
+        description: 'Matches the graph score rule buttons. "papers" uses the same real paper-subset matrix as the grid.',
       },
       {
         name: "lens",
@@ -280,14 +282,16 @@ function mergeRequestState(request = {}) {
 }
 
 function buildGridSnapshot(rawState = {}) {
-  const count = clampInteger(rawState.count, 4, 2, 8);
-  const universe = alphabet.slice(0, count);
   const metric = coerceEnum(rawState.metric, GRID_METRICS, "jaccard");
+  const countLimit = metric === "papers" ? Math.min(8, paperSubsetMaxCount) : 8;
+  const count = clampInteger(rawState.count, 4, 2, countLimit);
+  const universe = alphabet.slice(0, count);
   const conceptMode = coerceEnum(rawState.conceptMode, GRID_CONCEPT_MODES, "explore");
   const realDataMode = coerceEnum(rawState.realDataMode, ["precomputed", "live"], "precomputed");
   const realDataSample = clampInteger(rawState.realDataSample, 0, 0, Number.MAX_SAFE_INTEGER);
   const metricOptions = { realDataMode, realDataSample };
   const { matrix: baseMatrix, subsets } = buildSubsetGrid(universe, metric, metricOptions);
+  const subsetBuckets = metric === "papers" ? getPaperSubsetBuckets(universe) : [];
 
   const defaultFocus = universe.length ? [universe[0]] : [];
   let focusSet = normalizeTokenSet(rawState.focusSet ?? rawState.focus, universe, defaultFocus);
@@ -483,6 +487,7 @@ function buildGridSnapshot(rawState = {}) {
       count,
       universe,
       metric,
+      subsetBuckets,
       conceptMode,
       focusSet,
       focusPrimary,
@@ -508,6 +513,7 @@ function buildGridSnapshot(rawState = {}) {
       },
     },
     matrixSource: gridView,
+    subsetBuckets,
     fullMatrix: baseMatrix,
     analysisMatrix,
     editedMatrix,
@@ -531,11 +537,13 @@ function buildGridSnapshot(rawState = {}) {
 }
 
 function buildGraphSnapshot(rawState = {}) {
-  const count = clampInteger(rawState.count, 4, 2, 7);
-  const universe = alphabet.slice(0, count);
   const metric = coerceEnum(rawState.metric, GRAPH_METRICS, "jaccard");
+  const countLimit = metric === "papers" ? Math.min(7, paperSubsetMaxCount) : 7;
+  const count = clampInteger(rawState.count, 4, 2, countLimit);
+  const universe = alphabet.slice(0, count);
   const lens = coerceEnum(rawState.lens, GRAPH_LENSES, "ablation");
   const { matrix, subsets } = buildSubsetGrid(universe, metric);
+  const subsetBuckets = metric === "papers" ? getPaperSubsetBuckets(universe) : [];
   const fullSetIndex = findSubsetIndex(subsets, universe);
   const defaultFocus = universe[Math.min(1, Math.max(0, universe.length - 1))] || universe[0] || "A";
   let focusSet = normalizeTokenSet(rawState.focusSet ?? rawState.focus, universe, [defaultFocus]);
@@ -629,6 +637,7 @@ function buildGraphSnapshot(rawState = {}) {
       count,
       universe,
       metric,
+      subsetBuckets,
       lens,
       focusSet,
       focusPrimary,
@@ -645,6 +654,7 @@ function buildGraphSnapshot(rawState = {}) {
       },
     },
     matrixSource: "graph",
+    subsetBuckets,
     fullMatrix: matrix,
     responseMatrix: matrix,
     rowLabels: subsets.map((subset) => labelSubset(subset)),
@@ -668,6 +678,7 @@ function buildResponsePayload(snapshot, responseType) {
       explorer: snapshot.explorer,
       response: "cell",
       normalizedState: snapshot.normalizedState,
+      subsetBuckets: snapshot.subsetBuckets,
       selection: {
         rowIndex: snapshot.selectedCell.rowIndex,
         colIndex: snapshot.selectedCell.colIndex,
@@ -686,6 +697,7 @@ function buildResponsePayload(snapshot, responseType) {
       explorer: snapshot.explorer,
       response: "answer",
       normalizedState: snapshot.normalizedState,
+      subsetBuckets: snapshot.subsetBuckets,
       selection: {
         train: snapshot.selectedCell.trainLabel,
         eval: snapshot.selectedCell.evalLabel,
@@ -703,6 +715,7 @@ function buildResponsePayload(snapshot, responseType) {
     explorer: snapshot.explorer,
     response: "matrix",
     normalizedState: snapshot.normalizedState,
+    subsetBuckets: snapshot.subsetBuckets,
     matrixSource: snapshot.matrixSource,
     rowLabels: snapshot.rowLabels,
     columnLabels: snapshot.columnLabels,
