@@ -26,7 +26,12 @@ export interface PaperCollection {
   body?: string;
 }
 
-export async function loadPaperCollections(): Promise<PaperCollection[]> {
+export interface PaperCollectionsSnapshot {
+  generatedAt?: string;
+  collections: PaperCollection[];
+}
+
+export async function loadPaperCollectionsSnapshot(): Promise<PaperCollectionsSnapshot> {
   if (!isSembleConfigured()) {
     throw new Error('Semble is not configured. Set SEMBLE_PROFILE_IDENTIFIER or SEMBLE_COLLECTION_AT_URIS, or add defaults in semble.config.json.');
   }
@@ -36,13 +41,20 @@ export async function loadPaperCollections(): Promise<PaperCollection[]> {
     throw new Error('Semble is configured but no collection dataset could be loaded.');
   }
 
-  return dataset.collections.map((collection) => ({
-    slug: collection.slug,
-    title: collection.title,
-    citation_keys: [...collection.citation_keys],
-    visibility: collection.visibility,
-    body: collection.body,
-  }));
+  return {
+    generatedAt: dataset.generatedAt,
+    collections: dataset.collections.map((collection) => ({
+      slug: collection.slug,
+      title: collection.title,
+      citation_keys: [...collection.citation_keys],
+      visibility: collection.visibility,
+      body: collection.body,
+    })),
+  };
+}
+
+export async function loadPaperCollections(): Promise<PaperCollection[]> {
+  return (await loadPaperCollectionsSnapshot()).collections;
 }
 
 /**

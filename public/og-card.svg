@@ -1,0 +1,74 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="48" x2="1060" y2="590" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FBF7EF"/>
+      <stop offset="0.5" stop-color="#F2E7D7"/>
+      <stop offset="1" stop-color="#E7D6C2"/>
+    </linearGradient>
+    <radialGradient id="glowWarm" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(980 88) rotate(120) scale(280 360)">
+      <stop stop-color="#C86E3B" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#C86E3B" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowCool" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(180 112) rotate(64) scale(260 320)">
+      <stop stop-color="#2F6B6F" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#2F6B6F" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="card" x1="190" y1="132" x2="964" y2="506" gradientUnits="userSpaceOnUse">
+      <stop stop-color="white" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#FFF7EC" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" rx="36" fill="url(#bg)"/>
+  <rect width="1200" height="630" rx="36" fill="url(#glowWarm)"/>
+  <rect width="1200" height="630" rx="36" fill="url(#glowCool)"/>
+
+  <rect x="118" y="96" width="964" height="438" rx="32" fill="url(#card)" stroke="#C8B49B" stroke-opacity="0.6"/>
+  <rect x="146" y="124" width="908" height="382" rx="24" stroke="white" stroke-opacity="0.65"/>
+
+  <g opacity="0.9">
+    <rect x="164" y="146" width="124" height="18" rx="9" fill="#B14F1F" fill-opacity="0.12"/>
+    <text x="180" y="159" fill="#9D4A20" font-family="Avenir Next, Aptos, Segoe UI, sans-serif" font-size="14" font-weight="700" letter-spacing="2.2">INTERACTIVE EXPLAINER</text>
+  </g>
+
+  <text x="178" y="250" fill="#201A16" font-family="Iowan Old Style, Palatino Linotype, Book Antiqua, Georgia, serif" font-size="74" font-weight="700">
+    <tspan x="178" dy="0">Data</tspan>
+    <tspan x="178" dy="84">Counterfactuals</tspan>
+  </text>
+
+  <text x="182" y="398" fill="#655A4F" font-family="Avenir Next, Aptos, Segoe UI, sans-serif" font-size="29" font-weight="500">
+    <tspan x="182" dy="0">What changes in an AI model</tspan>
+    <tspan x="182" dy="42">when the training data changes?</tspan>
+  </text>
+
+  <g transform="translate(782 162)">
+    <rect x="0" y="0" width="214" height="214" rx="28" fill="#F4E3C9" stroke="#D7C1A3"/>
+    <rect x="24" y="24" width="34" height="34" rx="10" fill="#FFFDF9" stroke="#E0D2BF"/>
+    <rect x="68" y="24" width="34" height="34" rx="10" fill="#F5E6D3" stroke="#D9C3AA"/>
+    <rect x="112" y="24" width="34" height="34" rx="10" fill="#E7C18B" stroke="#D09A57"/>
+    <rect x="156" y="24" width="34" height="34" rx="10" fill="#D88252" stroke="#B96534"/>
+    <rect x="24" y="68" width="34" height="34" rx="10" fill="#E8F1F2" stroke="#B7D0D2"/>
+    <rect x="68" y="68" width="34" height="34" rx="10" fill="#BDD6D8" stroke="#8CB3B6"/>
+    <rect x="112" y="68" width="34" height="34" rx="10" fill="#89AEB2" stroke="#678A8E"/>
+    <rect x="156" y="68" width="34" height="34" rx="10" fill="#4E7D82" stroke="#376065"/>
+    <rect x="24" y="112" width="34" height="34" rx="10" fill="#FFFDF9" stroke="#E0D2BF"/>
+    <rect x="68" y="112" width="34" height="34" rx="10" fill="#F3DAC2" stroke="#D8B18F"/>
+    <rect x="112" y="112" width="34" height="34" rx="10" fill="#D78350" stroke="#B86435"/>
+    <rect x="156" y="112" width="34" height="34" rx="10" fill="#A84F28" stroke="#8E411F"/>
+    <rect x="24" y="156" width="34" height="34" rx="10" fill="#EDF4F5" stroke="#C4D8DA"/>
+    <rect x="68" y="156" width="34" height="34" rx="10" fill="#CFE0E2" stroke="#A5C2C5"/>
+    <rect x="112" y="156" width="34" height="34" rx="10" fill="#89AEB2" stroke="#678A8E"/>
+    <rect x="156" y="156" width="34" height="34" rx="10" fill="#355C61" stroke="#28494D"/>
+  </g>
+
+  <g transform="translate(820 412)">
+    <rect x="0" y="0" width="120" height="30" rx="15" fill="#2F6B6F" fill-opacity="0.12" stroke="#2F6B6F" stroke-opacity="0.18"/>
+    <text x="18" y="20" fill="#245357" font-family="Avenir Next, Aptos, Segoe UI, sans-serif" font-size="14" font-weight="700">Grid, graph, memo</text>
+  </g>
+
+  <g transform="translate(178 500)">
+    <text fill="#8A7767" font-family="Avenir Next, Aptos, Segoe UI, sans-serif" font-size="20" font-weight="600">
+      datacounterfactuals.org
+    </text>
+  </g>
+</svg>

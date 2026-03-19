@@ -260,8 +260,8 @@ function App() {
   const [gridView, setGridView] = useState("real");
   const [focusSet, setFocusSet] = useState(["A"]);
   const [k, setK] = useState(2);
-  const [showNums, setShowNums] = useState(false);
-  const [showSingletonEvalCols, setShowSingletonEvalCols] = useState(false);
+  const [showNums, setShowNums] = useState(true);
+  const [showSingletonEvalCols, setShowSingletonEvalCols] = useState(true);
   const [tutorialKind, setTutorialKind] = useState(null);
   const [tutorialInfo, setTutorialInfo] = useState(null);
   const [pendingSelection, setPendingSelection] = useState(null);
@@ -386,6 +386,7 @@ function App() {
         setK,
         setConceptMode,
         setShowNums,
+        setShowSingletonEvalCols,
         setPendingSelection,
         setPoisonActive,
         setGridView,
@@ -1397,6 +1398,7 @@ function App() {
   const evalColumnSummary = showSingletonEvalCols
     ? "Only singleton evaluation columns are shown. For pointwise-additive metrics, larger eval slices can be recovered from per-point scores; for other toy metrics this is just a decluttering view."
     : "All evaluation subsets are shown.";
+  const centerCompactGrid = showSingletonEvalCols && visibleColIndices.length < subs.length;
   const gridSelectionHint =
     showSingletonEvalCols
       ? "Click a row label to choose the training world, a visible singleton column to choose the evaluation slice, or any cell to set both at once. Larger eval subsets are hidden in this display mode. Use the chooser buttons below the grid to mark a target or comparison point."
@@ -1800,7 +1802,7 @@ function App() {
         </div>
 
         <div class="toolbar-grid">
-          <section class="toolbar-group" data-testid="concept-controls">
+          <section class="toolbar-group toolbar-group-compact" data-testid="concept-controls">
             <div class="toolbar-label">Question family</div>
             <div class="segmented-row mode-toggle">
               ${conceptOrder.map((mode) => html`
@@ -1849,7 +1851,7 @@ function App() {
                 checked=${showSingletonEvalCols}
                 onChange=${(event) => setShowSingletonEvalCols(event.target.checked)}
               />
-              <label for="show-singleton-eval-cols">Show fewer eval cols</label>
+              <label for="show-singleton-eval-cols">Show fewer cols</label>
               ${InfoTip(
                 "For pointwise-additive metrics, a larger eval slice can be reconstructed from per-point scores, so singleton columns are enough. This toggle hides multi-point eval subsets to declutter the view; some toy metrics here are not literally pointwise additive, so the full matrix is still computed underneath.",
               )}
@@ -1857,7 +1859,7 @@ function App() {
             <div class="toolbar-note">
               ${conceptMode === "poison"
                 ? `${editSummary} ${evalColumnSummary}`
-                : `Turn raw values on when you want to inspect the exact toy scores instead of just the color field. ${evalColumnSummary}`}
+                : `${showNums ? "Raw values are visible, so each cell shows its numeric score as well as its color." : "Turn raw values on when you want to inspect the exact toy scores instead of just the color field."} ${evalColumnSummary}`}
             </div>
             <details class="guide-details toolbar-drawer">
               <summary>Advanced display and export</summary>
@@ -1974,176 +1976,183 @@ function App() {
             </div>
           </div>
 
-          <div class="grid-wrap stage-grid" ref=${gridWrapRef} data-testid="explorer-grid">
-            <div style="display:flex">
-              <div class="rl axis-corner" style="width:var(--grid-axis-w)" title=${`${gridSelectionHint} Use the plus and minus buttons to grow or shrink the toy universe.`}>
-                <div class="axis-corner-stack">
-                  <span class="axis-corner-label">Grid controls</span>
-                  <div class="axis-corner-mode">
-                    <span>Rows train</span>
-                    <span>Cols eval</span>
-                  </div>
-                  <div class="axis-corner-actions">
-                    <button
-                      class="axis-corner-btn"
-                      type="button"
-                      disabled=${!canDecreaseCount}
-                      onClick=${() => setCount((previous) => Math.max(countMin, previous - 1))}
-                      title="Remove one base point; rows and columns both shrink."
-                    >
-                      -
-                    </button>
-                    <span class="axis-corner-size" title="Toy universe size">${count}</span>
-                    <button
-                      class="axis-corner-btn"
-                      type="button"
-                      disabled=${!canIncreaseCount}
-                      onClick=${() => setCount((previous) => Math.min(countMax, previous + 1))}
-                      title="Add one base point; rows and columns both grow."
-                    >
-                      +
-                    </button>
+          <div
+            class="grid-wrap stage-grid"
+            ref=${gridWrapRef}
+            data-testid="explorer-grid"
+            data-compact-cols=${centerCompactGrid ? "true" : "false"}
+          >
+            <div class="grid-matrix">
+              <div style="display:flex">
+                <div class="rl axis-corner" style="width:var(--grid-axis-w)" title=${`${gridSelectionHint} Use the plus and minus buttons to grow or shrink the toy universe.`}>
+                  <div class="axis-corner-stack">
+                    <span class="axis-corner-label">Grid controls</span>
+                    <div class="axis-corner-mode">
+                      <span>Rows train</span>
+                      <span>Cols eval</span>
+                    </div>
+                    <div class="axis-corner-actions">
+                      <button
+                        class="axis-corner-btn"
+                        type="button"
+                        disabled=${!canDecreaseCount}
+                        onClick=${() => setCount((previous) => Math.max(countMin, previous - 1))}
+                        title="Remove one base point; rows and columns both shrink."
+                      >
+                        -
+                      </button>
+                      <span class="axis-corner-size" title="Toy universe size">${count}</span>
+                      <button
+                        class="axis-corner-btn"
+                        type="button"
+                        disabled=${!canIncreaseCount}
+                        onClick=${() => setCount((previous) => Math.min(countMax, previous + 1))}
+                        title="Add one base point; rows and columns both grow."
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </div>
+                ${visibleColIndices.map((colIndex) => {
+                  const colSet = subs[colIndex] || [];
+                  const active = colIndex === safeColIdx;
+                  const hovered = hoveredColIdx === colIndex;
+                  return html`
+                    <div
+                      key=${`col-${colIndex}`}
+                      class=${`cl ${active ? "axis-active" : ""} ${hovered ? "axis-hot" : ""}`}
+                      role="button"
+                      tabIndex="0"
+                      aria-pressed=${active}
+                      aria-label=${`Select evaluation slice ${label(colSet)}`}
+                      title=${`Select evaluation slice ${label(colSet)}. Click any cell to set both train and eval at once.`}
+                      onClick=${() => setColIdx(colIndex)}
+                      onKeyDown=${(event) => handleGridActionKey(event, () => setColIdx(colIndex))}
+                      onMouseEnter=${() => previewGridTarget(safeRowIdx, colIndex)}
+                      onMouseLeave=${clearGridPreview}
+                      onFocus=${() => previewGridTarget(safeRowIdx, colIndex)}
+                      onBlur=${clearGridPreview}
+                    >
+                      ${formatColumnHeader(colIndex, colSet)}
+                    </div>
+                  `;
+                })}
               </div>
-              ${visibleColIndices.map((colIndex) => {
-                const colSet = subs[colIndex] || [];
-                const active = colIndex === safeColIdx;
-                const hovered = hoveredColIdx === colIndex;
+              ${subs.map((rowSet, rowIndex) => {
+                const rowActive = rowIndex === safeRowIdx;
+                const rowHovered = hoveredRowIdx === rowIndex;
                 return html`
-                  <div
-                    key=${`col-${colIndex}`}
-                    class=${`cl ${active ? "axis-active" : ""} ${hovered ? "axis-hot" : ""}`}
-                    role="button"
-                    tabIndex="0"
-                    aria-pressed=${active}
-                    aria-label=${`Select evaluation slice ${label(colSet)}`}
-                    title=${`Select evaluation slice ${label(colSet)}. Click any cell to set both train and eval at once.`}
-                    onClick=${() => setColIdx(colIndex)}
-                    onKeyDown=${(event) => handleGridActionKey(event, () => setColIdx(colIndex))}
-                    onMouseEnter=${() => previewGridTarget(safeRowIdx, colIndex)}
-                    onMouseLeave=${clearGridPreview}
-                    onFocus=${() => previewGridTarget(safeRowIdx, colIndex)}
-                    onBlur=${clearGridPreview}
-                  >
-                    ${formatColumnHeader(colIndex, colSet)}
+                  <div style="display:flex" key=${`row-${rowIndex}`}>
+                    <div
+                      class=${`rl ${rowActive ? "axis-active" : ""} ${rowHovered ? "axis-hot" : ""}`}
+                      role="button"
+                      tabIndex="0"
+                      aria-pressed=${rowActive}
+                      aria-label=${`Select training world ${label(rowSet)}`}
+                      title=${`Select training world ${label(rowSet)}. Click any cell to set both train and eval at once.`}
+                      onClick=${() => setRowIdx(rowIndex)}
+                      onKeyDown=${(event) => handleGridActionKey(event, () => setRowIdx(rowIndex))}
+                      onMouseEnter=${() => previewGridTarget(rowIndex, safeColIdx)}
+                      onMouseLeave=${clearGridPreview}
+                      onFocus=${() => previewGridTarget(rowIndex, safeColIdx)}
+                      onBlur=${clearGridPreview}
+                    >
+                      ${formatRowHeader(rowIndex, rowSet)}
+                    </div>
+                    <div class="rr">
+                      ${visibleColIndices.map((colIndex) => {
+                        const evSet = subs[colIndex] || [];
+                        const value = displayMatrix[rowIndex]?.[colIndex] ?? 0;
+                        const normalized = normalizeValue(value, dispMin, dispMax, 0.5);
+                        const sizeK = rowSet.length === k;
+                        const isSel = rowIndex === safeRowIdx && colIndex === safeColIdx;
+                        const isTargetCell =
+                          selectionArmed === "target" &&
+                          pendingSelection === null &&
+                          rowIndex === safeRowIdx &&
+                          colIndex === safeColIdx;
+                        const isCompareCell = Boolean(
+                          visibleComparePoint &&
+                            visibleComparePoint.rowIndex === rowIndex &&
+                            visibleComparePoint.colIndex === colIndex,
+                        );
+                        const edited =
+                          conceptMode === "poison" &&
+                          effectiveGridView === "operator" &&
+                          poisonRows.has(rowIndex) &&
+                          colIndex === safeColIdx;
+
+                        let thin = false;
+                        let thick = false;
+                        if (semivalueModes.has(conceptMode) && colIndex === safeColIdx) {
+                          thin = thin || semivalueThinRows.has(rowIndex);
+                          thick = thick || semivalueThickRows.has(rowIndex);
+                        }
+                        if (["loo", "dp", "unlearning"].includes(conceptMode) && colIndex === safeColIdx) {
+                          if (rowIndex === safeRowIdx) thick = true;
+                          if (looMinusIdx >= 0 && rowIndex === looMinusIdx) thin = true;
+                        }
+                        if (conceptMode === "group" && colIndex === safeColIdx) {
+                          if (rowIndex === safeRowIdx) thick = true;
+                          if (strikeMinusIdx >= 0 && rowIndex === strikeMinusIdx) thin = true;
+                        }
+                        if (conceptMode === "scaling" && colIndex === safeColIdx && sizeK) {
+                          thin = true;
+                        }
+                        if (conceptMode === "poison" && colIndex === safeColIdx) {
+                          if (rowIndex === safeRowIdx) thick = true;
+                          if (poisonRows.has(rowIndex)) thin = true;
+                        }
+
+                        const highlight = thin || thick || isSel;
+                        const previewingRow = hoveredRowIdx === rowIndex;
+                        const previewingCol = hoveredColIdx === colIndex;
+                        const previewingCell = previewingRow && previewingCol;
+                        const classes = ["cell"];
+                        if (isSel) classes.push("sel");
+                        if (highlight) classes.push("cell-emph");
+                        if (previewingRow || previewingCol) classes.push("cell-track");
+                        if (previewingCell) classes.push("cell-hot");
+                        if (edited) classes.push("cell-edited");
+                        if (switchPulse && highlight) classes.push("cell-pulse");
+
+                        return html`
+                          <div
+                            key=${`cell-${rowIndex}-${colIndex}`}
+                            class=${classes.join(" ")}
+                            data-selected=${isSel ? "true" : "false"}
+                            data-target-cell=${isTargetCell ? "true" : "false"}
+                            data-compare-cell=${isCompareCell ? "true" : "false"}
+                            role="button"
+                            tabIndex="0"
+                            aria-pressed=${isSel}
+                            aria-label=${`Train ${label(rowSet)}, evaluate ${label(evSet)}, score ${value.toFixed(3)}`}
+                            title=${`Train ${label(rowSet)} | Eval ${label(evSet)} | value ${value.toFixed(3)}`}
+                            onClick=${() => handleCellClick(rowIndex, colIndex)}
+                            onKeyDown=${(event) => handleGridActionKey(event, () => handleCellClick(rowIndex, colIndex))}
+                            onMouseEnter=${() => previewGridTarget(rowIndex, colIndex)}
+                            onMouseLeave=${clearGridPreview}
+                            onFocus=${() => previewGridTarget(rowIndex, colIndex)}
+                            onBlur=${clearGridPreview}
+                            style=${{ background: palette(normalized) }}
+                          >
+                            ${isTargetCell ? html`<div class="marker-ring marker-ring-target"></div>` : null}
+                            ${isCompareCell ? html`<div class="marker-ring marker-ring-compare"></div>` : null}
+                            ${thin ? html`<div class="ring ring-thin"></div>` : null}
+                            ${thick ? html`<div class="ring ring-thick"></div>` : null}
+                            ${edited ? html`<div class="edit-flag" title="Toy edit affects this row in operator view"></div>` : null}
+                            ${showNums
+                              ? html`<div class="num" style=${{ color: normalized > 0.48 ? "#10273d" : "#f7fbff" }}>${value.toFixed(2)}</div>`
+                              : null}
+                          </div>
+                        `;
+                      })}
+                    </div>
                   </div>
                 `;
               })}
             </div>
-            ${subs.map((rowSet, rowIndex) => {
-              const rowActive = rowIndex === safeRowIdx;
-              const rowHovered = hoveredRowIdx === rowIndex;
-              return html`
-                <div style="display:flex" key=${`row-${rowIndex}`}>
-                  <div
-                    class=${`rl ${rowActive ? "axis-active" : ""} ${rowHovered ? "axis-hot" : ""}`}
-                    role="button"
-                    tabIndex="0"
-                    aria-pressed=${rowActive}
-                    aria-label=${`Select training world ${label(rowSet)}`}
-                    title=${`Select training world ${label(rowSet)}. Click any cell to set both train and eval at once.`}
-                    onClick=${() => setRowIdx(rowIndex)}
-                    onKeyDown=${(event) => handleGridActionKey(event, () => setRowIdx(rowIndex))}
-                    onMouseEnter=${() => previewGridTarget(rowIndex, safeColIdx)}
-                    onMouseLeave=${clearGridPreview}
-                    onFocus=${() => previewGridTarget(rowIndex, safeColIdx)}
-                    onBlur=${clearGridPreview}
-                  >
-                    ${formatRowHeader(rowIndex, rowSet)}
-                  </div>
-                  <div class="rr">
-                    ${visibleColIndices.map((colIndex) => {
-                      const evSet = subs[colIndex] || [];
-                      const value = displayMatrix[rowIndex]?.[colIndex] ?? 0;
-                      const normalized = normalizeValue(value, dispMin, dispMax, 0.5);
-                      const sizeK = rowSet.length === k;
-                      const isSel = rowIndex === safeRowIdx && colIndex === safeColIdx;
-                      const isTargetCell =
-                        selectionArmed === "target" &&
-                        pendingSelection === null &&
-                        rowIndex === safeRowIdx &&
-                        colIndex === safeColIdx;
-                      const isCompareCell = Boolean(
-                        visibleComparePoint &&
-                          visibleComparePoint.rowIndex === rowIndex &&
-                          visibleComparePoint.colIndex === colIndex,
-                      );
-                      const edited =
-                        conceptMode === "poison" &&
-                        effectiveGridView === "operator" &&
-                        poisonRows.has(rowIndex) &&
-                        colIndex === safeColIdx;
-
-                      let thin = false;
-                      let thick = false;
-                      if (semivalueModes.has(conceptMode) && colIndex === safeColIdx) {
-                        thin = thin || semivalueThinRows.has(rowIndex);
-                        thick = thick || semivalueThickRows.has(rowIndex);
-                      }
-                      if (["loo", "dp", "unlearning"].includes(conceptMode) && colIndex === safeColIdx) {
-                        if (rowIndex === safeRowIdx) thick = true;
-                        if (looMinusIdx >= 0 && rowIndex === looMinusIdx) thin = true;
-                      }
-                      if (conceptMode === "group" && colIndex === safeColIdx) {
-                        if (rowIndex === safeRowIdx) thick = true;
-                        if (strikeMinusIdx >= 0 && rowIndex === strikeMinusIdx) thin = true;
-                      }
-                      if (conceptMode === "scaling" && colIndex === safeColIdx && sizeK) {
-                        thin = true;
-                      }
-                      if (conceptMode === "poison" && colIndex === safeColIdx) {
-                        if (rowIndex === safeRowIdx) thick = true;
-                        if (poisonRows.has(rowIndex)) thin = true;
-                      }
-
-                      const highlight = thin || thick || isSel;
-                      const previewingRow = hoveredRowIdx === rowIndex;
-                      const previewingCol = hoveredColIdx === colIndex;
-                      const previewingCell = previewingRow && previewingCol;
-                      const classes = ["cell"];
-                      if (isSel) classes.push("sel");
-                      if (highlight) classes.push("cell-emph");
-                      if (previewingRow || previewingCol) classes.push("cell-track");
-                      if (previewingCell) classes.push("cell-hot");
-                      if (edited) classes.push("cell-edited");
-                      if (switchPulse && highlight) classes.push("cell-pulse");
-
-                      return html`
-                        <div
-                          key=${`cell-${rowIndex}-${colIndex}`}
-                          class=${classes.join(" ")}
-                          data-selected=${isSel ? "true" : "false"}
-                          data-target-cell=${isTargetCell ? "true" : "false"}
-                          data-compare-cell=${isCompareCell ? "true" : "false"}
-                          role="button"
-                          tabIndex="0"
-                          aria-pressed=${isSel}
-                          aria-label=${`Train ${label(rowSet)}, evaluate ${label(evSet)}, score ${value.toFixed(3)}`}
-                          title=${`Train ${label(rowSet)} | Eval ${label(evSet)} | value ${value.toFixed(3)}`}
-                          onClick=${() => handleCellClick(rowIndex, colIndex)}
-                          onKeyDown=${(event) => handleGridActionKey(event, () => handleCellClick(rowIndex, colIndex))}
-                          onMouseEnter=${() => previewGridTarget(rowIndex, colIndex)}
-                          onMouseLeave=${clearGridPreview}
-                          onFocus=${() => previewGridTarget(rowIndex, colIndex)}
-                          onBlur=${clearGridPreview}
-                          style=${{ background: palette(normalized) }}
-                        >
-                          ${isTargetCell ? html`<div class="marker-ring marker-ring-target"></div>` : null}
-                          ${isCompareCell ? html`<div class="marker-ring marker-ring-compare"></div>` : null}
-                          ${thin ? html`<div class="ring ring-thin"></div>` : null}
-                          ${thick ? html`<div class="ring ring-thick"></div>` : null}
-                          ${edited ? html`<div class="edit-flag" title="Toy edit affects this row in operator view"></div>` : null}
-                          ${showNums
-                            ? html`<div class="num" style=${{ color: normalized > 0.48 ? "#10273d" : "#f7fbff" }}>${value.toFixed(2)}</div>`
-                            : null}
-                        </div>
-                      `;
-                    })}
-                  </div>
-                </div>
-              `;
-            })}
           </div>
 
         </section>

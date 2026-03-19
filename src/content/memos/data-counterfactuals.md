@@ -7,7 +7,7 @@ visibility: public
 type: shared_memo
 ---
 
-This is a short "memo" meant to explain the datacounterfactuals.org project/website. It will crossposted on the Data Leverage Substack.
+This is a short "memo" meant to explain the datacounterfactuals.org project and website. It will be cross-posted on the Data Leverage Substack.
 
 There are many reasons we might want to understand how a specific piece of data impacts an AI model. Perhaps we want to find particularly valuable data to look at it. Perhaps we want to pay people based on the impact of their data (though this is a tricky endeavor!). Perhaps we need to debug our data. Or perhaps a group of people want to withhold data for bargaining or protest. The datacounterfactuals project grew out of discussions on data valuation, algorithmic collective action, data scaling, data selection, data poisoning, privacy, unlearning and neighboring topics. Counterfactual questions about how data might change are foundational to all these areas, and so understanding various questions in terms of data counterfactuals can be practically and academically useful.
 
@@ -17,7 +17,7 @@ This site exists to:
 - make certain data counterfactual measurements easier to understand
 - illustrate connections between technical and social data-centric work
 
-In particular, I found myself using the phrase "data counterfactuals" very frequently while teaching about data valuation, algorithmic collective action, data scaling, and related topics. Students and colleagues would ask some version of: is "data counterfactuals" an actual field/area/offical term, or just a convenient phrase for a bunch of neighboring ideas?
+In particular, I found myself using the phrase "data counterfactuals" very frequently while teaching about data valuation, algorithmic collective action, data scaling, and related topics. Students and colleagues would ask some version of: is "data counterfactuals" an actual field, area, or official term, or just a convenient phrase for a bunch of neighboring ideas?
 
 Variations of the term appear across the related data valuation and data attribution literature. Work on "datamodels" from [Ilyas et al.](https://proceedings.mlr.press/v162/ilyas22a.html) uses the term "dataset counterfactuals", and this [talk](https://simons.berkeley.edu/talks/andrew-ilyas-stanford-university-2025-04-03) from Ilyas uses the term "data counterfactuals" directly. In early work from Koh and Liang on influence functions, the authors state: "we ask the counterfactual: what would happen if we did not have this training point, or if the values of this training point were changed slightly?"
 
@@ -56,9 +56,9 @@ The site's main "interactive explorer" is a grid. Imagine possible training sets
 
 Of course, nobody can completely fill out this "giant spreadsheet" (it's too computationally expensive). The grid can still be useful as a teaching model (and again, not a claim about how practitioners store or compute things).
 
-Once that picture is in view, various literatures that usually live in separate boxes start to sit nearer to one another. Most notably, we the direct connection between valuation/attribution methods and collective action simulations. Collective action and leverage experiments typically ask what happens when people or institutions intentionally change the data-generating process itself: strikes, contribution campaigns, bargaining, provenance demands, licensing disputes, and other efforts to shift AI operators toward less favorable rows. We can also understand how various kinds of scaling and selection methods also share "building blocks" with attribution and collective action.
+Once that picture is in view, various literatures that usually live in separate boxes start to sit nearer to one another. Most notably, we can see the direct connection between valuation and attribution methods and collective action simulations. Collective action and leverage experiments typically ask what happens when people or institutions intentionally change the data-generating process itself: strikes, contribution campaigns, bargaining, provenance demands, licensing disputes, and other efforts to shift AI operators toward less favorable rows. We can also understand how various kinds of scaling and selection methods share "building blocks" with attribution and collective action.
 
-Critically, the counterfactual grid is conceptually useful a baseline for areas that don't directly try to measure data counterfactuals. For instance, we can find relevant data counterfactuals that map to specific scenarios involving differential privacy, membership inference, and machine unlearning.
+Critically, the counterfactual grid is conceptually useful as a baseline for areas that do not directly try to measure data counterfactuals. For instance, we can find relevant data counterfactuals that map to specific scenarios involving differential privacy, membership inference, and machine unlearning.
 
 On this site, we maintain a larger "loosely curated examples of generally related research" that's hosted via semble.so for easy updating and commenting.
 
@@ -70,7 +70,7 @@ Some related concepts require a more complex model than the simple "grid" presen
 
 - Training dynamics and curriculum learning care about order, not just set membership. 
 - Active learning and experimental design care about policies for acquiring the next point. 
-- Multi-stage pipelines care about sequence much more
+- Multi-stage pipelines care much more about sequence.
 - Privacy, memorization, poisoning, backdoor work, and adversarial training usually need a more detailed state space than one scalar per cell. 
 - Meta-learning learns policies over rows rather than merely comparing fixed rows. 
 - Model collapse asks what happens when more and more rows are synthetic outputs of previous models.

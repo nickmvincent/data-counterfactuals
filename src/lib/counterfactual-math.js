@@ -462,6 +462,7 @@ export function createTutorialPresets(actions) {
     setConceptMode,
     setComputed,
     setShowNums,
+    setShowSingletonEvalCols,
     setPendingSelection,
     setPoisonActive,
     setGridView,
@@ -487,6 +488,7 @@ export function createTutorialPresets(actions) {
         setFocusSet(["A"]);
         setK(3);
         setShowNums(true);
+        setShowSingletonEvalCols?.(false);
         setMode("explore");
         setPoisonActive?.(false);
         setGridView?.("real");
@@ -507,6 +509,7 @@ export function createTutorialPresets(actions) {
         setFocusSet(["B"]);
         setK(3);
         setShowNums(true);
+        setShowSingletonEvalCols?.(false);
         setMode("loo");
         setPoisonActive?.(false);
         setGridView?.("real");
@@ -527,6 +530,7 @@ export function createTutorialPresets(actions) {
         setFocusSet(["C", "D"].sort());
         setK(4);
         setShowNums(true);
+        setShowSingletonEvalCols?.(false);
         setMode("group");
         setPoisonActive?.(false);
         setGridView?.("real");
@@ -547,6 +551,7 @@ export function createTutorialPresets(actions) {
         setFocusSet(["B"]);
         setK(2);
         setShowNums(false);
+        setShowSingletonEvalCols?.(false);
         setMode("shapley");
         setPoisonActive?.(false);
         setGridView?.("real");
@@ -566,6 +571,7 @@ export function createTutorialPresets(actions) {
         setMetric("jaccard");
         setFocusSet(["B"]);
         setShowNums(false);
+        setShowSingletonEvalCols?.(false);
         setMode("banzhaf");
         setPoisonActive?.(false);
         setGridView?.("real");
@@ -585,6 +591,7 @@ export function createTutorialPresets(actions) {
         setMetric("jaccard");
         setFocusSet(["B"]);
         setShowNums(false);
+        setShowSingletonEvalCols?.(false);
         setBetaAlpha?.(4);
         setBetaBeta?.(1);
         setMode("beta");
@@ -607,6 +614,7 @@ export function createTutorialPresets(actions) {
         setFocusSet(["A"]);
         setK(2);
         setShowNums(false);
+        setShowSingletonEvalCols?.(false);
         setMode("scaling");
         setPoisonActive?.(false);
         setGridView?.("real");
@@ -626,6 +634,7 @@ export function createTutorialPresets(actions) {
         setMetric("jaccard");
         setFocusSet(["B"]);
         setShowNums(true);
+        setShowSingletonEvalCols?.(false);
         setEpsilon?.(1);
         setMode("dp");
         setPoisonActive?.(false);
@@ -646,6 +655,7 @@ export function createTutorialPresets(actions) {
         setMetric("jaccard");
         setFocusSet(["C"]);
         setShowNums(true);
+        setShowSingletonEvalCols?.(false);
         setAuditTolerance?.(0.15);
         setMode("unlearning");
         setPoisonActive?.(false);
@@ -667,6 +677,7 @@ export function createTutorialPresets(actions) {
         setFocusSet(["A"]);
         setK(3);
         setShowNums(true);
+        setShowSingletonEvalCols?.(false);
         setMode("poison");
         setPoisonActive?.(true);
         setGridView?.("operator");

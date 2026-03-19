@@ -28,7 +28,7 @@ function isActive(href: string): boolean {
       <span class="brand-note">What changes when the training data changes?</span>
     </a>
 
-    <div class="nav-cluster">
+    <div class="nav-cluster nav-cluster-desktop">
       <div class="nav-links">
         {links.map(link => (
           <a
@@ -62,5 +62,50 @@ function isActive(href: string): boolean {
         </a>
       )}
     </div>
+
+    <details class="nav-mobile">
+      <summary class="nav-mobile-toggle">Menu</summary>
+      <div class="nav-mobile-panel">
+        <div class="nav-mobile-links">
+          <span class="nav-mobile-section-label">Explore the site</span>
+          {links.map((link) => (
+            <a
+              class="nav-mobile-link"
+              href={link.href}
+              aria-current={isActive(link.href) ? "page" : undefined}
+            >
+              <span>
+                <span>{link.label}</span>
+                <span class="nav-mobile-link-note">{link.title}</span>
+              </span>
+            </a>
+          ))}
+        </div>
+
+        <div class="nav-mobile-actions">
+          <span class="nav-mobile-section-label">Project links</span>
+          <a
+            class="nav-mobile-action"
+            href={externalLink.href}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            <span>3D View</span>
+            <span aria-hidden="true">↗</span>
+          </a>
+          {githubUrl && (
+            <a
+              class="nav-mobile-action"
+              href={githubUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              <span>GitHub Repo</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+          )}
+        </div>
+      </div>
+    </details>
   </div>
 </nav>

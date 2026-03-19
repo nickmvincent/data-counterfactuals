@@ -122,6 +122,7 @@ export interface SembleCollectionRecord {
 }
 
 export interface SembleDataset {
+  generatedAt: string;
   references: Map<string, SembleReference>;
   collections: SembleCollectionRecord[];
 }
@@ -317,7 +318,11 @@ function normalizeCollectionPageItem(item: SembleCollectionPageItem): SembleUrlC
     return item.urlCard || null;
   }
 
-  return item;
+  if ('url' in item || 'uri' in item || 'note' in item || 'cardContent' in item) {
+    return item;
+  }
+
+  return null;
 }
 
 function normalizeCollectionTitle(name: string | undefined, config: SembleConfig): string {
@@ -411,7 +416,7 @@ function serializeSembleDataset(config: SembleConfig, dataset: SembleDataset): S
 
   return {
     version: 1,
-    generated_at: new Date().toISOString(),
+    generated_at: dataset.generatedAt,
     cache_key: buildCacheKey(config),
     source: {
       apiBase: config.apiBase,
@@ -470,7 +475,11 @@ function deserializeSembleDataset(
     });
   }
 
-  return { references, collections };
+  return {
+    generatedAt: payload.generated_at,
+    references,
+    collections,
+  };
 }
 
 async function readSembleDatasetFromCache(config: SembleConfig): Promise<SembleDataset | null> {
@@ -722,6 +731,7 @@ function normalizeReference(
 }
 
 async function buildSembleDataset(config: SembleConfig): Promise<SembleDataset> {
+  const generatedAt = new Date().toISOString();
   const explicitUris = config.collectionAtUris;
   const discoveredCollections = await listCollections(config);
   const discoveredCollectionsByUri = new Map(
@@ -797,7 +807,11 @@ async function buildSembleDataset(config: SembleConfig): Promise<SembleDataset> 
 
   collections.sort((a, b) => a.title.localeCompare(b.title));
 
-  return { references, collections };
+  return {
+    generatedAt,
+    references,
+    collections,
+  };
 }
 
 export async function loadSembleDataset(

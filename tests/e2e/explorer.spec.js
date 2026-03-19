@@ -18,13 +18,16 @@ test("grid explorer defaults to explore mode and exposes lettered axis labels", 
   await expect(sideRail).toBeVisible();
 
   const columnLabels = page.locator('[data-testid="explorer-grid"] .cl .axis-set');
-  await expect(columnLabels.nth(0)).toHaveText("∅");
-  await expect(columnLabels.nth(1)).toHaveText("A");
-  await expect(columnLabels.nth(2)).toHaveText("B");
+  await expect(columnLabels).toHaveCount(4);
+  await expect(columnLabels.nth(0)).toHaveText("A");
+  await expect(columnLabels.nth(1)).toHaveText("B");
+  await expect(columnLabels.nth(2)).toHaveText("C");
+  await expect(columnLabels.nth(3)).toHaveText("D");
 
   const rowLabels = page.locator('[data-testid="explorer-grid"] .rl .axis-set');
   await expect(rowLabels.nth(0)).toHaveText("∅");
   await expect(rowLabels.nth(1)).toHaveText("A");
+  await expect(page.locator('[data-testid="explorer-grid"] .num').first()).toBeVisible();
 
   const firstRowCells = page.locator('[data-testid="explorer-grid"] .rr').first().locator(".cell");
   const firstCellBox = await firstRowCells.nth(0).boundingBox();
@@ -71,11 +74,13 @@ test("grid explorer defaults to explore mode and exposes lettered axis labels", 
   await expect(page.getByTestId("question-controls")).toContainText("Focus contributor");
   await expect(gridCard).toContainText("Rows train");
   await expect(page.getByTestId("display-controls")).toContainText("Show raw values");
+  await expect(page.getByLabel("Show raw values")).toBeChecked();
+  await expect(page.getByLabel("Show fewer cols")).toBeChecked();
   await expect(page.getByTitle(/pointwise-additive metrics/i)).toBeVisible();
-  await page.getByLabel("Show fewer eval cols").check();
-  await expect(columnLabels).toHaveCount(4);
-  await expect(columnLabels.nth(0)).toHaveText("A");
-  await expect(columnLabels.nth(3)).toHaveText("D");
+  await page.getByLabel("Show fewer cols").uncheck();
+  await expect(columnLabels).toHaveCount(16);
+  await expect(columnLabels.nth(0)).toHaveText("∅");
+  await expect(columnLabels.nth(1)).toHaveText("A");
   await expect(page.getByTestId("metric-controls")).toContainText("Real data");
   await expect(page.getByTestId("metric-controls")).toContainText('toy proxy for "retrain on');
   await page.getByRole("button", { name: "Real data" }).click();

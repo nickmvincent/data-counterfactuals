@@ -9,6 +9,12 @@ import { getRequiredPageEntry, renderMarkdownBlocks } from "../lib/page-content"
 const page = await getRequiredPageEntry("discussions");
 const headerNote = page.data.notes?.header;
 const discussions = networkData.discussions ?? [];
+const updatedAt = networkData.generatedAt ? new Date(networkData.generatedAt) : null;
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
 ---
 
 <Layout
@@ -40,6 +46,7 @@ const discussions = networkData.discussions ?? [];
         {page.data.lede && <p class="page-lede">{page.data.lede}</p>}
         <div class="page-meta">
           <span class="pill">{discussions.length} discussion venues</span>
+          {updatedAt && <span class="pill">Updated {dateFormatter.format(updatedAt)}</span>}
         </div>
       </div>
 
@@ -58,6 +65,7 @@ const discussions = networkData.discussions ?? [];
         backLinkLabel="Back to overview"
         hideProjectLinks={true}
         hideRelatedProjects={true}
+        hideGeneratedAt={true}
         classes={{
           container: "discussion-helper",
           title: "discussion-title",

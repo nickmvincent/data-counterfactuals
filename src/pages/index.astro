@@ -13,6 +13,12 @@ const coreMove = sections.find(
 const gridSection = getSection(sections, "a-grid-for-seeing-the-space");
 const connections = getSection(sections, "what-the-idea-helps-connect");
 const readingPaths = page.data.reading_paths ?? [];
+const readingPathByHref = Object.fromEntries(readingPaths.map((path) => [path.href, path]));
+const quickStartPaths = [
+  readingPathByHref["/grid"],
+  readingPathByHref["/memo/data-counterfactuals"],
+  readingPathByHref["/glossary"],
+].filter(Boolean);
 const figures = page.data.figures ?? {};
 ---
 
@@ -68,6 +74,113 @@ const figures = page.data.figures ?? {};
       color: var(--muted);
       font-size: 1.04rem;
       line-height: 1.92;
+    }
+    .start-utility-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .start-utility-note {
+      color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+    .quickstart-dialog {
+      width: min(calc(100% - 1.5rem), 42rem);
+      margin: auto;
+      padding: 0;
+      border: 0;
+      border-radius: 28px;
+      background: transparent;
+      color: inherit;
+      box-shadow: 0 28px 80px rgba(37, 28, 20, 0.24);
+    }
+    .quickstart-dialog::backdrop {
+      background: rgba(34, 26, 20, 0.42);
+      backdrop-filter: blur(5px);
+    }
+    .quickstart-shell {
+      display: grid;
+      gap: 1rem;
+      padding: clamp(1.2rem, 2vw, 1.6rem);
+      border-radius: 28px;
+      border: 1px solid rgba(92, 72, 52, 0.14);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0)),
+        linear-gradient(135deg, rgba(47, 107, 111, 0.08), rgba(177, 79, 31, 0.08)),
+        rgba(255, 250, 243, 0.98);
+    }
+    .quickstart-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .quickstart-kicker {
+      color: var(--ring-thick);
+      font-family: var(--font-ui);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+    .quickstart-title {
+      margin: 0.25rem 0 0;
+      font-family: var(--font-display);
+      font-size: clamp(1.7rem, 2.2vw, 2.2rem);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+    .quickstart-copy {
+      margin: 0.7rem 0 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.74;
+    }
+    .quickstart-close {
+      flex: 0 0 auto;
+    }
+    .quickstart-grid {
+      display: grid;
+      gap: 0.8rem;
+      grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
+    }
+    .quickstart-card {
+      display: grid;
+      gap: 0.45rem;
+      padding: 1rem;
+      border-radius: 18px;
+      border: 1px solid rgba(92, 72, 52, 0.12);
+      background: rgba(255, 255, 255, 0.7);
+      color: inherit;
+      text-decoration: none;
+    }
+    .quickstart-card:hover,
+    .quickstart-card:focus-visible {
+      border-color: rgba(177, 79, 31, 0.22);
+      transform: translateY(-1px);
+    }
+    .quickstart-card-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 1.14rem;
+      line-height: 1.18;
+    }
+    .quickstart-card-copy {
+      margin: 0;
+      color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 0.9rem;
+      line-height: 1.62;
+    }
+    .quickstart-footer {
+      margin: 0;
+      color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 0.84rem;
+      line-height: 1.6;
     }
     .start-section {
       padding-top: 2.35rem;
@@ -239,6 +352,12 @@ const figures = page.data.figures ?? {};
       .start-section {
         padding-top: 2rem;
       }
+      .start-utility-row {
+        align-items: flex-start;
+      }
+      .quickstart-head {
+        display: grid;
+      }
     }
   </style>
 
@@ -252,7 +371,42 @@ const figures = page.data.figures ?? {};
       {introBlocks.map((html) => (
         <div class="intro-block" set:html={html}></div>
       ))}
+      {quickStartPaths.length > 0 && (
+        <div class="start-utility-row">
+          <button class="btn ghost" type="button" data-quickstart-open>Open quick-start guide</button>
+          <span class="start-utility-note">A short chooser for where to begin, without changing the flow of the page.</span>
+        </div>
+      )}
     </header>
+
+    {quickStartPaths.length > 0 && (
+      <dialog class="quickstart-dialog" data-quickstart-dialog>
+        <div class="quickstart-shell">
+          <div class="quickstart-head">
+            <div>
+              <span class="quickstart-kicker">Quick start</span>
+              <h2 class="quickstart-title">Pick the version of the site that matches how you want to learn it.</h2>
+              <p class="quickstart-copy">If you want the shortest path in, start with the interactive grid. If you want the argument first, open the memo. If you want definitions nearby while you browse, keep the glossary handy.</p>
+            </div>
+
+            <form method="dialog" class="quickstart-close">
+              <button class="btn ghost" type="submit">Close</button>
+            </form>
+          </div>
+
+          <div class="quickstart-grid">
+            {quickStartPaths.map((path) => (
+              <a href={path.href} class="quickstart-card">
+                <h3 class="quickstart-card-title">{path.title}</h3>
+                {path.body && <p class="quickstart-card-copy">{path.body}</p>}
+              </a>
+            ))}
+          </div>
+
+          <p class="quickstart-footer">You can reopen this guide any time from the button at the top of the page.</p>
+        </div>
+      </dialog>
+    )}
 
     <section class="start-section">
       <h2>{coreMove.title}</h2>
@@ -315,4 +469,28 @@ const figures = page.data.figures ?? {};
       </ul>
     </section>
   </main>
+
+  {quickStartPaths.length > 0 && (
+    <script>
+      const dialog = document.querySelector("[data-quickstart-dialog]");
+      const openButton = document.querySelector("[data-quickstart-open]");
+
+      if (dialog instanceof HTMLDialogElement && openButton instanceof HTMLButtonElement) {
+        openButton.addEventListener("click", () => dialog.showModal());
+        dialog.addEventListener("click", (event) => {
+          const bounds = dialog.getBoundingClientRect();
+          const clickedBackdrop = (
+            event.clientX < bounds.left ||
+            event.clientX > bounds.right ||
+            event.clientY < bounds.top ||
+            event.clientY > bounds.bottom
+          );
+
+          if (clickedBackdrop) {
+            dialog.close();
+          }
+        });
+      }
+    </script>
+  )}
 </Layout>

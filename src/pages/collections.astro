@@ -1,7 +1,7 @@
 ---
 import Layout from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
-import { loadPaperCollections, loadPapersForCollection, getPriority } from "../lib/content-loader";
+import { loadPaperCollectionsSnapshot, loadPapersForCollection, getPriority } from "../lib/content-loader";
 import { getRequiredPageEntry, renderMarkdown } from "../lib/page-content";
 
 const COLLECTION_PREFIX = "dc:";
@@ -64,7 +64,8 @@ function getVeryCoreRank(title: string): number {
   return rank === -1 ? VERY_CORE_AREA_ORDER.length : rank;
 }
 
-const allCollections = await loadPaperCollections();
+const collectionsSnapshot = await loadPaperCollectionsSnapshot();
+const allCollections = collectionsSnapshot.collections;
 const prefixedCollections = allCollections.filter((collection) => matchesCollectionPrefix(collection.title));
 const collections = prefixedCollections.length ? prefixedCollections : allCollections;
 
@@ -100,6 +101,12 @@ const groupedCollections = [
 const totalPapers = collectionsWithPapers.reduce((sum, collection) => sum + collection.papers.length, 0);
 const page = await getRequiredPageEntry("collections");
 const introHtml = page.body ? renderMarkdown(page.body) : "";
+const generatedAt = collectionsSnapshot.generatedAt ? new Date(collectionsSnapshot.generatedAt) : null;
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
 ---
 
 <Layout
@@ -312,6 +319,7 @@ const introHtml = page.body ? renderMarkdown(page.body) : "";
         <div class="page-meta">
           <span class="pill">{collectionsWithPapers.length} areas</span>
           <span class="pill">{totalPapers} papers</span>
+          {generatedAt && <span class="pill">Updated {dateFormatter.format(generatedAt)}</span>}
         </div>
       </div>
 
