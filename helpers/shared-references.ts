@@ -26,7 +26,7 @@ export interface Reference {
 /**
  * Load all references from Semble
  */
-export async function loadReferences(options: { force?: boolean } = {}): Promise<Map<string, Reference>> {
+async function loadReferences(options: { force?: boolean } = {}): Promise<Map<string, Reference>> {
   if (!isSembleConfigured()) {
     throw new Error('Semble is not configured. Set SEMBLE_PROFILE_IDENTIFIER or SEMBLE_COLLECTION_AT_URIS, or add defaults in semble.config.json.');
   }
@@ -54,54 +54,4 @@ export async function loadReferencesByKeys(keys: string[]): Promise<Reference[]>
   }
 
   return result;
-}
-
-/**
- * Load references that have any of the specified tags
- */
-export async function loadReferencesByTags(tags: string[]): Promise<Reference[]> {
-  const allRefs = await loadReferences();
-  const results: Reference[] = [];
-  const tagSet = new Set(tags.map(t => t.toLowerCase()));
-
-  for (const ref of allRefs.values()) {
-    if (ref.tags?.some(t => tagSet.has(t.toLowerCase()))) {
-      results.push(ref);
-    }
-  }
-
-  return results;
-}
-
-/**
- * Format a reference as a citation string
- */
-export function formatCitation(ref: Reference, style: 'apa' | 'short' = 'short'): string {
-  if (style === 'short') {
-    const firstAuthor = ref.authors[0]?.split(',')[0] || 'Unknown';
-    const etAl = ref.authors.length > 1 ? ' et al.' : '';
-    return `${firstAuthor}${etAl} (${ref.year})`;
-  }
-
-  // APA-ish format
-  const authors = ref.authors.join(', ');
-  return `${authors} (${ref.year}). ${ref.title}. ${ref.venue || ref.journal || ref.booktitle || ''}`;
-}
-
-/**
- * Get the priority number for a reference
- * Looks for tags like 'priority:1', 'priority:2', etc.
- * Returns the priority number, or Infinity if no priority tag
- */
-export function getPriority(ref: Reference): number {
-  if (!ref.tags) return Infinity;
-
-  for (const tag of ref.tags) {
-    const lower = tag.toLowerCase();
-    if (lower.startsWith('priority:')) {
-      const num = parseInt(lower.slice('priority:'.length), 10);
-      if (!isNaN(num)) return num;
-    }
-  }
-  return Infinity;
 }

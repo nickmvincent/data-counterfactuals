@@ -19,7 +19,7 @@ test("grid explorer defaults to explore mode and exposes lettered axis labels", 
   await expect(sideRail).toBeVisible();
 
   const columnLabels = page.locator('[data-testid="explorer-grid"] .cl .axis-set');
-  await expect(columnLabels).toHaveCount(16);
+  await expect(columnLabels).toHaveCount(8);
   await expect(columnLabels.nth(0)).toHaveText("∅");
   await expect(columnLabels.nth(1)).toHaveText("A");
   await expect(columnLabels.nth(2)).toHaveText("B");
@@ -63,9 +63,9 @@ test("grid explorer defaults to explore mode and exposes lettered axis labels", 
   expect(questionControlsBox.y).toBeGreaterThan(valueDockBox.y);
   await expect(page.getByRole("button", { name: "Mark comparison cell" })).toBeEnabled();
   await page.getByTestId("grid-train-select").selectOption({ label: "ABC" });
-  await page.getByTestId("grid-eval-select").selectOption({ label: "D" });
+  await page.getByTestId("grid-eval-select").selectOption({ label: "C" });
   await expect(valueDock).toContainText("Train ABC");
-  await expect(valueDock).toContainText("Eval D");
+  await expect(valueDock).toContainText("Eval C");
   await page.getByTestId("concept-select").selectOption("loo");
   await expect(page.getByRole("button", { name: "Mark comparison cell" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Use built-in comparison" })).toBeVisible();
@@ -77,7 +77,7 @@ test("grid explorer defaults to explore mode and exposes lettered axis labels", 
   await expect(page.getByLabel("Show raw values")).toBeChecked();
   await expect(page.getByLabel("Fewer cols")).not.toBeChecked();
   await page.getByLabel("Fewer cols").check();
-  await expect(columnLabels).toHaveCount(4);
+  await expect(columnLabels).toHaveCount(3);
   await expect(columnLabels.nth(0)).toHaveText("A");
   await expect(columnLabels.nth(1)).toHaveText("B");
   await expect(page.getByTestId("metric-controls")).toContainText("Real data");

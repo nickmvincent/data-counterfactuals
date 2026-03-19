@@ -88,14 +88,6 @@ export function splitMarkdownSections(markdown: string): PageSection[] {
   return splitMarkdownDocument(markdown).sections;
 }
 
-export function getSection(sections: PageSection[], id: string): PageSection {
-  const section = sections.find((candidate) => candidate.id === id);
-  if (!section) {
-    throw new Error(`Missing content section '${id}'.`);
-  }
-  return section;
-}
-
 export async function getRequiredPageEntry(slug: string): Promise<CollectionEntry<"pages">> {
   const entry = await getEntry("pages", slug);
   if (!entry) {

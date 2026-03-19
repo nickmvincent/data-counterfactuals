@@ -258,7 +258,7 @@ function clampIndex(index, total) {
 function App() {
   const countMin = 2;
   const countMax = 8;
-  const [count, setCount] = useState(4);
+  const [count, setCount] = useState(3);
 
   const [metric, setMetric] = useState("jaccard");
   const [realDataMode, setRealDataMode] = useState("precomputed");
@@ -1672,6 +1672,25 @@ function App() {
             </div>
           `}
 
+      <div class="control-cluster">
+        <div class="control-head">Train / eval jump</div>
+        <div class="ctrl-note">Jump straight to the anchored train row and evaluation slice you want to read.</div>
+        <div class="grid-jump-controls grid-jump-controls-embedded" data-testid="grid-jump-controls">
+          <label class="grid-jump-field">
+            <span class="toolbar-label">Train</span>
+            <select data-testid="grid-train-select" value=${safeRowIdx} onChange=${(event) => setRowIdx(Number(event.target.value))}>
+              ${jumpTrainOptions.map((option) => html`<option value=${option.index}>${option.label}</option>`)}
+            </select>
+          </label>
+          <label class="grid-jump-field">
+            <span class="toolbar-label">Eval</span>
+            <select data-testid="grid-eval-select" value=${safeColIdx} onChange=${(event) => setColIdx(Number(event.target.value))}>
+              ${jumpEvalOptions.map((option) => html`<option value=${option.index}>${option.label}</option>`)}
+            </select>
+          </label>
+        </div>
+      </div>
+
       ${conceptMode === "beta"
         ? html`
             <div class="control-cluster">
@@ -2026,22 +2045,7 @@ function App() {
               <div>
                 <span class="summary-kicker">Counterfactual grid</span>
                 <h2 class="grid-card-title">Choose a train row and eval slice.</h2>
-                <p class="grid-card-copy">Click a row, column, or cell to anchor the pair you want to read.</p>
               </div>
-            </div>
-            <div class="grid-jump-controls grid-jump-controls-inline" data-testid="grid-jump-controls">
-              <label class="grid-jump-field grid-jump-field-compact">
-                <span class="toolbar-label">Train</span>
-                <select data-testid="grid-train-select" value=${safeRowIdx} onChange=${(event) => setRowIdx(Number(event.target.value))}>
-                  ${jumpTrainOptions.map((option) => html`<option value=${option.index}>${option.label}</option>`)}
-                </select>
-              </label>
-              <label class="grid-jump-field grid-jump-field-compact">
-                <span class="toolbar-label">Eval</span>
-                <select data-testid="grid-eval-select" value=${safeColIdx} onChange=${(event) => setColIdx(Number(event.target.value))}>
-                  ${jumpEvalOptions.map((option) => html`<option value=${option.index}>${option.label}</option>`)}
-                </select>
-              </label>
             </div>
           </div>
 

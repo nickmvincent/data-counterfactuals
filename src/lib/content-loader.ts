@@ -1,5 +1,6 @@
 import { isSembleConfigured, loadSembleDataset } from '../../helpers/semble';
-import { loadReferencesByKeys, formatCitation as formatReferenceCitation } from '../../helpers/shared-references';
+import { loadReferencesByKeys } from '../../helpers/shared-references';
+import { LOCAL_PAPER_COLLECTIONS } from '../data/local-paper-collections';
 
 export interface Paper {
   citation_key: string;
@@ -31,6 +32,54 @@ export interface PaperCollectionsSnapshot {
   collections: PaperCollection[];
 }
 
+function normalizeCollectionTitle(title: string): string {
+  return title
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+function isSameCollection(
+  a: Pick<PaperCollection, 'slug' | 'title'>,
+  b: Pick<PaperCollection, 'slug' | 'title'>,
+): boolean {
+  return a.slug.trim().toLowerCase() === b.slug.trim().toLowerCase()
+    || normalizeCollectionTitle(a.title) === normalizeCollectionTitle(b.title);
+}
+
+function mergePaperCollections(baseCollections: PaperCollection[]): PaperCollection[] {
+  const merged = baseCollections.map((collection) => ({
+    ...collection,
+    citation_keys: [...collection.citation_keys],
+  }));
+
+  for (const localCollection of LOCAL_PAPER_COLLECTIONS) {
+    const index = merged.findIndex((collection) => isSameCollection(collection, localCollection));
+    if (index === -1) {
+      merged.push({
+        ...localCollection,
+        citation_keys: [...localCollection.citation_keys],
+      });
+      continue;
+    }
+
+    const existing = merged[index];
+    merged[index] = {
+      ...existing,
+      ...localCollection,
+      citation_keys: Array.from(new Set([
+        ...existing.citation_keys,
+        ...localCollection.citation_keys,
+      ])),
+      visibility: localCollection.visibility ?? existing.visibility,
+      body: localCollection.body ?? existing.body,
+    };
+  }
+
+  return merged;
+}
+
 export async function loadPaperCollectionsSnapshot(): Promise<PaperCollectionsSnapshot> {
   if (!isSembleConfigured()) {
     throw new Error('Semble is not configured. Set SEMBLE_PROFILE_IDENTIFIER or SEMBLE_COLLECTION_AT_URIS, or add defaults in semble.config.json.');
@@ -41,33 +90,20 @@ export async function loadPaperCollectionsSnapshot(): Promise<PaperCollectionsSn
     throw new Error('Semble is configured but no collection dataset could be loaded.');
   }
 
-  return {
-    generatedAt: dataset.generatedAt,
-    collections: dataset.collections.map((collection) => ({
+  const collections = mergePaperCollections(
+    dataset.collections.map((collection) => ({
       slug: collection.slug,
       title: collection.title,
       citation_keys: [...collection.citation_keys],
       visibility: collection.visibility,
       body: collection.body,
     })),
+  );
+
+  return {
+    generatedAt: dataset.generatedAt,
+    collections,
   };
-}
-
-export async function loadPaperCollections(): Promise<PaperCollection[]> {
-  return (await loadPaperCollectionsSnapshot()).collections;
-}
-
-/**
- * Load paper citation keys from all Semble collections
- */
-export async function loadPaperCollectionKeys(): Promise<string[]> {
-  const collections = await loadPaperCollections();
-  const keys = new Set<string>();
-
-  for (const collection of collections) {
-    for (const key of collection.citation_keys) keys.add(key);
-  }
-  return Array.from(keys);
 }
 
 /**
@@ -115,7 +151,7 @@ export async function loadPapersForCollection(collection: PaperCollection): Prom
 /**
  * Load papers from shared-references by citation keys
  */
-export async function loadSharedPapers(keys: string[]): Promise<Paper[]> {
+async function loadSharedPapers(keys: string[]): Promise<Paper[]> {
   const refs = await loadReferencesByKeys(keys);
   return refs.map((ref) => ({
     citation_key: ref.citation_key,
@@ -131,19 +167,4 @@ export async function loadSharedPapers(keys: string[]): Promise<Paper[]> {
     semantic_scholar_url: ref.semantic_scholar_url as string | undefined,
     google_scholar_url: ref.google_scholar_url as string | undefined,
   }));
-}
-
-/**
- * Load all available papers from the shared paper collection
- */
-export async function loadAllPapers(sharedKeys?: string[]): Promise<Paper[]> {
-  const keys = sharedKeys ?? await loadPaperCollectionKeys();
-  return loadSharedPapers(keys);
-}
-
-/**
- * Format a paper as a short citation
- */
-export function formatCitation(paper: Paper): string {
-  return formatReferenceCitation(paper);
 }

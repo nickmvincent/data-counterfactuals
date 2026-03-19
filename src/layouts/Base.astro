@@ -1,5 +1,7 @@
 ---
 import "katex/dist/katex.min.css";
+import networkData from "../data/network.json";
+import { siteLinks, viewerLink, type SiteNavLink } from "../lib/site-nav";
 
 interface Props {
   title?: string;
@@ -16,6 +18,12 @@ const {
 const siteUrl = "https://datacounterfactuals.org";
 const fullTitle = title === "Data Counterfactuals" ? title : `${title} | Data Counterfactuals`;
 const pageUrl = new URL(Astro.url.pathname || "/", siteUrl).toString();
+const githubUrl = networkData.links?.github;
+type FooterNavLink = SiteNavLink & { external?: boolean };
+
+const footerNavLinks: FooterNavLink[] = githubUrl
+  ? [...siteLinks, { href: githubUrl, label: "GitHub Repo", external: true }]
+  : siteLinks;
 ---
 
 <!DOCTYPE html>
@@ -48,6 +56,37 @@ const pageUrl = new URL(Astro.url.pathname || "/", siteUrl).toString();
   <body>
     <div class="site-shell">
       <slot />
+      <footer class="site-footer">
+        <div class="site-footer-inner">
+          <div class="site-footer-nav-wrap">
+            <p class="site-footer-kicker">Browse the rest of the site</p>
+            <nav class="site-footer-nav" aria-label="Footer">
+              {footerNavLinks.map((link) => (
+                <a
+                  class="site-footer-nav-link"
+                  href={link.href}
+                  target={link.external ? "_blank" : undefined}
+                  rel={link.external ? "noreferrer noopener" : undefined}
+                >
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+          </div>
+
+          <div class="site-footer-spotlight">
+            <p class="site-footer-note">Looking for the heavier prototype?</p>
+            <a
+              class="site-footer-link"
+              href={viewerLink.href}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              {viewerLink.label} ↗
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   </body>
 </html>
@@ -128,6 +167,90 @@ const pageUrl = new URL(Astro.url.pathname || "/", siteUrl).toString();
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+  }
+  .site-footer {
+    margin-top: auto;
+    padding: 0 0 1.5rem;
+  }
+  .site-footer-inner {
+    width: min(1240px, calc(100% - 2rem));
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 1rem 1.4rem;
+    padding: 1rem 1.1rem;
+    border-radius: 24px;
+    border: 1px solid rgba(92, 72, 52, 0.12);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0)),
+      rgba(255, 250, 243, 0.74);
+    box-shadow: var(--shadow-soft);
+  }
+  .site-footer-nav-wrap {
+    display: grid;
+    gap: 0.45rem;
+    min-width: 0;
+  }
+  .site-footer-kicker {
+    margin: 0;
+    color: rgba(101, 90, 79, 0.82);
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .site-footer-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 1rem;
+  }
+  .site-footer-nav-link {
+    color: var(--muted);
+    font-family: var(--font-ui);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    text-decoration: none;
+    transition: color 160ms ease;
+  }
+  .site-footer-nav-link:hover,
+  .site-footer-nav-link:focus-visible {
+    color: var(--fg);
+    text-decoration: underline;
+  }
+  .site-footer-spotlight {
+    display: grid;
+    gap: 0.45rem;
+    justify-items: end;
+  }
+  .site-footer-note {
+    margin: 0;
+    color: var(--muted);
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  .site-footer-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.7rem 1rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(47, 107, 111, 0.08);
+    color: #19484b;
+    font-family: var(--font-ui);
+    font-size: 0.92rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition: transform 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+  .site-footer-link:hover,
+  .site-footer-link:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(25, 72, 75, 0.18);
+    color: #12373a;
   }
 
   .top-nav {
@@ -774,6 +897,18 @@ const pageUrl = new URL(Astro.url.pathname || "/", siteUrl).toString();
     .page {
       width: min(100% - 1.25rem, 1240px);
       padding-bottom: 3rem;
+    }
+    .site-footer {
+      padding-bottom: 1rem;
+    }
+    .site-footer-inner {
+      width: min(100% - 1.25rem, 1240px);
+      padding: 0.95rem 1rem;
+      grid-template-columns: 1fr;
+      align-items: start;
+    }
+    .site-footer-spotlight {
+      justify-items: start;
     }
     .page-title {
       max-width: 12ch;

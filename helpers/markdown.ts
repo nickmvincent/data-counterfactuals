@@ -10,7 +10,3 @@ export function parseFrontmatter(raw: string): { data: Frontmatter; body: string
   const body = raw.slice(match[0].length).trim();
   return { data, body };
 }
-
-export function slugFromFilename(name: string): string {
-  return name.replace(/\.md$/i, '');
-}

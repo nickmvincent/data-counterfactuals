@@ -65,6 +65,10 @@ Plots from data cartography that place examples according to training dynamics l
 
 A project-level umbrella term for "what if" questions about training data. What would happen to model performance if we trained on different data? The grid visualization is a teaching model for organizing those questions, not something we literally enumerate in real systems. This usage is inspired by the broader counterfactual tradition, but it is not meant as a claim that this phrase is already a standard textbook term in ML. Example links: the [main memo](/memo/data-counterfactuals) and [Pearl (2009)](https://doi.org/10.1017/CBO9780511803161).
 
+### Data dividends
+
+Proposals to share some of the economic value created by AI or other data-driven systems back to the people whose data made those systems possible. In this project's framing, data dividend claims usually depend on counterfactual questions about how much model behavior, performance, or revenue would change if certain people or groups contributed, withheld, or relicensed their data. Example link: [Vincent et al. (2021)](https://www.microsoft.com/en-us/research/publication/data-leverage-a-framework-for-empowering-the-public-in-its-relationship-with-technology-companies/).
+
 ### Data leverage
 
 The power that data creators have over AI systems by virtue of controlling training data. Performance drops from withholding or degrading data are one source of leverage, but coordination, substitutability, and bargaining position also matter. Example link: [Vincent et al. (2021)](https://www.microsoft.com/en-us/research/publication/data-leverage-a-framework-for-empowering-the-public-in-its-relationship-with-technology-companies/).

@@ -1,18 +1,9 @@
 ---
 import networkData from "../data/network.json";
+import { siteLinks } from "../lib/site-nav";
 
 const { pathname } = Astro.url;
 
-const links = [
-  { href: "/", label: "Overview", title: "What data counterfactuals are and why they matter" },
-  { href: "/grid", label: "Grid", title: "Interactive toy grid for exploring train/eval counterfactuals" },
-  { href: "/graph", label: "Graph", title: "Subset-lattice companion that treats dataset edits as graph moves" },
-  { href: "/api-explorer", label: "API", title: "Request/response style explorer for querying grid and graph state directly" },
-  { href: "/memo", label: "Memos", title: "Written notes: the launch post, formalisms, and more" },
-  { href: "/collections", label: "Related Areas and Papers", title: "Curated shelf of neighboring literatures and representative papers" },
-];
-
-const externalLink = { href: "/advanced.html", label: "3D View", external: true };
 const githubUrl = networkData.links?.github;
 
 function isActive(href: string): boolean {
@@ -30,7 +21,7 @@ function isActive(href: string): boolean {
 
     <div class="nav-cluster nav-cluster-desktop">
       <div class="nav-links">
-        {links.map(link => (
+        {siteLinks.map(link => (
           <a
             class="nav-link"
             href={link.href}
@@ -42,15 +33,6 @@ function isActive(href: string): boolean {
         ))}
       </div>
 
-      <a
-        class="nav-link nav-link-aux"
-        href={externalLink.href}
-        target="_blank"
-        rel="noreferrer noopener"
-        title="Opens in a new tab"
-      >
-        {externalLink.label} ↗
-      </a>
       {githubUrl && (
         <a
           class="nav-link nav-link-aux"
@@ -68,7 +50,7 @@ function isActive(href: string): boolean {
       <div class="nav-mobile-panel">
         <div class="nav-mobile-links">
           <span class="nav-mobile-section-label">Explore the site</span>
-          {links.map((link) => (
+          {siteLinks.map((link) => (
             <a
               class="nav-mobile-link"
               href={link.href}
@@ -82,18 +64,9 @@ function isActive(href: string): boolean {
           ))}
         </div>
 
-        <div class="nav-mobile-actions">
-          <span class="nav-mobile-section-label">Project links</span>
-          <a
-            class="nav-mobile-action"
-            href={externalLink.href}
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            <span>3D View</span>
-            <span aria-hidden="true">↗</span>
-          </a>
-          {githubUrl && (
+        {githubUrl && (
+          <div class="nav-mobile-actions">
+            <span class="nav-mobile-section-label">Project links</span>
             <a
               class="nav-mobile-action"
               href={githubUrl}
@@ -103,8 +76,8 @@ function isActive(href: string): boolean {
               <span>GitHub Repo</span>
               <span aria-hidden="true">↗</span>
             </a>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </details>
   </div>

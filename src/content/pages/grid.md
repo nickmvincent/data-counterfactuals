@@ -9,7 +9,7 @@ companion_links:
     href: /memo/data-counterfactuals
   - title: Open the glossary for fast definitions
     href: /glossary
-  - title: Try the 3D view
+  - title: wip more complex 3d viewer
     href: /advanced.html
 notes:
   header:

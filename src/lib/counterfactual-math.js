@@ -246,12 +246,6 @@ export function getCovertypeDomains(countOrItems = covertypeDomainMaxCount) {
   return covertypeMetricData.domains.slice(0, safeCount).map(cloneCovertypeDomain);
 }
 
-export function getCovertypeMetricSource() {
-  return {
-    ...covertypeMetricData.source,
-  };
-}
-
 function buildCovertypeGrid(items) {
   if (!isSupportedCovertypePrefix(items)) {
     throw new Error(`Covertype metric supports the prefix tokens A-${covertypeMetricData.domains[Math.max(0, items.length - 1)]?.token || "A"} only.`);

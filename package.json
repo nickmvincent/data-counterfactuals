@@ -32,7 +32,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@atproto/identity": "^0.4.12",
     "@cosmik.network/semble-pds-client": "^0.0.9",
     "gray-matter": "^4.0.3",
     "htm": "^3.1.1",
