@@ -34,7 +34,9 @@ When people can withhold, redirect, or condition the supply of data, data counte
 
 ## Why data counterfactuals are relevant to core AI
 
-...
+This frame is not only relevant to data leverage or governance. It is also deeply relevant to what many people would recognize as "core AI" questions. If we want to know how models improve with more data, which data are worth keeping, which examples are redundant, what happens when we swap in synthetic data, why a model fails on one slice but not another, or how to remove the effect of a problematic subset, we are asking questions about what changes when the data change.
+
+Data scaling, ablations, selection, influence estimation, distillation, synthetic data substitution, privacy interventions, poisoning, and unlearning are not all the same task. But they do all involve moving between nearby training worlds and asking how model behavior shifts as we move. The point is not to collapse everything into one technique. The point is to notice that many central ML questions are already, in a practical sense, data counterfactual questions.
 
 ## The grid view
 
@@ -77,17 +79,17 @@ Some related concepts require a more complex model than the simple "grid" presen
 
 ## An important distinction
 
-...
+One important distinction is between interventions over data an AI operator already has, interventions over what data an AI operator can get, and interventions over what data the world produces in the first place. Those are related, but they are not identical. Removing a point from an existing training set, bargaining over whether a platform can access future contributions, and organizing to change how people behave online can all be described in counterfactual terms, but they operate at different levels.
 
-distinction between techniques that edit data an operator has, change the data an operator has, and edit the real world
+That distinction matters both technically and politically. Some methods only compare subsets of a fixed dataset. Others concern provenance, licensing, bargaining, and contribution governance, where the key question is which rows are available on acceptable terms. Still others involve feedback loops where deploying a model changes future behavior, and therefore changes the future data-generating process itself. I think the data counterfactual frame is useful partly because it helps make these differences explicit rather than hiding them.
 
-## Some exciting connections
+## Clarifying the "more out there" connections
 
-...
+I think that arguing that a data ablation experiment and data strike experiment are related is pretty uncontroversial. For this particular comparison, we can get pretty formal in showing that these are the same thing. However, some of the other connections I've "promised" may not feel so obvious.
 
-explain how differential privacy can be understood in terms of data counterfactuals
+One exciting connection is to differential privacy. In a very rough sense, differential privacy asks for a guarantee that the world with one person's data and the world without that person's data do not come apart too much. That is not the same thing as standard data valuation or attribution, but it is still very naturally understood as a constraint over nearby data counterfactuals. Machine unlearning has a similarly clear connection: the task is to move from a world where some data were included to a nearby world where they were not, without retraining from scratch if possible.
 
-Also machine unlearning, also data scaling, also data ablations, also a participant in a data market
+Other connections are maybe more familiar, but still useful to line up in one place. Data scaling asks what happens as we add more data. Data ablations ask what happens when we remove a subset. Selection and curation ask which rows are worth visiting in the first place. And a participant in a data market, or someone involved in bargaining over data access, is also asking a counterfactual question: what happens if this data are contributed, withheld, redirected, or licensed under different terms?
 
 ## Why build this site?
 
