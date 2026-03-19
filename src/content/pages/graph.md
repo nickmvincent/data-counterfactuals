@@ -5,7 +5,7 @@ description: Interactive graph/network companion to the grid explorer.
 
 ## What are we simulating?
 
-The same tiny toy universe as the grid view: possible training slices named `A`, `B`, `C`, `D`, and so on.
+We imagine an AI operator is training some machine learning model on different slices of data. There is a small set of data objects to choose between, named `A`, `B`, `C`, `D`, and so on. The operator will train a model on some slice of training data (e.g., A, B, and C) and then evaluate on a set of data (e.g., just A and B).
 
 ## How do I read the graph?
 

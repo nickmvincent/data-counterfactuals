@@ -15,10 +15,10 @@ reading_paths:
     body: Explore the data counterfactuals "grid" framing directly.
   - title: Compare formalisms
     href: /memo/formalisms
-    body: A more technical, web-only companion that lines up neighboring formalisms side by side.
+    body: A more technical companion that lines up neighboring formalisms side by side. Currently very WIP.
   - title: Related areas and papers
     href: /collections
-    body: A dynamic, non-exhaustive set of related areas and readings, updated via Semble.
+    body: A dynamic, non-exhaustive set of related areas and readings, updated via Semble.so.
 figures:
   leave_one_out:
     label: Leave-one-out toy example
