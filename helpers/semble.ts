@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { fetchCitationMetadata, needsCitationMetadataEnrichment } from './citation-metadata.js';
 import { parseFrontmatter } from './markdown';
 
 const DEFAULT_SEMBLE_API_BASE = 'https://api.semble.so';
@@ -278,6 +279,77 @@ function pickFirst<T>(...values: Array<T | undefined>): T | undefined {
 
 function unique(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean)));
+}
+
+function isLikelyUrlTitle(value: string | undefined): boolean {
+  const text = asOptionalString(value);
+  if (!text) return false;
+
+  try {
+    new URL(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function applyCitationMetadata(
+  reference: SembleReference,
+  metadata: {
+    title?: string;
+    authors?: string[];
+    year?: string;
+    venue?: string;
+    journal?: string;
+    booktitle?: string;
+    abstract?: string;
+    doi?: string;
+  } | null,
+): SembleReference {
+  if (!metadata) {
+    return reference;
+  }
+
+  const enriched: SembleReference = {
+    ...reference,
+    authors: unique([
+      ...(reference.authors || []),
+      ...normalizeAuthors(metadata.authors || []),
+    ]),
+  };
+
+  if ((reference.title.trim() === '' || isLikelyUrlTitle(reference.title)) && asOptionalString(metadata.title)) {
+    enriched.title = asString(metadata.title);
+  }
+
+  if (!reference.year && asOptionalString(metadata.year)) {
+    enriched.year = asString(metadata.year);
+  }
+
+  if (!reference.venue && asOptionalString(metadata.venue)) {
+    enriched.venue = asString(metadata.venue);
+  }
+
+  if (!reference.journal && asOptionalString(metadata.journal)) {
+    enriched.journal = asString(metadata.journal);
+  }
+
+  if (!reference.booktitle && asOptionalString(metadata.booktitle)) {
+    enriched.booktitle = asString(metadata.booktitle);
+  }
+
+  if (!reference.doi && asOptionalString(metadata.doi)) {
+    enriched.doi = asString(metadata.doi);
+  }
+
+  if (
+    (!asOptionalString(reference.abstract) || (reference.abstract?.trim().length ?? 0) < 40)
+    && asOptionalString(metadata.abstract)
+  ) {
+    enriched.abstract = asString(metadata.abstract);
+  }
+
+  return enriched;
 }
 
 function slugify(value: string): string {
@@ -803,6 +875,22 @@ async function buildSembleDataset(config: SembleConfig): Promise<SembleDataset> 
 
     collection.citation_keys = unique(collection.citation_keys);
     collections.push(collection);
+  }
+
+  const enrichedReferences = await Promise.all(
+    Array.from(references.entries()).map(async ([citationKey, reference]) => {
+      if (!needsCitationMetadataEnrichment(reference)) {
+        return [citationKey, reference] as const;
+      }
+
+      const metadata = await fetchCitationMetadata(reference.url);
+      return [citationKey, applyCitationMetadata(reference, metadata)] as const;
+    }),
+  );
+
+  references.clear();
+  for (const [citationKey, reference] of enrichedReferences) {
+    references.set(citationKey, reference);
   }
 
   collections.sort((a, b) => a.title.localeCompare(b.title));

@@ -8,7 +8,7 @@ import {
   predictProbability,
   scenarioConfigs,
   subsetDefs,
-} from "../public/advanced-simulator-core.js";
+} from "../src/lib/advanced-simulator-core.js";
 
 test("advanced simulator metrics stay finite and confusion counts match eval sizes", () => {
   const { resultMatrix, scenarioDataMap } = buildModelRun(0);

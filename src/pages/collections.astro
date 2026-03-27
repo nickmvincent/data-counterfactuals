@@ -18,16 +18,6 @@ function stripCollectionPrefix(title: string): string {
   return stripped || trimmed;
 }
 
-function summarizeCollectionBody(body?: string): string | null {
-  const normalized = body?.replace(/\s+/g, " ").trim();
-  if (!normalized) return null;
-
-  const [firstSentence = normalized] = normalized.split(/(?<=[.!?])\s+/);
-  if (firstSentence.length <= 150) return firstSentence;
-
-  return `${firstSentence.slice(0, 147).replace(/[\s,;:.-]+$/g, "")}...`;
-}
-
 function normalizeCollectionName(title: string): string {
   return stripCollectionPrefix(title)
     .trim()
@@ -75,7 +65,6 @@ const collectionsWithPapers = await Promise.all(
   collections.map(async (collection) => ({
     ...collection,
     displayTitle: stripCollectionPrefix(collection.title),
-    summary: summarizeCollectionBody(collection.body),
     papers: await loadPapersForCollection(collection),
   }))
 );
@@ -90,12 +79,12 @@ const peripheralCollections = collectionsWithPapers
 const groupedCollections = [
   {
     id: "very-core",
-    title: "Very core areas",
+    title: "Core areas",
     collections: veryCoreCollections,
   },
   {
     id: "more-peripheral",
-    title: "More peripheral areas",
+    title: "Related areas",
     collections: peripheralCollections,
   },
 ].filter((group) => group.collections.length);
@@ -252,13 +241,6 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
       line-height: 1.06;
       letter-spacing: -0.03em;
     }
-    .collection-summary {
-      margin: 0;
-      max-width: 40rem;
-      color: var(--muted);
-      line-height: 1.68;
-      font-size: 0.97rem;
-    }
     .paper-list {
       list-style: none;
       padding: 0;
@@ -363,17 +345,15 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
                     </div>
                     <span class="pill">{collection.papers.length} papers</span>
                   </div>
-
-                  {collection.summary && <p class="collection-summary">{collection.summary}</p>}
-
                   {collection.papers.length ? (
                     <ul class="paper-list">
                       {collection.papers.map((paper) => {
                         const priority = getPriority(paper);
                         const isPriority = priority !== Infinity;
                         const priorityLabel = priority === 1 ? "Start here" : `Priority ${priority}`;
-                        const venueAndYear = paper.venue
-                          ? `${paper.venue}${paper.year ? ` (${paper.year})` : ""}`
+                        const venue = paper.venue || paper.booktitle || paper.journal;
+                        const venueAndYear = venue
+                          ? `${venue}${paper.year ? ` (${paper.year})` : ""}`
                           : paper.year;
                         const meta = [paper.authors?.length ? paper.authors.join(", ") : null, venueAndYear]
                           .filter(Boolean)

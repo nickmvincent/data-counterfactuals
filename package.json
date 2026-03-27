@@ -11,10 +11,13 @@
     "build": "astro build",
     "build:offline": "node scripts/semble-run.mjs build cache-only",
     "build:refresh": "node scripts/semble-run.mjs build refresh",
+    "cf:deploy": "node scripts/cf-deploy.mjs",
+    "deploy": "node scripts/cf-deploy.mjs",
     "preview": "astro preview",
     "check": "astro check",
     "semble:status": "node scripts/semble-status.mjs",
     "semble:manage": "node scripts/semble-client.mjs",
+    "semble:tui": "node tools/semble-tui/index.mjs",
     "generate:covertype-metric": "node scripts/generate-covertype-metric.mjs",
     "test": "node --test",
     "test:e2e": "playwright test"
@@ -29,7 +32,8 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.10.1",
     "astro": "^4.16.19",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wrangler": "^4.77.0"
   },
   "dependencies": {
     "@cosmik.network/semble-pds-client": "^0.0.9",
@@ -40,6 +44,7 @@
     "marked": "^12.0.2",
     "preact": "^10.27.2",
     "rehype-katex": "^7.0.1",
-    "remark-math": "^6.0.0"
+    "remark-math": "^6.0.0",
+    "three": "^0.183.2"
   }
 }

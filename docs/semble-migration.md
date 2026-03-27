@@ -99,6 +99,9 @@ npm run semble:manage -- move-card --from 1 --to 2 --card 3
 # Refresh the cache from live Semble data
 npm run build:refresh
 
+# Refresh, build, and deploy to Cloudflare Pages
+npm run cf:deploy
+
 # Use the cached snapshot while offline
 npm run dev:offline
 ```
@@ -110,7 +113,7 @@ npm run dev:offline
 3. Run `npm run build:refresh` to update the local cache snapshot after live Semble edits.
 4. Use plain `npm run dev` / `npm run build` for normal work. They will use the configured source and fall back to cache if the live fetch fails.
 5. Use `npm run dev:offline` or `npm run build:offline` when you want deterministic cache-only work for travel, CI debugging, or AI agents.
-6. Rebuild and redeploy this site whenever you want those Semble edits reflected here.
+6. Run `npm run cf:deploy` whenever you want those Semble edits reflected on Cloudflare Pages.
 
 The repo-local markdown bibliography and paper-collection files have been removed so Semble stays the only source of truth.
 

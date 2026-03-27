@@ -1,6 +1,5 @@
 import { isSembleConfigured, loadSembleDataset } from '../../helpers/semble';
 import { loadReferencesByKeys } from '../../helpers/shared-references';
-import { LOCAL_PAPER_COLLECTIONS } from '../data/local-paper-collections';
 
 export interface Paper {
   citation_key: string;
@@ -9,6 +8,8 @@ export interface Paper {
   authors: string[];
   year: string;
   venue?: string;
+  booktitle?: string;
+  journal?: string;
   url?: string;
   doi?: string;
   abstract?: string;
@@ -32,54 +33,6 @@ export interface PaperCollectionsSnapshot {
   collections: PaperCollection[];
 }
 
-function normalizeCollectionTitle(title: string): string {
-  return title
-    .trim()
-    .toLowerCase()
-    .replace(/-/g, ' ')
-    .replace(/\s+/g, ' ');
-}
-
-function isSameCollection(
-  a: Pick<PaperCollection, 'slug' | 'title'>,
-  b: Pick<PaperCollection, 'slug' | 'title'>,
-): boolean {
-  return a.slug.trim().toLowerCase() === b.slug.trim().toLowerCase()
-    || normalizeCollectionTitle(a.title) === normalizeCollectionTitle(b.title);
-}
-
-function mergePaperCollections(baseCollections: PaperCollection[]): PaperCollection[] {
-  const merged = baseCollections.map((collection) => ({
-    ...collection,
-    citation_keys: [...collection.citation_keys],
-  }));
-
-  for (const localCollection of LOCAL_PAPER_COLLECTIONS) {
-    const index = merged.findIndex((collection) => isSameCollection(collection, localCollection));
-    if (index === -1) {
-      merged.push({
-        ...localCollection,
-        citation_keys: [...localCollection.citation_keys],
-      });
-      continue;
-    }
-
-    const existing = merged[index];
-    merged[index] = {
-      ...existing,
-      ...localCollection,
-      citation_keys: Array.from(new Set([
-        ...existing.citation_keys,
-        ...localCollection.citation_keys,
-      ])),
-      visibility: localCollection.visibility ?? existing.visibility,
-      body: localCollection.body ?? existing.body,
-    };
-  }
-
-  return merged;
-}
-
 export async function loadPaperCollectionsSnapshot(): Promise<PaperCollectionsSnapshot> {
   if (!isSembleConfigured()) {
     throw new Error('Semble is not configured. Set SEMBLE_PROFILE_IDENTIFIER or SEMBLE_COLLECTION_AT_URIS, or add defaults in semble.config.json.');
@@ -90,15 +43,13 @@ export async function loadPaperCollectionsSnapshot(): Promise<PaperCollectionsSn
     throw new Error('Semble is configured but no collection dataset could be loaded.');
   }
 
-  const collections = mergePaperCollections(
-    dataset.collections.map((collection) => ({
-      slug: collection.slug,
-      title: collection.title,
-      citation_keys: [...collection.citation_keys],
-      visibility: collection.visibility,
-      body: collection.body,
-    })),
-  );
+  const collections = dataset.collections.map((collection) => ({
+    slug: collection.slug,
+    title: collection.title,
+    citation_keys: [...collection.citation_keys],
+    visibility: collection.visibility,
+    body: collection.body,
+  }));
 
   return {
     generatedAt: dataset.generatedAt,
@@ -159,7 +110,9 @@ async function loadSharedPapers(keys: string[]): Promise<Paper[]> {
     title: ref.title,
     authors: ref.authors,
     year: ref.year,
-    venue: ref.venue,
+    venue: (ref.venue as string | undefined) || (ref.booktitle as string | undefined) || (ref.journal as string | undefined),
+    booktitle: ref.booktitle as string | undefined,
+    journal: ref.journal as string | undefined,
     url: ref.url,
     doi: ref.doi,
     abstract: ref.abstract,

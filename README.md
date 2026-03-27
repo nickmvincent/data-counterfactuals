@@ -29,6 +29,7 @@ Useful commands:
 npm run semble:status
 npm run semble:manage -- list-collections
 npm run build:refresh
+npm run cf:deploy
 npm run build
 npm run build:offline
 ```
@@ -78,6 +79,14 @@ npm run preview
 ## Deploy
 
 Cloudflare Pages is configured via `wrangler.toml`.
+
+```bash
+npm run cf:deploy
+```
+
+That command refreshes the live Semble cache, builds the Astro site, and deploys `dist` to the `datacounterfactuals` Pages project.
+
+If you want the raw deploy command, it is still:
 
 ```bash
 wrangler pages deploy dist --project-name datacounterfactuals

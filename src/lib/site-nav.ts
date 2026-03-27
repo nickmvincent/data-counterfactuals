@@ -24,7 +24,6 @@ export const wipExplorableLinks: SiteNavLink[] = [
     href: "/advanced.html",
     label: "3D Viewer",
     title: "Heavier prototype with the more complex 3D visualization",
-    external: true,
   },
 ];
 

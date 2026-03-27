@@ -68,9 +68,6 @@ const hasMobileNotice = Astro.slots.has("mobileNotice");
           <summary>
             <div class="explorer-page-help-summary-copy">
               <span class="explorer-page-help-summary-kicker">{helpSummary}</span>
-              <span class="explorer-page-help-summary-title">
-                Open once to see all {helpSections.length} questions.
-              </span>
             </div>
             <span class="explorer-page-help-summary-meta">{helpSections.length} answers</span>
           </summary>
@@ -216,15 +213,6 @@ const hasMobileNotice = Astro.slots.has("mobileNotice");
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-  }
-
-  .explorer-page-help-summary-title {
-    color: #10273d;
-    font-family: var(--font-ui);
-    font-size: 0.94rem;
-    font-weight: 650;
-    line-height: 1.35;
-    text-wrap: balance;
   }
 
   .explorer-page-help-summary-meta {
