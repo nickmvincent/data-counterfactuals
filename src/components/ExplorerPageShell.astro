@@ -11,6 +11,8 @@ interface Props {
   lede?: string;
   helpSections?: HelpSection[];
   helpAriaLabel?: string;
+  helpVariant?: "stack" | "faq";
+  helpSummary?: string;
   exploreId?: string;
   exploreLabel?: string;
   shellClass: string;
@@ -25,6 +27,8 @@ const {
   lede,
   helpSections = [],
   helpAriaLabel = "Explorer page guide",
+  helpVariant = "stack",
+  helpSummary = "Quick FAQ",
   exploreId = "explore",
   exploreLabel = "Explore",
   shellClass,
@@ -35,6 +39,12 @@ const {
 const mainClasses = ["page", "essay-page", "explorer-page-shell", pageClass].filter(Boolean).join(" ");
 const frameClasses = ["section-card", "explorer-page-frame", frameClass].filter(Boolean).join(" ");
 const mobileNoticeClasses = ["explorer-page-mobile-notice", mobileNoticeClass].filter(Boolean).join(" ");
+const helpStackClasses = [
+  "explorer-page-help-stack",
+  helpVariant === "faq" ? "explorer-page-help-stack-faq" : "",
+]
+  .filter(Boolean)
+  .join(" ");
 const hasMobileNotice = Astro.slots.has("mobileNotice");
 ---
 
@@ -52,13 +62,35 @@ const hasMobileNotice = Astro.slots.has("mobileNotice");
   ) : null}
 
   {helpSections.length ? (
-    <section class="explorer-page-help-stack" aria-label={helpAriaLabel}>
-      {helpSections.map((section) => (
-        <details class="explorer-page-help-drawer">
-          <summary>{section.title}</summary>
-          <div class="explorer-page-help-body" set:html={section.html}></div>
+    <section class={helpStackClasses} aria-label={helpAriaLabel}>
+      {helpVariant === "faq" ? (
+        <details class="explorer-page-help-drawer explorer-page-help-drawer-faq">
+          <summary>
+            <div class="explorer-page-help-summary-copy">
+              <span class="explorer-page-help-summary-kicker">{helpSummary}</span>
+              <span class="explorer-page-help-summary-title">
+                Open once to see all {helpSections.length} questions.
+              </span>
+            </div>
+            <span class="explorer-page-help-summary-meta">{helpSections.length} answers</span>
+          </summary>
+          <div class="explorer-page-help-faq-list">
+            {helpSections.map((section) => (
+              <article class="explorer-page-help-faq-item">
+                <h2 class="explorer-page-help-faq-title">{section.title}</h2>
+                <div class="explorer-page-help-body" set:html={section.html}></div>
+              </article>
+            ))}
+          </div>
         </details>
-      ))}
+      ) : (
+        helpSections.map((section) => (
+          <details class="explorer-page-help-drawer">
+            <summary>{section.title}</summary>
+            <div class="explorer-page-help-body" set:html={section.html}></div>
+          </details>
+        ))
+      )}
     </section>
   ) : null}
 
@@ -147,6 +179,95 @@ const hasMobileNotice = Astro.slots.has("mobileNotice");
     margin-bottom: 0.15rem;
   }
 
+  .explorer-page-help-drawer-faq {
+    gap: 0;
+    padding: 0;
+    grid-column: 1 / -1;
+  }
+
+  .explorer-page-help-drawer-faq summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.9rem;
+    padding: 0.95rem 1rem;
+  }
+
+  .explorer-page-help-drawer-faq summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .explorer-page-help-drawer-faq[open] summary {
+    margin-bottom: 0;
+    border-bottom: 1px solid rgba(33, 65, 95, 0.08);
+  }
+
+  .explorer-page-help-summary-copy {
+    display: grid;
+    gap: 0.14rem;
+    min-width: 0;
+  }
+
+  .explorer-page-help-summary-kicker {
+    color: #24566e;
+    font-family: var(--font-ui);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .explorer-page-help-summary-title {
+    color: #10273d;
+    font-family: var(--font-ui);
+    font-size: 0.94rem;
+    font-weight: 650;
+    line-height: 1.35;
+    text-wrap: balance;
+  }
+
+  .explorer-page-help-summary-meta {
+    color: var(--muted);
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .explorer-page-help-faq-list {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.65rem;
+    align-items: start;
+    padding: 0.95rem 1rem 1rem;
+  }
+
+  .explorer-page-help-faq-item {
+    display: grid;
+    gap: 0.5rem;
+    min-height: 100%;
+    padding: 0.8rem 0.85rem;
+    border-radius: var(--explorer-radius-lg);
+    border: 1px solid rgba(33, 65, 95, 0.1);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0)),
+      rgba(255, 251, 246, 0.76);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.82),
+      0 14px 26px rgba(88, 64, 42, 0.04);
+  }
+
+  .explorer-page-help-faq-title {
+    margin: 0;
+    color: #10273d;
+    font-family: var(--font-ui);
+    font-size: 0.94rem;
+    font-weight: 650;
+    line-height: 1.35;
+    text-wrap: balance;
+  }
+
   .explorer-page-help-body {
     display: grid;
     gap: 0.55rem;
@@ -206,10 +327,18 @@ const hasMobileNotice = Astro.slots.has("mobileNotice");
     .explorer-page-help-stack {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .explorer-page-help-faq-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @media (max-width: 920px) {
     .explorer-page-help-stack {
+      grid-template-columns: 1fr;
+    }
+
+    .explorer-page-help-faq-list {
       grid-template-columns: 1fr;
     }
   }

@@ -1,14 +1,24 @@
 ---
 import networkData from "../data/network.json";
-import { siteLinks } from "../lib/site-nav";
+import { getSiteNavSections } from "../lib/site-nav";
 
 const { pathname } = Astro.url;
 
 const githubUrl = networkData.links?.github;
+const navSections = getSiteNavSections(githubUrl);
+const [primarySection, wipSection, projectSection] = navSections;
+const primaryLinks = primarySection?.links ?? [];
+const wipLinks = wipSection?.links ?? [];
+const projectLinks = projectSection?.links ?? [];
 
 function isActive(href: string): boolean {
+  if (/^(https?:)?\/\//.test(href) || href.endsWith(".html")) return pathname === href;
   if (href === "/") return pathname === "/";
   return pathname.startsWith(href);
+}
+
+function isSectionActive(links: typeof primaryLinks): boolean {
+  return links.some((link) => !link.external && isActive(link.href));
 }
 ---
 
@@ -21,7 +31,7 @@ function isActive(href: string): boolean {
 
     <div class="nav-cluster nav-cluster-desktop">
       <div class="nav-links">
-        {siteLinks.map(link => (
+        {primaryLinks.map((link) => (
           <a
             class="nav-link"
             href={link.href}
@@ -31,53 +41,73 @@ function isActive(href: string): boolean {
             {link.label}
           </a>
         ))}
+
+        {wipLinks.length > 0 && (
+          <details class="nav-dropdown" data-active={isSectionActive(wipLinks) ? "true" : undefined}>
+            <summary
+              class="nav-link nav-dropdown-toggle"
+              title="Graph, API, and 3D viewer work-in-progress explorables"
+            >
+              WIP Explorables
+            </summary>
+
+            <div class="nav-dropdown-panel">
+              {wipLinks.map((link) => (
+                <a
+                  class="nav-dropdown-link"
+                  href={link.href}
+                  title={link.title}
+                  target={link.external ? "_blank" : undefined}
+                  rel={link.external ? "noreferrer noopener" : undefined}
+                  aria-current={!link.external && isActive(link.href) ? "page" : undefined}
+                >
+                  <span>
+                    <span>{link.label}</span>
+                    {link.title && <span class="nav-dropdown-link-note">{link.title}</span>}
+                  </span>
+                  {link.external && <span aria-hidden="true">↗</span>}
+                </a>
+              ))}
+            </div>
+          </details>
+        )}
       </div>
 
-      {githubUrl && (
+      {projectLinks.map((link) => (
         <a
           class="nav-link nav-link-aux"
-          href={githubUrl}
-          target="_blank"
-          rel="noreferrer noopener"
+          href={link.href}
+          target={link.external ? "_blank" : undefined}
+          rel={link.external ? "noreferrer noopener" : undefined}
         >
-          GitHub Repo
+          {link.label}
         </a>
-      )}
+      ))}
     </div>
 
     <details class="nav-mobile">
       <summary class="nav-mobile-toggle">Menu</summary>
       <div class="nav-mobile-panel">
-        <div class="nav-mobile-links">
-          <span class="nav-mobile-section-label">Explore the site</span>
-          {siteLinks.map((link) => (
-            <a
-              class="nav-mobile-link"
-              href={link.href}
-              aria-current={isActive(link.href) ? "page" : undefined}
-            >
-              <span>
-                <span>{link.label}</span>
-                <span class="nav-mobile-link-note">{link.title}</span>
-              </span>
-            </a>
-          ))}
-        </div>
-
-        {githubUrl && (
-          <div class="nav-mobile-actions">
-            <span class="nav-mobile-section-label">Project links</span>
-            <a
-              class="nav-mobile-action"
-              href={githubUrl}
-              target="_blank"
-              rel="noreferrer noopener"
-            >
-              <span>GitHub Repo</span>
-              <span aria-hidden="true">↗</span>
-            </a>
+        {navSections.map((section) => (
+          <div class="nav-mobile-section">
+            <span class="nav-mobile-section-label">{section.label}</span>
+            {section.links.map((link) => (
+              <a
+                class="nav-mobile-link"
+                href={link.href}
+                target={link.external ? "_blank" : undefined}
+                rel={link.external ? "noreferrer noopener" : undefined}
+                aria-current={!link.external && isActive(link.href) ? "page" : undefined}
+              >
+                <span>
+                  <span>{link.label}</span>
+                  {link.title && <span class="nav-mobile-link-note">{link.title}</span>}
+                </span>
+                {link.external && <span aria-hidden="true">↗</span>}
+              </a>
+            ))}
           </div>
-        )}
+        ))}
       </div>
     </details>
   </div>

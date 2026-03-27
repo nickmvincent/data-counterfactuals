@@ -12,6 +12,12 @@ async function openExplorer(page) {
 test("grid explorer defaults to explore mode and exposes lettered axis labels", async ({ page }) => {
   await openExplorer(page);
 
+  const faqDrawer = page.locator(".explorer-page-help-drawer-faq");
+  await expect(faqDrawer).toHaveCount(1);
+  await faqDrawer.locator("summary").click();
+  await expect(faqDrawer).toContainText("What are we simulating?");
+  await expect(faqDrawer).toContainText("How do I read one cell?");
+
   const gridCard = page.getByTestId("explorer-grid-card");
   await gridCard.scrollIntoViewIfNeeded();
   await expect(gridCard).toBeVisible();

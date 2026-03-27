@@ -24,7 +24,10 @@ const html = htm.bind(h);
 
 const ToolbarHelp = (summary, body, testId) => html`
   <details class="toolbar-inline-help" data-testid=${testId}>
-    <summary>${summary}</summary>
+    <summary>
+      <span class="toolbar-inline-help-icon" aria-hidden="true">?</span>
+      <span class="toolbar-inline-help-copy">${summary}</span>
+    </summary>
     <div class="toolbar-inline-help-body">${body}</div>
   </details>
 `;
@@ -1425,7 +1428,19 @@ function App() {
   const currentWorldLabel = effectiveGridView === "operator" ? "Operator view" : "Reference grid";
   const modeLabel = conceptMeta[conceptMode].label;
   const modeCopy = conceptMeta[conceptMode].description;
-  const toolbarGuideCopy = conceptMode === "explore" ? "" : modeCopy;
+  const toolbarGuideCopy =
+    conceptMode === "explore"
+      ? "Pick the question lens and the cell score, then choose a train row and eval slice below."
+      : modeCopy;
+  const metricLabel = metricMeta[metric].name;
+  const metricModeLabel =
+    metric === "real"
+      ? realDataMode === "live"
+        ? "Live sample"
+        : "Precomputed"
+      : metric === "covertype"
+        ? `${covertypeDomains.length} domains`
+        : "Toy proxy";
   const editSummary = activeEditLabels.length
     ? `Active edit layer: ${activeEditLabels.join(" and ")}.`
     : "No attack layer is active, so the operator grid and the untouched reference grid currently match.";
@@ -1898,23 +1913,71 @@ function App() {
                 ${toolbarGuideCopy ? html`<p class="toolbar-guide-copy">${toolbarGuideCopy}</p>` : null}
               </div>
             </div>
+            <div class="toolbar-selection-strip" aria-label="Current explorer settings">
+              <div class="toolbar-selection-chip">
+                <span class="toolbar-selection-chip-label">Question family</span>
+                <span class="toolbar-selection-chip-value">${modeLabel}</span>
+              </div>
+              <div class="toolbar-selection-chip">
+                <span class="toolbar-selection-chip-label">Cell score</span>
+                <span class="toolbar-selection-chip-value">${metricMeta[metric].short}</span>
+              </div>
+              ${metric === "real"
+                ? html`
+                    <div class="toolbar-selection-chip">
+                      <span class="toolbar-selection-chip-label">Dataset mode</span>
+                      <span class="toolbar-selection-chip-value">
+                        ${realDataMode === "live" ? "Live sample" : "Precomputed"}
+                      </span>
+                    </div>
+                  `
+                : metric === "covertype"
+                  ? html`
+                      <div class="toolbar-selection-chip">
+                        <span class="toolbar-selection-chip-label">Real domains</span>
+                        <span class="toolbar-selection-chip-value">${covertypeDomains.length} cohorts</span>
+                      </div>
+                    `
+                  : conceptMode === "poison"
+                    ? html`
+                        <div class="toolbar-selection-chip">
+                          <span class="toolbar-selection-chip-label">World layer</span>
+                          <span class="toolbar-selection-chip-value">${currentWorldLabel}</span>
+                        </div>
+                      `
+                    : null}
+            </div>
           </div>
         </div>
 
         <div class="toolbar-grid">
-          <section class="toolbar-group toolbar-group-compact" data-testid="concept-controls">
+          <section class="toolbar-group toolbar-group-compact toolbar-group-primary" data-testid="concept-controls">
+            <div class="toolbar-group-head">
+              <div class="toolbar-group-head-copy">
+                <span class="toolbar-label">Question family</span>
+                <div class="toolbar-current-choice">${modeLabel}</div>
+              </div>
+              <span class="pill toolbar-group-pill">Lens</span>
+            </div>
             <label class="toolbar-select-field">
-              <span class="toolbar-label">Question family</span>
+              <span class="toolbar-field-hint">Pick the counterfactual question to ask</span>
               <select data-testid="concept-select" value=${conceptMode} onChange=${(event) => chooseConcept(event.target.value)}>
                 ${conceptOrder.map((mode) => html`<option value=${mode}>${conceptMeta[mode].label}</option>`)}
               </select>
             </label>
-            ${ToolbarHelp("What does this Question family ask?", modeCopy, "concept-help")}
+            ${ToolbarHelp("What does this question ask?", modeCopy, "concept-help")}
           </section>
 
-          <section class="toolbar-group" data-testid="metric-controls">
+          <section class="toolbar-group toolbar-group-primary" data-testid="metric-controls">
+            <div class="toolbar-group-head">
+              <div class="toolbar-group-head-copy">
+                <span class="toolbar-label">Cell score</span>
+                <div class="toolbar-current-choice">${metricLabel}</div>
+              </div>
+              <span class="pill toolbar-group-pill">${metricModeLabel}</span>
+            </div>
             <label class="toolbar-select-field">
-              <span class="toolbar-label">Cell score</span>
+              <span class="toolbar-field-hint">Choose how each train/eval pair gets scored</span>
               <select data-testid="metric-select" value=${metric} onChange=${(event) => setMetric(event.target.value)}>
                 ${Object.entries(metricMeta).map(([value, meta]) => html`<option value=${value}>${meta.short}</option>`)}
               </select>
@@ -1937,7 +2000,7 @@ function App() {
                     </div>
                   `
               : null}
-            ${ToolbarHelp("What does this Cell score mean?", scoreProxyCopy, "metric-help")}
+            ${ToolbarHelp("What does this cell score mean?", scoreProxyCopy, "metric-help")}
           </section>
 
           <details class="toolbar-group toolbar-group-actions toolbar-expand" data-testid="display-controls">
