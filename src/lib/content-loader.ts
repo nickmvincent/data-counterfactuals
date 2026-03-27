@@ -16,6 +16,8 @@ export interface Paper {
   tags?: string[];
   semantic_scholar_url?: string;
   google_scholar_url?: string;
+  metadata_provenance?: Record<string, unknown>;
+  metadata_sources?: unknown[];
   body?: string;
   [key: string]: unknown;
 }
@@ -119,5 +121,7 @@ async function loadSharedPapers(keys: string[]): Promise<Paper[]> {
     tags: ref.tags as string[] | undefined,
     semantic_scholar_url: ref.semantic_scholar_url as string | undefined,
     google_scholar_url: ref.google_scholar_url as string | undefined,
+    metadata_provenance: ref.metadata_provenance as Record<string, unknown> | undefined,
+    metadata_sources: ref.metadata_sources as unknown[] | undefined,
   }));
 }

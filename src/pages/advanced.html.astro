@@ -1,0 +1,294 @@
+---
+import Nav from "../components/Nav.astro";
+import AdvancedViewer from "../components/AdvancedViewer.jsx";
+import Layout from "../layouts/Base.astro";
+---
+
+<Layout
+  title="3D Viewer"
+  description="A heavier 3D prototype for exploring training rosters, evaluation worlds, and operator reveal mechanics."
+>
+  <style>
+    .advanced-page {
+      width: min(1380px, calc(100% - 1rem));
+      margin: 0 auto 2rem;
+      padding-top: 1rem;
+    }
+    .advanced-viewer-shell {
+      --bg: #03060d;
+      --fg: #f5fbff;
+      --muted: #9ba8c3;
+      --card: #070b18;
+      --border: #11192c;
+      --accent: #00e5ff;
+      --accent-warm: #ffd166;
+      --accent-hot: #ff6b6b;
+      background:
+        radial-gradient(circle at top left, rgba(0, 229, 255, 0.14), transparent 28%),
+        radial-gradient(circle at top right, rgba(255, 107, 107, 0.12), transparent 24%),
+        linear-gradient(180deg, #03060d 0%, #06101d 100%);
+      border: 1px solid rgba(102, 147, 197, 0.14);
+      border-radius: 30px;
+      box-shadow: 0 24px 64px rgba(6, 12, 24, 0.34);
+      overflow: hidden;
+    }
+    .advanced-viewer-shell * {
+      box-sizing: border-box;
+    }
+    .advanced-viewer-shell .wrap {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 20px;
+      color: var(--fg);
+    }
+    .advanced-viewer-shell a {
+      color: var(--accent);
+    }
+    .advanced-viewer-shell header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 16px;
+      justify-content: space-between;
+    }
+    .advanced-viewer-shell h1 {
+      margin: 0;
+      font-size: 30px;
+      color: var(--fg);
+    }
+    .advanced-viewer-shell h2 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      color: var(--fg);
+    }
+    .advanced-viewer-shell h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+      color: var(--fg);
+    }
+    .advanced-viewer-shell p {
+      line-height: 1.5;
+      margin: 6px 0;
+      color: var(--fg);
+    }
+    .advanced-viewer-shell strong {
+      color: var(--fg);
+    }
+    .advanced-viewer-shell .lede {
+      color: var(--muted);
+      max-width: 65ch;
+      line-height: 1.5;
+    }
+    .advanced-viewer-shell .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #0c1326;
+      border: 1px solid #16213a;
+      font-size: 13px;
+      color: var(--fg);
+    }
+    .advanced-viewer-shell .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 16px;
+      margin-top: 18px;
+    }
+    .advanced-viewer-shell .board-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+    .advanced-viewer-shell .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      margin-bottom: 14px;
+    }
+    .advanced-viewer-shell .ctrl-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .advanced-viewer-shell .btn {
+      border: 1px solid var(--border);
+      background: #0e152b;
+      color: var(--fg);
+      border-radius: 12px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.15s ease;
+    }
+    .advanced-viewer-shell .btn:hover:not(:disabled) {
+      background: #151d38;
+    }
+    .advanced-viewer-shell .btn[aria-pressed="true"] {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+      background: #111b3a;
+    }
+    .advanced-viewer-shell .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .advanced-viewer-shell select,
+    .advanced-viewer-shell input {
+      font: inherit;
+    }
+    .advanced-viewer-shell .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .advanced-viewer-shell .metric-pill {
+      padding: 10px;
+      border: 1px solid #16213a;
+      border-radius: 12px;
+      background: #090f1f;
+    }
+    .advanced-viewer-shell .metric-pill span {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .advanced-viewer-shell .metric-pill strong {
+      font-size: 18px;
+    }
+    .advanced-viewer-shell table.confusion {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    .advanced-viewer-shell table.confusion th,
+    .advanced-viewer-shell table.confusion td {
+      border: 1px solid #15203a;
+      padding: 6px;
+      text-align: center;
+    }
+    .advanced-viewer-shell .scene-shell {
+      border: 1px solid #11192c;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #04070f;
+      min-height: 420px;
+    }
+    .advanced-viewer-shell .scene-shell canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .advanced-viewer-shell .scatter-card {
+      margin-top: 14px;
+    }
+    .advanced-viewer-shell .scatter-card canvas {
+      width: 100%;
+      border: 1px solid #121a2f;
+      border-radius: 14px;
+      background: #050912;
+    }
+    .advanced-viewer-shell .scatter-title {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .advanced-viewer-shell .legend {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .advanced-viewer-shell .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .advanced-viewer-shell .legend i {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .advanced-viewer-shell .log {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+    .advanced-viewer-shell .row-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .advanced-viewer-shell .row-badge {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px 10px;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      background: #080f21;
+      min-width: 140px;
+    }
+    .advanced-viewer-shell .row-badge.revealed {
+      border-color: #1d6bff;
+      background: #071429;
+    }
+    .advanced-viewer-shell .row-badge header {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+    }
+    .advanced-viewer-shell .row-badge button {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 8px;
+    }
+    .advanced-viewer-shell .operator-log {
+      font-size: 13px;
+      color: var(--muted);
+      max-height: 140px;
+      overflow: auto;
+      margin-top: 10px;
+      padding-left: 18px;
+    }
+    .advanced-viewer-shell .board-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    @media (max-width: 1020px) {
+      .advanced-page {
+        width: min(100%, calc(100% - 0.5rem));
+      }
+      .advanced-viewer-shell {
+        border-radius: 24px;
+      }
+      .advanced-viewer-shell .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <Nav />
+
+  <main class="advanced-page">
+    <section class="advanced-viewer-shell">
+      <AdvancedViewer client:load />
+    </section>
+  </main>
+</Layout>

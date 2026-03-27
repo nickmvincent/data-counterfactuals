@@ -2,13 +2,23 @@ import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { fetchCitationMetadata, needsCitationMetadataEnrichment } from './citation-metadata.js';
+import { fetchCitationMetadata } from './citation-metadata.js';
+import {
+  createMetadataSource,
+  extractDoiFromText,
+  extractDoiFromUrl,
+  fetchDoiCslMetadata,
+  mergeFieldProvenance,
+  mergeMetadataSources,
+  resolveReferenceMetadata,
+} from './reference-metadata.js';
 import { parseFrontmatter } from './markdown';
 
 const DEFAULT_SEMBLE_API_BASE = 'https://api.semble.so';
 const DEFAULT_SEMBLE_CACHE_PATH = 'tmp/semble-cache.json';
 const DEFAULT_SEMBLE_CONFIG_FILE = 'semble.config.json';
 const PAGE_LIMIT = 100;
+const METADATA_ENRICHMENT_CONCURRENCY = 6;
 
 type SembleCachePolicy = 'network-first' | 'cache-only' | 'refresh' | 'off';
 
@@ -88,6 +98,25 @@ interface SembleCollectionPageResponse {
   pagination?: SemblePagination;
 }
 
+export interface SembleMetadataFieldProvenance {
+  kind: string;
+  label: string;
+  source_url?: string;
+  source_uri?: string;
+  retrieved_at?: string;
+  official?: boolean;
+  value?: unknown;
+}
+
+export interface SembleMetadataSourceRecord {
+  kind: string;
+  label: string;
+  source_url?: string;
+  source_uri?: string;
+  retrieved_at?: string;
+  official?: boolean;
+}
+
 export interface SembleReference {
   citation_key: string;
   entry_type: string;
@@ -110,6 +139,8 @@ export interface SembleReference {
   semble_note_uri?: string;
   semble_collection_slugs?: string[];
   semble_collection_uris?: string[];
+  metadata_provenance?: Record<string, SembleMetadataFieldProvenance>;
+  metadata_sources?: SembleMetadataSourceRecord[];
   [key: string]: unknown;
 }
 
@@ -281,75 +312,45 @@ function unique(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
-function isLikelyUrlTitle(value: string | undefined): boolean {
-  const text = asOptionalString(value);
-  if (!text) return false;
-
-  try {
-    new URL(text);
-    return true;
-  } catch {
-    return false;
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  if (items.length === 0) {
+    return [];
   }
+
+  const results = new Array<R>(items.length);
+  let cursor = 0;
+
+  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (true) {
+      const index = cursor;
+      cursor += 1;
+
+      if (index >= items.length) {
+        return;
+      }
+
+      results[index] = await worker(items[index], index);
+    }
+  });
+
+  await Promise.all(runners);
+  return results;
 }
 
-function applyCitationMetadata(
-  reference: SembleReference,
-  metadata: {
-    title?: string;
-    authors?: string[];
-    year?: string;
-    venue?: string;
-    journal?: string;
-    booktitle?: string;
-    abstract?: string;
-    doi?: string;
-  } | null,
-): SembleReference {
-  if (!metadata) {
-    return reference;
-  }
-
-  const enriched: SembleReference = {
-    ...reference,
-    authors: unique([
-      ...(reference.authors || []),
-      ...normalizeAuthors(metadata.authors || []),
-    ]),
-  };
-
-  if ((reference.title.trim() === '' || isLikelyUrlTitle(reference.title)) && asOptionalString(metadata.title)) {
-    enriched.title = asString(metadata.title);
-  }
-
-  if (!reference.year && asOptionalString(metadata.year)) {
-    enriched.year = asString(metadata.year);
-  }
-
-  if (!reference.venue && asOptionalString(metadata.venue)) {
-    enriched.venue = asString(metadata.venue);
-  }
-
-  if (!reference.journal && asOptionalString(metadata.journal)) {
-    enriched.journal = asString(metadata.journal);
-  }
-
-  if (!reference.booktitle && asOptionalString(metadata.booktitle)) {
-    enriched.booktitle = asString(metadata.booktitle);
-  }
-
-  if (!reference.doi && asOptionalString(metadata.doi)) {
-    enriched.doi = asString(metadata.doi);
-  }
-
-  if (
-    (!asOptionalString(reference.abstract) || (reference.abstract?.trim().length ?? 0) < 40)
-    && asOptionalString(metadata.abstract)
-  ) {
-    enriched.abstract = asString(metadata.abstract);
-  }
-
-  return enriched;
+function createReferenceSource(
+  kind: string,
+  options: {
+    source_url?: string;
+    source_uri?: string;
+    retrieved_at?: string;
+    official?: boolean;
+  } = {},
+): SembleMetadataSourceRecord | null {
+  return createMetadataSource(kind, options) as SembleMetadataSourceRecord | null;
 }
 
 function slugify(value: string): string {
@@ -734,6 +735,23 @@ function mergeReference(existing: SembleReference | undefined, incoming: SembleR
       ...(incoming.semble_collection_uris || []),
     ]),
     tags: unique([...(existing.tags || []), ...(incoming.tags || [])]),
+    metadata_provenance: mergeFieldProvenance(
+      existing.metadata_provenance as Record<string, SembleMetadataFieldProvenance> | undefined,
+      incoming.metadata_provenance as Record<string, SembleMetadataFieldProvenance> | undefined,
+      {
+        entry_type: pickFirst(existing.entry_type, incoming.entry_type) || 'misc',
+        title: pickFirst(existing.title, incoming.title) || '',
+        authors: unique([...(existing.authors || []), ...(incoming.authors || [])]),
+        year: pickFirst(existing.year, incoming.year) || '',
+        venue: pickFirst(existing.venue, incoming.venue),
+        doi: pickFirst(existing.doi, incoming.doi),
+        abstract: pickFirst(existing.abstract, incoming.abstract),
+        pages: pickFirst(existing.pages, incoming.pages),
+        booktitle: pickFirst(existing.booktitle, incoming.booktitle),
+        journal: pickFirst(existing.journal, incoming.journal),
+      },
+    ) as Record<string, SembleMetadataFieldProvenance>,
+    metadata_sources: mergeMetadataSources(existing.metadata_sources, incoming.metadata_sources),
   };
 
   for (const [key, value] of Object.entries(incoming)) {
@@ -751,6 +769,18 @@ function normalizeReference(
   collection: SembleCollectionRecord,
 ): SembleReference {
   const { data, body } = extractFrontmatter(card.note?.text);
+  const noteSource = card.note?.uri
+    ? createReferenceSource('yaml-note', { source_uri: card.note.uri })
+    : createReferenceSource('yaml-note');
+  const bodySource = card.note?.uri
+    ? createReferenceSource('yaml-note-body', { source_uri: card.note.uri })
+    : createReferenceSource('yaml-note-body');
+  const cardPreviewSource = card.uri
+    ? createReferenceSource('card-preview', { source_uri: card.uri, source_url: asOptionalString(card.url) })
+    : createReferenceSource('card-preview', { source_url: asOptionalString(card.url) });
+  const cardUrlSource = card.uri
+    ? createReferenceSource('card-url', { source_uri: card.uri, source_url: asOptionalString(card.url) })
+    : createReferenceSource('card-url', { source_url: asOptionalString(card.url) });
   const authors = normalizeAuthors(data.authors ?? data.author ?? card.cardContent?.author);
   const tags = unique([
     ...normalizeStringArray(data.tags),
@@ -768,6 +798,36 @@ function normalizeReference(
     asOptionalString(data.abstract) ||
     body ||
     asOptionalString(card.cardContent?.description);
+
+  const metadataProvenance: Record<string, SembleMetadataFieldProvenance> = {};
+  if (asOptionalString(data.citation_key) && noteSource) metadataProvenance.citation_key = { ...noteSource, value: asOptionalString(data.citation_key) };
+  if (asOptionalString(data.entry_type) && noteSource) metadataProvenance.entry_type = { ...noteSource, value: asOptionalString(data.entry_type) };
+  if (asOptionalString(data.title) && noteSource) metadataProvenance.title = { ...noteSource, value: asOptionalString(data.title) };
+  else if (asOptionalString(card.cardContent?.title) && cardPreviewSource) metadataProvenance.title = { ...cardPreviewSource, value: asOptionalString(card.cardContent?.title) };
+  else if (asOptionalString(card.url) && cardUrlSource) metadataProvenance.title = { ...cardUrlSource, value: asOptionalString(card.url) };
+
+  if ((data.authors || data.author) && noteSource) metadataProvenance.authors = { ...noteSource, value: normalizeAuthors(data.authors ?? data.author) };
+  else if (card.cardContent?.author && cardPreviewSource) metadataProvenance.authors = { ...cardPreviewSource, value: normalizeAuthors(card.cardContent.author) };
+
+  if (asOptionalString(data.year) && noteSource) metadataProvenance.year = { ...noteSource, value: asOptionalString(data.year) };
+  if (asOptionalString(data.venue) && noteSource) metadataProvenance.venue = { ...noteSource, value: asOptionalString(data.venue) };
+  if (asOptionalString(data.booktitle) && noteSource) metadataProvenance.booktitle = { ...noteSource, value: asOptionalString(data.booktitle) };
+  if (asOptionalString(data.journal) && noteSource) metadataProvenance.journal = { ...noteSource, value: asOptionalString(data.journal) };
+  if (asOptionalString(data.pages) && noteSource) metadataProvenance.pages = { ...noteSource, value: asOptionalString(data.pages) };
+  if (asOptionalString(data.doi) && noteSource) metadataProvenance.doi = { ...noteSource, value: asOptionalString(data.doi) };
+  if (asOptionalString(data.url) && noteSource) metadataProvenance.url = { ...noteSource, value: asOptionalString(data.url) };
+  else if (asOptionalString(card.url) && cardUrlSource) metadataProvenance.url = { ...cardUrlSource, value: asOptionalString(card.url) };
+  if (asOptionalString(data.abstract) && noteSource) metadataProvenance.abstract = { ...noteSource, value: asOptionalString(data.abstract) };
+  else if (body && bodySource) metadataProvenance.abstract = { ...bodySource, value: body };
+  else if (asOptionalString(card.cardContent?.description) && cardPreviewSource) metadataProvenance.abstract = { ...cardPreviewSource, value: asOptionalString(card.cardContent?.description) };
+  if (asOptionalString(data.semantic_scholar_url) && noteSource) metadataProvenance.semantic_scholar_url = { ...noteSource, value: asOptionalString(data.semantic_scholar_url) };
+  if (asOptionalString(data.google_scholar_url) && noteSource) metadataProvenance.google_scholar_url = { ...noteSource, value: asOptionalString(data.google_scholar_url) };
+
+  const metadataSources = mergeMetadataSources(
+    noteSource ? [noteSource] : [],
+    cardPreviewSource ? [cardPreviewSource] : [],
+    cardUrlSource ? [cardUrlSource] : [],
+  );
 
   const record: SembleReference = {
     citation_key: citationKey,
@@ -791,6 +851,8 @@ function normalizeReference(
     semble_note_uri: asOptionalString(card.note?.uri),
     semble_collection_slugs: [collection.slug],
     semble_collection_uris: collection.uri ? [collection.uri] : [],
+    metadata_provenance: metadataProvenance,
+    metadata_sources: metadataSources,
   };
 
   for (const [key, value] of Object.entries(data)) {
@@ -800,6 +862,56 @@ function normalizeReference(
   }
 
   return record;
+}
+
+async function resolveReferenceAuthority(reference: SembleReference): Promise<SembleReference> {
+  const retrievedAt = new Date().toISOString();
+  let pageMetadata: Record<string, unknown> | null = null;
+  let pageSource: SembleMetadataSourceRecord | null = null;
+  let doiCandidate = asOptionalString(reference.doi) || extractDoiFromUrl(reference.url);
+  let doiMetadata: Record<string, unknown> | null = null;
+  let doiSource: SembleMetadataSourceRecord | null = null;
+
+  if (doiCandidate) {
+    doiMetadata = await fetchDoiCslMetadata(doiCandidate);
+    if (doiMetadata) {
+      doiSource = createReferenceSource('doi-csl', {
+        source_url: `https://doi.org/${encodeURIComponent(doiCandidate)}`,
+        retrieved_at: retrievedAt,
+        official: true,
+      });
+    }
+  }
+
+  if (!doiMetadata && reference.url) {
+    pageMetadata = await fetchCitationMetadata(reference.url);
+    if (pageMetadata) {
+      pageSource = createReferenceSource('page-citation-meta', {
+        source_url: reference.url,
+        retrieved_at: retrievedAt,
+      });
+    }
+
+    if (!doiCandidate) {
+      doiCandidate = asOptionalString(pageMetadata?.doi) || extractDoiFromText(reference.url);
+    }
+
+    if (!doiMetadata && doiCandidate) {
+      doiMetadata = await fetchDoiCslMetadata(doiCandidate);
+      if (doiMetadata) {
+        doiSource = createReferenceSource('doi-csl', {
+          source_url: `https://doi.org/${encodeURIComponent(doiCandidate)}`,
+          retrieved_at: retrievedAt,
+          official: true,
+        });
+      }
+    }
+  }
+
+  return resolveReferenceMetadata(reference, [
+    pageMetadata && pageSource ? { metadata: pageMetadata, source: pageSource } : null,
+    doiMetadata && doiSource ? { metadata: doiMetadata, source: doiSource } : null,
+  ]);
 }
 
 async function buildSembleDataset(config: SembleConfig): Promise<SembleDataset> {
@@ -877,15 +989,16 @@ async function buildSembleDataset(config: SembleConfig): Promise<SembleDataset> 
     collections.push(collection);
   }
 
-  const enrichedReferences = await Promise.all(
-    Array.from(references.entries()).map(async ([citationKey, reference]) => {
-      if (!needsCitationMetadataEnrichment(reference)) {
+  const enrichedReferences = await mapWithConcurrency(
+    Array.from(references.entries()),
+    METADATA_ENRICHMENT_CONCURRENCY,
+    async ([citationKey, reference]) => {
+      if (!reference.url && !reference.doi) {
         return [citationKey, reference] as const;
       }
 
-      const metadata = await fetchCitationMetadata(reference.url);
-      return [citationKey, applyCitationMetadata(reference, metadata)] as const;
-    }),
+      return [citationKey, await resolveReferenceAuthority(reference)] as const;
+    },
   );
 
   references.clear();

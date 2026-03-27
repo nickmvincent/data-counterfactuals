@@ -3,6 +3,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 import matter from 'gray-matter';
+import { dump as dumpYaml, load as loadYaml } from 'js-yaml';
 import { SemblePDSClient } from '@cosmik.network/semble-pds-client';
 
 const DEFAULT_PDS_SERVICE = 'https://bsky.social';
@@ -378,6 +379,75 @@ export function buildUpdatedUrlCardRecord(cardRecord, config, edits) {
   };
 }
 
+export function buildCardYamlDocument(cardItem) {
+  return {
+    url: cardItem.url || '',
+    metadata: {
+      ...Object.fromEntries(
+        Object.entries(normalizeMetadata(cardItem.metadata)).filter(([, value]) => value !== undefined),
+      ),
+    },
+  };
+}
+
+export function serializeCardYamlDocument(cardItem) {
+  return `${dumpYaml(buildCardYamlDocument(cardItem), {
+    lineWidth: 0,
+    noRefs: true,
+    sortKeys: false,
+  }).trimEnd()}\n`;
+}
+
+export function parseCardYamlDocument(text) {
+  let payload;
+
+  try {
+    payload = loadYaml(text);
+  } catch (error) {
+    throw new Error(`Invalid YAML: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  if (!isPlainObject(payload)) {
+    throw new Error('YAML editor expects a mapping with "url" and optional "metadata".');
+  }
+
+  const allowedTopLevelKeys = new Set(['url', 'metadata']);
+  for (const key of Object.keys(payload)) {
+    if (!allowedTopLevelKeys.has(key)) {
+      throw new Error(`Unsupported top-level YAML key "${key}". Allowed keys: url, metadata.`);
+    }
+  }
+
+  const url = normalizeYamlString(payload.url, 'url');
+  if (!url) {
+    throw new Error('YAML editor requires a non-empty url.');
+  }
+
+  const metadataPayload = payload.metadata === undefined || payload.metadata === null
+    ? {}
+    : payload.metadata;
+
+  if (!isPlainObject(metadataPayload)) {
+    throw new Error('metadata must be a mapping if present.');
+  }
+
+  const allowedMetadataKeys = ['title', 'description', 'author', 'siteName', 'imageUrl', 'type', 'retrievedAt'];
+  for (const key of Object.keys(metadataPayload)) {
+    if (!allowedMetadataKeys.includes(key)) {
+      throw new Error(`Unsupported metadata key "${key}". Allowed keys: ${allowedMetadataKeys.join(', ')}.`);
+    }
+  }
+
+  const metadata = Object.fromEntries(
+    allowedMetadataKeys.map((key) => [key, normalizeYamlString(metadataPayload[key], `metadata.${key}`)]),
+  );
+
+  return {
+    url,
+    metadata,
+  };
+}
+
 export async function createCollection(session, { name, description = '', accessType = 'OPEN' }) {
   const trimmedName = asString(name).trim();
   if (!trimmedName) {
@@ -467,6 +537,28 @@ export async function createCard(session, { url, noteText = '', collectionRecord
 export async function updateCard(session, cardRecord, edits) {
   const nextRecord = buildUpdatedUrlCardRecord(cardRecord, session.config, edits);
   await putRecordByUri(session.client.agent, session.repo, cardRecord.uri, nextRecord);
+}
+
+export async function saveCardYamlEdit(session, cardItem, yamlText) {
+  const document = parseCardYamlDocument(yamlText);
+
+  await updateCard(session, cardItem.card, {
+    url: document.url,
+    title: toYamlEditableValue(document.metadata.title),
+    description: toYamlEditableValue(document.metadata.description),
+    author: toYamlEditableValue(document.metadata.author),
+    siteName: toYamlEditableValue(document.metadata.siteName),
+    imageUrl: toYamlEditableValue(document.metadata.imageUrl),
+    type: toYamlEditableValue(document.metadata.type),
+    retrievedAt: toYamlEditableValue(document.metadata.retrievedAt),
+  });
+
+  await recordManualMetadataEdit(session, cardItem, {
+    source: 'semble_tui_yaml',
+    editedAt: new Date().toISOString(),
+  });
+
+  return document;
 }
 
 export async function upsertCardNote(session, cardItem, nextText) {
@@ -643,6 +735,59 @@ async function putRecordByUri(agent, repo, uri, record) {
   });
 }
 
+async function getRecordByUri(agent, repo, uri) {
+  const { collection, rkey } = parseAtUri(uri);
+  const response = await agent.com.atproto.repo.getRecord({
+    repo,
+    collection,
+    rkey,
+  });
+
+  return {
+    uri: response.data.uri,
+    cid: response.data.cid || '',
+    value: response.data.value || {},
+  };
+}
+
+async function recordManualMetadataEdit(session, cardItem, stamp) {
+  const nextNoteText = buildManualMetadataAuditNote(
+    cardItem.latestNote?.value?.content?.text || '',
+    stamp,
+  );
+
+  if (cardItem.latestNote) {
+    await session.client.updateNote(toStrongRef(cardItem.latestNote), nextNoteText);
+    return;
+  }
+
+  const currentCardRecord = await getRecordByUri(session.client.agent, session.repo, cardItem.card.uri);
+  await session.client.addNoteToCard(toStrongRef(currentCardRecord), nextNoteText);
+}
+
+export function buildManualMetadataAuditNote(existingText, stamp) {
+  const parsed = matter(existingText || '');
+  const frontmatter = isPlainObject(parsed.data) ? { ...parsed.data } : {};
+  const currentAudit = isPlainObject(frontmatter.manual_metadata_edit)
+    ? frontmatter.manual_metadata_edit
+    : {};
+
+  frontmatter.manual_metadata_edit = {
+    ...currentAudit,
+    source: stamp.source || 'semble_tui_yaml',
+    edited_at: stamp.editedAt || new Date().toISOString(),
+  };
+
+  const yaml = dumpYaml(frontmatter, {
+    lineWidth: 0,
+    noRefs: true,
+    sortKeys: false,
+  }).trimEnd();
+  const body = parsed.content?.replace(/^\n/, '') || '';
+
+  return `---\n${yaml}\n---${body ? `\n${body}` : '\n'}`;
+}
+
 function sanitizeMetadata(metadata, baseNsid) {
   const nextMetadata = {
     title: asOptionalTrimmedString(metadata.title),
@@ -686,6 +831,27 @@ function normalizeMetadata(metadata) {
   };
 }
 
+function toYamlEditableValue(value) {
+  return value ? value : CLEAR;
+}
+
+function normalizeYamlString(value, label) {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+
+  if (typeof value === 'number') {
+    return String(value);
+  }
+
+  throw new Error(`${label} must be a string, number, null, or omitted.`);
+}
+
 function normalizeNoteText(text) {
   const normalized = asString(text).replace(/\r\n/g, '\n').trim();
   return normalized;
@@ -705,6 +871,10 @@ function toStrongRef(record) {
 function asOptionalTrimmedString(value) {
   const text = asString(value).trim();
   return text || undefined;
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function asString(value) {

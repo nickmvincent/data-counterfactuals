@@ -13,7 +13,7 @@ Standalone Astro + Preact repo for `datacounterfactuals.org`.
 
 ## Semble-backed bibliography
 
-Semble is now the source of truth for bibliography data and reading-list membership.
+Semble is now the source of truth for reading-list membership and the manual note layer, while bibliographic identity fields are resolved at build time from DOI/page metadata when available.
 
 This repo now keeps the public default Semble source in `semble.config.json`, so local builds and agent runs do not need hand-written env vars just to know where the bibliography lives.
 

@@ -26,6 +26,7 @@ It loads `.env` and `.env.local` from the repo root before connecting.
 - Create, rename, update, and delete collections
 - Create URL cards and optionally attach notes
 - Edit URL card metadata fields
+- Edit card metadata in a built-in YAML editor and stamp a manual-edit record in the attached note
 - Edit notes in `$VISUAL` or `$EDITOR`
 - Delete cards with cascade cleanup for attached notes and collection links
 - Link, unlink, and move cards between collections
@@ -38,6 +39,7 @@ It loads `.env` and `.env.local` from the repo root before connecting.
 - `j`, `k`: move selection
 - `c`: create
 - `e`: edit selected collection or card
+- `y`: open the in-TUI YAML editor for the selected card metadata
 - `n`: edit selected card note
 - `a`: add existing card to a collection, or link a selected card to another collection
 - `x`: remove the selected card from the current collection

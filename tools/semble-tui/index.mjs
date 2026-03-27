@@ -21,6 +21,7 @@ Key actions:
   Tab        Switch between collections and cards
   c          Create collection or card
   e          Edit selected collection or card metadata
+  y          Open the in-TUI YAML editor for the selected card metadata
   n          Edit selected card note in $EDITOR
   a          Add or link cards and collections
   x          Remove a card from the current collection

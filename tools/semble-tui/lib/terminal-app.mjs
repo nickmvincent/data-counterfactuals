@@ -22,6 +22,8 @@ import {
   moveCardBetweenCollections,
   parsePromptEdit,
   removeCardFromCollection,
+  saveCardYamlEdit,
+  serializeCardYamlDocument,
   truncate,
   updateCard,
   updateCollection,
@@ -104,6 +106,7 @@ export class SembleTuiApp {
     if (process.stdin.isTTY) {
       process.stdin.setRawMode(false);
     }
+    process.stdin.pause();
     process.stdout.write(`${ANSI.showCursor}${ANSI.reset}\n`);
 
     if (this._resolve) {
@@ -133,6 +136,11 @@ export class SembleTuiApp {
     if (this.overlay?.type === 'help') {
       this.overlay = null;
       this.render();
+      return;
+    }
+
+    if (this.overlay?.type === 'editor') {
+      void this.handleTextEditorKeypress(str, key);
       return;
     }
 
@@ -244,6 +252,11 @@ export class SembleTuiApp {
           void this.safeAction(() => this.handleEditNote());
         }
         return;
+      case 'y':
+        if (this.focusPane === 'cards') {
+          void this.safeAction(() => this.handleOpenYamlEditor());
+        }
+        return;
       case 'a':
         void this.safeAction(() => this.handleAddLink());
         return;
@@ -314,6 +327,86 @@ export class SembleTuiApp {
     if (str && isPrintableCharacter(str)) {
       picker.filter += str;
       picker.index = 0;
+      this.render();
+    }
+  }
+
+  async handleTextEditorKeypress(str, key) {
+    const editor = this.overlay;
+    if (!editor || editor.type !== 'editor') {
+      return;
+    }
+
+    if (key.name === 'escape') {
+      this.overlay = null;
+      this.setStatus('YAML editor cancelled.', 'info');
+      this.render();
+      return;
+    }
+
+    if (key.ctrl && key.name === 's') {
+      await this.runBusy('Saving YAML metadata...', async () => {
+        await editor.onSave(editor.lines.join('\n'));
+        this.overlay = null;
+      });
+      return;
+    }
+
+    switch (key.name) {
+      case 'up':
+        moveEditorCursorUp(editor);
+        this.render();
+        return;
+      case 'down':
+        moveEditorCursorDown(editor);
+        this.render();
+        return;
+      case 'left':
+        moveEditorCursorLeft(editor);
+        this.render();
+        return;
+      case 'right':
+        moveEditorCursorRight(editor);
+        this.render();
+        return;
+      case 'home':
+        editor.cursorCol = 0;
+        this.render();
+        return;
+      case 'end':
+        editor.cursorCol = getEditorLine(editor).length;
+        this.render();
+        return;
+      case 'pageup':
+        moveEditorCursorVertical(editor, -this.getEditorMetrics(editor).bodyHeight);
+        this.render();
+        return;
+      case 'pagedown':
+        moveEditorCursorVertical(editor, this.getEditorMetrics(editor).bodyHeight);
+        this.render();
+        return;
+      case 'backspace':
+        deleteBackwardInEditor(editor);
+        this.render();
+        return;
+      case 'delete':
+        deleteForwardInEditor(editor);
+        this.render();
+        return;
+      case 'return':
+        insertTextInEditor(editor, '\n');
+        this.render();
+        return;
+      case 'tab':
+        insertTextInEditor(editor, '  ');
+        this.render();
+        return;
+      default:
+        break;
+    }
+
+    if (str && hasInsertableText(str)) {
+      insertTextInEditor(editor, str);
       this.render();
     }
   }
@@ -666,6 +759,28 @@ export class SembleTuiApp {
     });
   }
 
+  async handleOpenYamlEditor() {
+    const cardItem = this.getSelectedCard();
+    if (!cardItem) {
+      this.setStatus('No card selected.', 'error');
+      this.render();
+      return;
+    }
+
+    this.openTextEditor({
+      title: `YAML metadata editor: ${cardItem.displayTitle}`,
+      text: serializeCardYamlDocument(cardItem),
+      onSave: async (nextText) => {
+        await saveCardYamlEdit(this.session, cardItem, nextText);
+        await this.refreshData({
+          preferredCollectionUri: this.getSelectedCollection()?.uri,
+          preferredCardUri: cardItem.card.uri,
+          statusMessage: `Saved YAML metadata for "${cardItem.displayTitle}" and recorded a manual edit stamp in the attached note.`,
+        });
+      },
+    });
+  }
+
   async handleEditNote() {
     const cardItem = this.getSelectedCard();
     if (!cardItem) {
@@ -907,6 +1022,20 @@ export class SembleTuiApp {
     this.render();
   }
 
+  openTextEditor({ title, text, onSave }) {
+    this.overlay = {
+      type: 'editor',
+      title,
+      lines: normalizeEditorText(text).split('\n'),
+      cursorRow: 0,
+      cursorCol: 0,
+      scrollTop: 0,
+      scrollLeft: 0,
+      onSave,
+    };
+    this.render();
+  }
+
   getVisiblePickerItems() {
     const picker = this.overlay;
     if (!picker || picker.type !== 'picker') {
@@ -975,6 +1104,24 @@ export class SembleTuiApp {
     }
   }
 
+  getEditorMetrics(editor) {
+    const width = process.stdout.columns || 80;
+    const height = process.stdout.rows || 24;
+    const headerLines = 3;
+    const bodyHeight = Math.max(4, height - headerLines - 1);
+    const gutterWidth = Math.max(String(editor.lines.length).length, 2) + 3;
+    const bodyWidth = Math.max(12, width - gutterWidth);
+
+    return {
+      width,
+      height,
+      headerLines,
+      bodyHeight,
+      gutterWidth,
+      bodyWidth,
+    };
+  }
+
   suspendTerminalForPrompt() {
     if (process.stdin.isTTY) {
       process.stdin.setRawMode(false);
@@ -1000,10 +1147,15 @@ export class SembleTuiApp {
       return;
     }
 
-    process.stdout.write(ANSI.clear);
+    process.stdout.write(`${ANSI.clear}${ANSI.hideCursor}`);
 
     if (this.overlay?.type === 'help') {
       process.stdout.write(this.renderHelp());
+      return;
+    }
+
+    if (this.overlay?.type === 'editor') {
+      process.stdout.write(this.renderTextEditor());
       return;
     }
 
@@ -1062,9 +1214,12 @@ export class SembleTuiApp {
       lines.push(`${leftLine} | ${rightLine}`);
     }
 
+    const footerHelpLines = this.buildFooterHelpLines();
+    const status = this.getStatusDescriptor();
     lines.push(padOrTrim(this.buildDetailLine(selectedCollection, selectedCard), width));
-    lines.push(padOrTrim(this.buildStatusLine(), width));
-    lines.push(padOrTrim('Keys: Tab switch | j/k move | c create | e edit | n note | a add/link | x unlink | m move | t toggle cards | / filter | r refresh | ? help | q quit', width));
+    lines.push(stylize(padOrTrim(status.text, width), status.color));
+    lines.push(padOrTrim(footerHelpLines[0], width));
+    lines.push(padOrTrim(footerHelpLines[1], width));
 
     return `${lines.join('\n')}${ANSI.reset}`;
   }
@@ -1073,27 +1228,36 @@ export class SembleTuiApp {
     const lines = [
       stylize('Semble TUI Help', ANSI.bold),
       '',
-      'Navigation',
+      `Current context: ${this.describeCurrentContext()}`,
+      '',
+      'Global',
       '  Tab, h/l, Left/Right: switch panes',
       '  j/k, Up/Down: move selection',
       '  g/G, Home/End: jump to start or end',
-      '  t: toggle cards pane between selected collection and all cards',
-      '  /: set filter for the active pane',
-      '  Esc: clear the active filter',
-      '',
-      'Actions',
-      '  c: create collection or card',
-      '  e: edit selected collection or card metadata',
-      '  n: edit the selected card note in $EDITOR',
-      '  a: add an existing card to a collection, or link a card to another collection',
-      '  x: remove the selected card from the current collection',
-      '  m: move the selected card from the current collection to another one',
-      '  d: delete the selected collection or card',
+      '  /: filter the active pane',
+      '  Esc: clear the active pane filter',
+      '  t: toggle the cards pane between selected-collection mode and all-cards mode',
       '  r: refresh from Semble',
       '  q: quit',
       '',
-      'Editing notes',
+      'Collections pane',
+      '  c: create a collection',
+      '  e: edit the selected collection',
+      '  d: delete the selected collection and its collection-link records',
+      '  a: add an existing card to the selected collection',
+      '  Enter or Right: move focus into the cards pane',
+      '',
+      'Cards pane',
+      '  c: create a card, using the selected collection as the default destination if there is one',
+      '  e: edit simple card fields inline',
+      '  y: open the built-in YAML metadata editor and stamp a manual edit record',
       '  The TUI opens your $VISUAL or $EDITOR. If neither is set, it falls back to vi.',
+      '  a: link the selected card to another collection',
+      '  d: delete the card everywhere, including attached notes and collection links',
+      '',
+      this.cardsScope === 'collection'
+        ? 'Cards pane in selected-collection mode: x removes the current collection link, and m moves the card to another collection.'
+        : 'Cards pane in all-cards mode: x and m are disabled until you switch back to selected-collection mode.',
       '',
       'Press any key to return.',
     ];
@@ -1131,6 +1295,43 @@ export class SembleTuiApp {
     return `${lines.join('\n')}${ANSI.reset}`;
   }
 
+  renderTextEditor() {
+    const editor = this.overlay;
+    if (!editor || editor.type !== 'editor') {
+      return '';
+    }
+
+    const metrics = this.getEditorMetrics(editor);
+    ensureEditorCursorVisible(editor, metrics);
+
+    const visibleLines = editor.lines.slice(editor.scrollTop, editor.scrollTop + metrics.bodyHeight);
+    const status = this.getStatusDescriptor();
+    const lines = [
+      stylize(editor.title, ANSI.bold),
+      padOrTrimRaw(status.text, metrics.width),
+      padOrTrim('Ctrl+S save | Esc cancel | Arrows move | Enter newline | Tab inserts spaces | Backspace/Delete edit', metrics.width),
+    ];
+
+    for (let index = 0; index < metrics.bodyHeight; index += 1) {
+      const lineIndex = editor.scrollTop + index;
+      const rawLine = visibleLines[index] ?? '';
+      const visibleText = rawLine.slice(editor.scrollLeft, editor.scrollLeft + metrics.bodyWidth);
+      const prefix = `${String(lineIndex + 1).padStart(metrics.gutterWidth - 3, ' ')} | `;
+      lines.push(`${prefix}${padOrTrimRaw(visibleText, metrics.bodyWidth)}`);
+    }
+
+    const cursorScreenRow = Math.min(
+      metrics.headerLines + (editor.cursorRow - editor.scrollTop) + 1,
+      metrics.height,
+    );
+    const cursorScreenCol = Math.min(
+      metrics.gutterWidth + (editor.cursorCol - editor.scrollLeft) + 1,
+      metrics.width,
+    );
+
+    return `${lines.join('\n')}${ANSI.showCursor}\x1b[${cursorScreenRow};${cursorScreenCol}H${ANSI.reset}`;
+  }
+
   buildDetailLine(selectedCollection, selectedCard) {
     if (this.focusPane === 'collections') {
       if (!selectedCollection) {
@@ -1151,9 +1352,12 @@ export class SembleTuiApp {
     return `Selection: ${selectedCard.displayTitle} | ${selectedCard.url || 'no url'} | collections: ${truncate(collectionNames, 28)} | ${noteSummary}`;
   }
 
-  buildStatusLine() {
+  getStatusDescriptor() {
     if (this.busyMessage) {
-      return stylize(`Status: ${this.busyMessage}`, ANSI.yellow);
+      return {
+        text: `Status: ${this.busyMessage}`,
+        color: ANSI.yellow,
+      };
     }
 
     const color = this.statusLevel === 'error'
@@ -1162,7 +1366,43 @@ export class SembleTuiApp {
         ? ANSI.cyan
         : ANSI.dim;
 
-    return stylize(`Status: ${this.statusMessage}`, color);
+    return {
+      text: `Status: ${this.statusMessage}`,
+      color,
+    };
+  }
+
+  buildFooterHelpLines() {
+    const global = 'Global: Tab/h/l switch panes | j/k move | / filter active pane | Esc clear filter | t toggle cards | r refresh | ? help | q quit';
+
+    if (this.focusPane === 'collections') {
+      return [
+        global,
+        'Collections: c create | e edit | d delete | a add existing card to selected collection | Enter/Right focus cards',
+      ];
+    }
+
+    if (this.cardsScope === 'collection') {
+      return [
+        global,
+        'Cards(selected collection): c create | e quick edit | y YAML edit | n note | a link elsewhere | x unlink here | m move | d delete card',
+      ];
+    }
+
+    return [
+      global,
+      'Cards(all): c create | e quick edit | y YAML edit | n note | a link to collection | d delete card | x/m disabled in all-cards mode',
+    ];
+  }
+
+  describeCurrentContext() {
+    if (this.focusPane === 'collections') {
+      return 'collections pane focused';
+    }
+
+    return this.cardsScope === 'collection'
+      ? 'cards pane focused, showing cards in the selected collection'
+      : 'cards pane focused, showing all cards';
   }
 }
 
@@ -1224,6 +1464,15 @@ function padOrTrim(value, width) {
   return clean.padEnd(width, ' ');
 }
 
+function padOrTrimRaw(value, width) {
+  const text = String(value || '').replace(/\r/g, '');
+  if (text.length >= width) {
+    return text.slice(0, width);
+  }
+
+  return text.padEnd(width, ' ');
+}
+
 function stylize(text, code) {
   return `${code}${text}${ANSI.reset}`;
 }
@@ -1232,10 +1481,152 @@ function isPrintableCharacter(value) {
   return typeof value === 'string' && value.length === 1 && value >= ' ' && value !== '\x7f';
 }
 
+function hasInsertableText(value) {
+  return typeof value === 'string' && value.length > 0 && !/[\x00-\x08\x0B-\x1F\x7F]/.test(value);
+}
+
 function normalizeMultilineText(value) {
   return String(value || '').replace(/\r\n/g, '\n').trim();
 }
 
+function normalizeEditorText(value) {
+  return String(value || '').replace(/\r\n/g, '\n');
+}
+
 function shellEscape(value) {
   return `'${String(value).replace(/'/g, `'\\''`)}'`;
+}
+
+function getEditorLine(editor) {
+  return editor.lines[editor.cursorRow] ?? '';
+}
+
+function setEditorLine(editor, value) {
+  editor.lines[editor.cursorRow] = value;
+}
+
+function insertTextInEditor(editor, text) {
+  const current = getEditorLine(editor);
+  const before = current.slice(0, editor.cursorCol);
+  const after = current.slice(editor.cursorCol);
+  const parts = normalizeEditorText(text).split('\n');
+
+  if (parts.length === 1) {
+    setEditorLine(editor, `${before}${parts[0]}${after}`);
+    editor.cursorCol += parts[0].length;
+    return;
+  }
+
+  const nextLines = [
+    `${before}${parts[0]}`,
+    ...parts.slice(1, -1),
+    `${parts[parts.length - 1]}${after}`,
+  ];
+
+  editor.lines.splice(editor.cursorRow, 1, ...nextLines);
+  editor.cursorRow += parts.length - 1;
+  editor.cursorCol = parts[parts.length - 1].length;
+}
+
+function deleteBackwardInEditor(editor) {
+  if (editor.cursorCol > 0) {
+    const current = getEditorLine(editor);
+    setEditorLine(
+      editor,
+      `${current.slice(0, editor.cursorCol - 1)}${current.slice(editor.cursorCol)}`,
+    );
+    editor.cursorCol -= 1;
+    return;
+  }
+
+  if (editor.cursorRow === 0) {
+    return;
+  }
+
+  const previousLine = editor.lines[editor.cursorRow - 1] ?? '';
+  const currentLine = getEditorLine(editor);
+  editor.lines.splice(editor.cursorRow - 1, 2, `${previousLine}${currentLine}`);
+  editor.cursorRow -= 1;
+  editor.cursorCol = previousLine.length;
+}
+
+function deleteForwardInEditor(editor) {
+  const current = getEditorLine(editor);
+  if (editor.cursorCol < current.length) {
+    setEditorLine(
+      editor,
+      `${current.slice(0, editor.cursorCol)}${current.slice(editor.cursorCol + 1)}`,
+    );
+    return;
+  }
+
+  if (editor.cursorRow >= editor.lines.length - 1) {
+    return;
+  }
+
+  const nextLine = editor.lines[editor.cursorRow + 1] ?? '';
+  editor.lines.splice(editor.cursorRow, 2, `${current}${nextLine}`);
+}
+
+function moveEditorCursorUp(editor) {
+  moveEditorCursorVertical(editor, -1);
+}
+
+function moveEditorCursorDown(editor) {
+  moveEditorCursorVertical(editor, 1);
+}
+
+function moveEditorCursorVertical(editor, delta) {
+  editor.cursorRow = clamp(editor.cursorRow + delta, 0, Math.max(editor.lines.length - 1, 0));
+  editor.cursorCol = clamp(editor.cursorCol, 0, getEditorLine(editor).length);
+}
+
+function moveEditorCursorLeft(editor) {
+  if (editor.cursorCol > 0) {
+    editor.cursorCol -= 1;
+    return;
+  }
+
+  if (editor.cursorRow === 0) {
+    return;
+  }
+
+  editor.cursorRow -= 1;
+  editor.cursorCol = getEditorLine(editor).length;
+}
+
+function moveEditorCursorRight(editor) {
+  const current = getEditorLine(editor);
+  if (editor.cursorCol < current.length) {
+    editor.cursorCol += 1;
+    return;
+  }
+
+  if (editor.cursorRow >= editor.lines.length - 1) {
+    return;
+  }
+
+  editor.cursorRow += 1;
+  editor.cursorCol = 0;
+}
+
+function ensureEditorCursorVisible(editor, metrics) {
+  editor.scrollTop = clamp(
+    editor.scrollTop,
+    0,
+    Math.max(editor.lines.length - metrics.bodyHeight, 0),
+  );
+  editor.scrollLeft = Math.max(editor.scrollLeft, 0);
+
+  if (editor.cursorRow < editor.scrollTop) {
+    editor.scrollTop = editor.cursorRow;
+  } else if (editor.cursorRow >= editor.scrollTop + metrics.bodyHeight) {
+    editor.scrollTop = editor.cursorRow - metrics.bodyHeight + 1;
+  }
+
+  if (editor.cursorCol < editor.scrollLeft) {
+    editor.scrollLeft = editor.cursorCol;
+  } else if (editor.cursorCol >= editor.scrollLeft + metrics.bodyWidth) {
+    editor.scrollLeft = editor.cursorCol - metrics.bodyWidth + 1;
+  }
 }

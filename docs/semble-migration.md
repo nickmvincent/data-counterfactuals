@@ -11,7 +11,7 @@ Use Semble collections for the reading-list structure.
 - Collection description = site summary text
 - Membership in a Semble collection = paper belongs to that reading list
 
-Use the note attached to each URL card for structured bibliography metadata.
+Use the note attached to each URL card for manual bibliography metadata, tags, and notes.
 
 ## Note schema
 
@@ -38,7 +38,14 @@ google_scholar_url: https://scholar.google.com/...
 Optional note body here. If `abstract` is omitted above, this body is used as the abstract/summary.
 ```
 
-If a field is missing, the loader falls back to Semble card metadata when possible.
+The build resolves bibliographic identity fields from the strongest source it can find in this order:
+
+1. DOI CSL metadata from the DOI resolver when a DOI is available
+2. Citation meta tags on the linked landing page
+3. Semble note YAML
+4. Semble card preview metadata
+
+The note YAML still matters, but it is now the manual layer rather than the only bibliographic source. Tags, note body, and custom links still come from the Semble note.
 
 ## Build-time config
 
@@ -78,6 +85,8 @@ That cache file includes:
 - `references`
 - `generated_at`
 - `stats`
+- `metadata_provenance` on each reference when available
+- `metadata_sources` on each reference when available
 
 This is useful for two things:
 
@@ -115,7 +124,7 @@ npm run dev:offline
 5. Use `npm run dev:offline` or `npm run build:offline` when you want deterministic cache-only work for travel, CI debugging, or AI agents.
 6. Run `npm run cf:deploy` whenever you want those Semble edits reflected on Cloudflare Pages.
 
-The repo-local markdown bibliography and paper-collection files have been removed so Semble stays the only source of truth.
+The repo-local markdown bibliography and paper-collection files have been removed so Semble stays the source of truth for reading-list structure, tags, and manual notes.
 
 ## Taxonomy guidance
 

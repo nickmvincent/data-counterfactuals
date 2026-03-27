@@ -4,7 +4,10 @@ import assert from 'node:assert/strict';
 import {
   CLEAR,
   KEEP,
+  buildManualMetadataAuditNote,
   buildCardItems,
+  parseCardYamlDocument,
+  serializeCardYamlDocument,
   buildUpdatedUrlCardRecord,
   normalizeService,
   parseEnvText,
@@ -146,4 +149,54 @@ SEMBLE_PDS_SERVICE=bsky.social
     SEMBLE_LOGIN_IDENTIFIER: 'alice.bsky.social',
     SEMBLE_PDS_SERVICE: 'bsky.social',
   });
+});
+
+test('card YAML editor round-trips supported metadata fields', () => {
+  const cardItem = {
+    url: 'https://example.com/paper',
+    metadata: {
+      title: 'Example Paper',
+      description: 'A test paper',
+      siteName: 'Example',
+      imageUrl: 'https://example.com/image.png',
+      author: 'Alice',
+      type: 'article',
+      retrievedAt: '2026-03-27T00:00:00.000Z',
+    },
+  };
+
+  const yamlText = serializeCardYamlDocument(cardItem);
+  const parsed = parseCardYamlDocument(yamlText);
+
+  assert.deepEqual(parsed, {
+    url: 'https://example.com/paper',
+    metadata: {
+      title: 'Example Paper',
+      description: 'A test paper',
+      author: 'Alice',
+      siteName: 'Example',
+      imageUrl: 'https://example.com/image.png',
+      type: 'article',
+      retrievedAt: '2026-03-27T00:00:00.000Z',
+    },
+  });
+});
+
+test('manual metadata audit stamp preserves note body and records source', () => {
+  const nextNote = buildManualMetadataAuditNote(
+    `---
+title: Existing Title
+---
+Original body.`,
+    {
+      source: 'semble_tui_yaml',
+      editedAt: '2026-03-27T12:34:56.000Z',
+    },
+  );
+
+  assert.match(nextNote, /title: Existing Title/);
+  assert.match(nextNote, /manual_metadata_edit:/);
+  assert.match(nextNote, /source: semble_tui_yaml/);
+  assert.match(nextNote, /edited_at: '2026-03-27T12:34:56.000Z'/);
+  assert.match(nextNote, /Original body\./);
 });
