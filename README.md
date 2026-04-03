@@ -99,16 +99,3 @@ wrangler pages project create datacounterfactuals
 ```
 
 The Cloudflare Pages project is named `datacounterfactuals`, while the GitHub repo stays `data-counterfactuals`.
-
-## Push to GitHub
-
-If you want to publish this as `data-counterfactuals`:
-
-```bash
-git init -b main
-git add .
-git commit -m "Initial standalone import"
-gh repo create data-counterfactuals --source=. --remote=origin --push
-```
-
-The current site metadata assumes the GitHub repo URL will be `https://github.com/nickmvincent/data-counterfactuals`. Update `src/data/network.json` if you want a different owner or repo name.
