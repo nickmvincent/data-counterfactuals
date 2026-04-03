@@ -405,25 +405,25 @@ const introSection = sections[0];
     <section class="api-signpost" aria-label="How to use the API explorer">
       <div class="api-signpost-head">
         <span class="api-signpost-kicker">How to use this page</span>
-        <h2 class="api-signpost-title">Treat the explorer state like a request body, then inspect exactly what comes back.</h2>
-        <p class="api-signpost-copy">This page is intentionally lower-level than the grid and graph views. Instead of clicking through controls, you can type the same state directly, see how it gets normalized, and grab the matrix, a selected cell, or the current headline answer.</p>
+        <h2 class="api-signpost-title">Paste state in, inspect JSON out.</h2>
+        <p class="api-signpost-copy">Use the same inputs as the explorers, but type them directly.</p>
       </div>
 
       <div class="api-signpost-grid">
         <div class="api-signpost-card">
           <span class="api-signpost-number">1</span>
-          <h3>Pick a request shape</h3>
-          <p>Start from one of the example buttons if you want a fast template for grid matrices, grid cells, or graph answers.</p>
+          <h3>Load an example</h3>
+          <p>Start with a matrix, cell, or answer template.</p>
         </div>
         <div class="api-signpost-card">
           <span class="api-signpost-number">2</span>
-          <h3>Pass in the state you care about</h3>
-          <p>Use the same core knobs as the existing explorers: count, metric, focus tokens, train/eval subsets, and the lens-specific controls.</p>
+          <h3>Edit the state</h3>
+          <p>Change count, metric, subsets, or lens settings.</p>
         </div>
         <div class="api-signpost-card">
           <span class="api-signpost-number">3</span>
-          <h3>Read the normalized response</h3>
-          <p>The output echoes the resolved state first, so it is easy to confirm how labels, indices, defaults, and column filters were interpreted.</p>
+          <h3>Read the response</h3>
+          <p>Check the resolved state and returned result.</p>
         </div>
       </div>
     </section>

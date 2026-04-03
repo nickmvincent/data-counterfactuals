@@ -1,10 +1,10 @@
 ---
 title: The API explorer
-description: An API for the numbers underlying the data counterfactuals grid
+description: Inspect the numbers behind the grid and graph explorers.
 eyebrow: Interactive lab
-lede: Treat the explorer controls like a request body. This page accepts the same state values used by the grid and graph explorers, then returns either the matrix, the selected cell, or the current headline answer.
+lede: Paste explorer state as JSON and get back the matrix, a cell, or the current answer.
 ---
 
-## how to read this
+## How to read this
 
-This page provides an "API explorer" view into the underlying numbers that make up our data counterfactual exploration tools.
+This page lets you send the same state used by the grid and graph explorers as JSON and inspect the result directly.

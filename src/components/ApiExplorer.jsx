@@ -125,11 +125,8 @@ export default function ApiExplorer() {
       <section class="api-hero-card">
         <div class="api-hero-copy">
           <span class="api-kicker">API explorer</span>
-          <h2 class="api-title">Send the grid or graph state through one shared request body.</h2>
-          <p class="api-copy">
-            Paste JSON, run it in-browser, and inspect the normalized response. The request can stay flat or tuck the
-            explorer controls under a nested <code>state</code> object.
-          </p>
+          <h2 class="api-title">Run explorer state as JSON.</h2>
+          <p class="api-copy">Paste JSON, run it in-browser, and inspect the response.</p>
         </div>
 
         <div class="api-example-bank">
@@ -165,8 +162,7 @@ export default function ApiExplorer() {
               <span class="api-panel-kicker">Request</span>
               <h3 class="api-panel-title">Request JSON</h3>
               <p class="api-panel-copy">
-                Subset references accept labels like <code>ABC</code>, arrays like <code>["A","B","C"]</code>, or
-                numeric subset indices.
+                Use labels like <code>ABC</code>, arrays like <code>["A","B","C"]</code>, or numeric subset indices.
               </p>
             </div>
             <div class="api-action-row">
@@ -212,8 +208,8 @@ export default function ApiExplorer() {
           </label>
 
           <div class="api-inline-note">
-            Flat and nested forms both work. These requests are evaluated entirely client-side with the same explorer
-            math that powers the live grid and graph, including the precomputed Covertype domain experiment.
+            Flat requests and nested <code>state</code> requests both work. Everything runs client-side with the same
+            explorer math.
           </div>
 
           {errorText && (
@@ -247,19 +243,19 @@ export default function ApiExplorer() {
 
           <section class="api-panel-card">
             <span class="api-panel-kicker">Quick notes</span>
-            <h3 class="api-panel-title">A couple of useful shortcuts</h3>
+            <h3 class="api-panel-title">Useful shortcuts</h3>
             <div class="api-notes">
               <p>
                 Use <code>response: "matrix"</code> when you want the whole matrix and <code>"cell"</code> or{" "}
                 <code>"answer"</code> when you only need the selected result.
               </p>
               <p>
-                Both explorers accept <code>covertype</code>, which uses a shared precomputed matrix over real
-                wilderness-area domains from UCI Covertype. The grid still also supports the older toy <code>real</code> score.
+                <code>covertype</code> uses the shared precomputed matrix over real wilderness-area domains from UCI
+                Covertype.
               </p>
               <p>
-                In the grid explorer, <code>showSingletonEvalCols: true</code> filters the returned columns the same
-                way the display toggle does on the page.
+                In the grid explorer, <code>showSingletonEvalCols: true</code> filters columns the same way the page
+                toggle does.
               </p>
             </div>
           </section>
@@ -271,10 +267,7 @@ export default function ApiExplorer() {
           <div>
             <span class="api-panel-kicker">Response</span>
             <h3 class="api-panel-title">Normalized output</h3>
-            <p class="api-panel-copy">
-              The response echoes the resolved state, then returns either the matrix, the selected cell, or the current
-              headline answer.
-            </p>
+            <p class="api-panel-copy">The response shows the resolved state and the requested result.</p>
           </div>
           <div class="api-action-row">
             <button
