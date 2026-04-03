@@ -7,7 +7,7 @@ visibility: public
 type: shared_memo
 ---
 
-WARNING!! Whereas the rest of this site has been human-reviewed and curated, this particularl post is still a *lightly reviewed AI first draft* generated mainly by GPT 5.4. I think it's a valuable artifact but probably don't spend too much time looking at this now unless you'd like to critique/edit.
+WARNING! Whereas the rest of this site has been human-reviewed and curated, this particular post is still a *lightly reviewed AI first draft* generated mainly by GPT 5.4. I have read it through top to bottom and confirmed this close to what I think will be a useful "reference memo" for the site. I have a number of edits in mind, but have not actioned them yet. I think it's a valuable artifact already, but probably don't spend too much time looking at this now unless you'd like to critique/edit.
 
 ---
 
