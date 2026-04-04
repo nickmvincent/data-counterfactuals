@@ -237,6 +237,9 @@ const gridFigureSectionIds = new Set([
     .start-links {
       margin-top: 1.45rem;
     }
+    .start-action-row {
+      margin-top: 1.35rem;
+    }
     .start-links a {
       font-family: var(--font-body);
       font-size: 1.08rem;
@@ -267,7 +270,7 @@ const gridFigureSectionIds = new Set([
 
   <Nav />
 
-  <main class="page start-page">
+  <main class="page start-page" id="main-content" tabindex="-1">
     <header class="page-header start-intro">
       {page.data.eyebrow && <span class="page-eyebrow">{page.data.eyebrow}</span>}
       <h1 class="page-title">{page.data.title}</h1>
@@ -323,7 +326,7 @@ const gridFigureSectionIds = new Set([
                 />
               </div>
 
-              <div class="action-row" style="margin-top: 1.35rem;">
+              <div class="action-row start-action-row">
                 <a href="/grid" class="btn">Open in Explorer</a>
               </div>
             </>

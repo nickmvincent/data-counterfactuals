@@ -765,6 +765,13 @@ if (!helpSections.length) {
     .explorer-shell .toolbar-inline-help summary::-webkit-details-marker {
       display: none;
     }
+    .explorer-shell .toolbar-summary:focus-visible,
+    .explorer-shell .toolbar-inline-help summary:focus-visible,
+    .explorer-shell details summary:focus-visible {
+      outline: var(--focus-outline);
+      outline-offset: 4px;
+      border-radius: 8px;
+    }
     .explorer-shell .toolbar-inline-help-icon {
       width: 1.05rem;
       height: 1.05rem;
@@ -1250,12 +1257,24 @@ if (!helpSections.length) {
       width: max-content;
       min-width: max-content;
     }
+    .explorer-shell .grid-axis-row,
+    .explorer-shell .grid-matrix-row {
+      display: flex;
+    }
     .explorer-shell .grid-wrap[data-compact-cols="true"] .grid-matrix {
       margin-inline: auto;
     }
     .explorer-shell .rl,
     .explorer-shell .cl,
     .explorer-shell .cell {
+      appearance: none;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      font: inherit;
+      text-align: inherit;
       border-right: 1px solid rgba(33, 65, 95, 0.1);
       border-bottom: 1px solid rgba(33, 65, 95, 0.1);
     }

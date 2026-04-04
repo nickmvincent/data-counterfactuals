@@ -48,7 +48,7 @@ const helpStackClasses = [
 const hasMobileNotice = Astro.slots.has("mobileNotice");
 ---
 
-<main class={mainClasses}>
+<main class={mainClasses} id="main-content" tabindex="-1">
   <header class="essay-header page-header">
     {eyebrow && <span class="page-eyebrow">{eyebrow}</span>}
     <h1 class="page-title">{title}</h1>
@@ -170,6 +170,12 @@ const hasMobileNotice = Astro.slots.has("mobileNotice");
     font-weight: 650;
     line-height: 1.3;
     text-wrap: balance;
+  }
+
+  .explorer-page-help-drawer summary:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: 4px;
+    border-radius: 8px;
   }
 
   .explorer-page-help-drawer[open] summary {

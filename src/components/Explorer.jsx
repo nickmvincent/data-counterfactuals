@@ -1472,13 +1472,6 @@ function App() {
     setHoverTarget(null);
   };
 
-  const handleGridActionKey = (event, callback) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      callback();
-    }
-  };
-
   const handleCellClick = (rowIndex, colIndex) => {
     if (selectionArmed === "compare" && !compareChooserDisabled) {
       setComparePoint({ rowIndex, colIndex });
@@ -2121,8 +2114,8 @@ function App() {
                 data-compact-cols=${centerCompactGrid ? "true" : "false"}
               >
                 <div class="grid-matrix">
-                  <div style="display:flex">
-                    <div class="rl axis-corner" style="width:var(--grid-axis-w)" title="Use the plus and minus buttons to grow or shrink the toy universe.">
+                  <div class="grid-axis-row">
+                    <div class="rl axis-corner" title="Use the plus and minus buttons to grow or shrink the toy universe.">
                       <div class="axis-corner-stack">
                         <span class="axis-corner-label">Grid controls</span>
                         <div class="axis-corner-mode">
@@ -2157,23 +2150,21 @@ function App() {
                       const active = colIndex === safeColIdx;
                       const hovered = hoveredColIdx === colIndex;
                       return html`
-                        <div
+                        <button
                           key=${`col-${colIndex}`}
                           class=${`cl ${active ? "axis-active" : ""} ${hovered ? "axis-hot" : ""}`}
-                          role="button"
-                          tabIndex="0"
+                          type="button"
                           aria-pressed=${active}
                           aria-label=${`Select evaluation slice ${label(colSet)}`}
                           title=${`Select evaluation slice ${label(colSet)}. Click any cell to set both train and eval at once.`}
                           onClick=${() => setColIdx(colIndex)}
-                          onKeyDown=${(event) => handleGridActionKey(event, () => setColIdx(colIndex))}
                           onMouseEnter=${() => previewGridTarget(safeRowIdx, colIndex)}
                           onMouseLeave=${clearGridPreview}
                           onFocus=${() => previewGridTarget(safeRowIdx, colIndex)}
                           onBlur=${clearGridPreview}
                         >
                           ${formatColumnHeader(colIndex, colSet)}
-                        </div>
+                        </button>
                       `;
                     })}
                   </div>
@@ -2181,23 +2172,21 @@ function App() {
                     const rowActive = rowIndex === safeRowIdx;
                     const rowHovered = hoveredRowIdx === rowIndex;
                     return html`
-                      <div style="display:flex" key=${`row-${rowIndex}`}>
-                        <div
+                      <div class="grid-matrix-row" key=${`row-${rowIndex}`}>
+                        <button
                           class=${`rl ${rowActive ? "axis-active" : ""} ${rowHovered ? "axis-hot" : ""}`}
-                          role="button"
-                          tabIndex="0"
+                          type="button"
                           aria-pressed=${rowActive}
                           aria-label=${`Select training world ${label(rowSet)}`}
                           title=${`Select training world ${label(rowSet)}. Click any cell to set both train and eval at once.`}
                           onClick=${() => setRowIdx(rowIndex)}
-                          onKeyDown=${(event) => handleGridActionKey(event, () => setRowIdx(rowIndex))}
                           onMouseEnter=${() => previewGridTarget(rowIndex, safeColIdx)}
                           onMouseLeave=${clearGridPreview}
                           onFocus=${() => previewGridTarget(rowIndex, safeColIdx)}
                           onBlur=${clearGridPreview}
                         >
                           ${formatRowHeader(rowIndex, rowSet)}
-                        </div>
+                        </button>
                         <div class="rr">
                           ${visibleColIndices.map((colIndex) => {
                             const evSet = subs[colIndex] || [];
@@ -2256,34 +2245,32 @@ function App() {
                             if (switchPulse && highlight) classes.push("cell-pulse");
 
                             return html`
-                              <div
+                              <button
                                 key=${`cell-${rowIndex}-${colIndex}`}
                                 class=${classes.join(" ")}
+                                type="button"
                                 data-selected=${isSel ? "true" : "false"}
                                 data-target-cell=${isTargetCell ? "true" : "false"}
                                 data-compare-cell=${isCompareCell ? "true" : "false"}
-                                role="button"
-                                tabIndex="0"
                                 aria-pressed=${isSel}
                                 aria-label=${`Train ${label(rowSet)}, evaluate ${label(evSet)}, score ${value.toFixed(3)}`}
                                 title=${`Train ${label(rowSet)} | Eval ${label(evSet)} | value ${value.toFixed(3)}`}
                                 onClick=${() => handleCellClick(rowIndex, colIndex)}
-                                onKeyDown=${(event) => handleGridActionKey(event, () => handleCellClick(rowIndex, colIndex))}
                                 onMouseEnter=${() => previewGridTarget(rowIndex, colIndex)}
                                 onMouseLeave=${clearGridPreview}
                                 onFocus=${() => previewGridTarget(rowIndex, colIndex)}
                                 onBlur=${clearGridPreview}
                                 style=${{ background: palette(normalized) }}
                               >
-                                ${isTargetCell ? html`<div class="marker-ring marker-ring-target"></div>` : null}
-                                ${isCompareCell ? html`<div class="marker-ring marker-ring-compare"></div>` : null}
-                                ${thin ? html`<div class="ring ring-thin"></div>` : null}
-                                ${thick ? html`<div class="ring ring-thick"></div>` : null}
-                                ${edited ? html`<div class="edit-flag" title="Toy edit affects this row in operator view"></div>` : null}
+                                ${isTargetCell ? html`<span class="marker-ring marker-ring-target"></span>` : null}
+                                ${isCompareCell ? html`<span class="marker-ring marker-ring-compare"></span>` : null}
+                                ${thin ? html`<span class="ring ring-thin"></span>` : null}
+                                ${thick ? html`<span class="ring ring-thick"></span>` : null}
+                                ${edited ? html`<span class="edit-flag" title="Toy edit affects this row in operator view"></span>` : null}
                                 ${showNums
-                                  ? html`<div class="num" style=${{ color: normalized > 0.48 ? "#10273d" : "#f7fbff" }}>${value.toFixed(2)}</div>`
+                                  ? html`<span class="num" style=${{ color: normalized > 0.48 ? "#10273d" : "#f7fbff" }}>${value.toFixed(2)}</span>`
                                   : null}
-                              </div>
+                              </button>
                             `;
                           })}
                         </div>

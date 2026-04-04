@@ -93,6 +93,6 @@ Other connections are maybe more familiar, but still useful to line up in one pl
 
 ## Why build this site?
 
-Mostly, I wanted a place where I could put the argument once and then build around it. If you are reading this on Substack, the site adds a [toy explorer](https://datacounterfactuals.org/grid), a [collections page](https://datacounterfactuals.org/collections), and a more technical companion note on [formalisms](https://datacounterfactuals.org/memo/formalisms).
+Mostly, I wanted a place where I could put the argument once and then build around it. If you are reading this on Substack, the site adds a [toy explorer](https://datacounterfactuals.org/grid), a [collections page](https://datacounterfactuals.org/collections), a [loose syllabus](https://datacounterfactuals.org/memo/loose-syllabus), and a more technical companion note on [formalisms](https://datacounterfactuals.org/memo/formalisms).
 
 Feedback and contribution welcome!

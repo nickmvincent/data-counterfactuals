@@ -49,6 +49,7 @@ const footerNavSections = getSiteNavSections(githubUrl);
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=cf-grid-1" />
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
     <div class="site-shell">
       <slot />
       <footer class="site-footer">
@@ -99,6 +100,7 @@ const footerNavSections = getSiteNavSections(githubUrl);
     --rail: 17rem;
     --radius-lg: 28px;
     --radius-md: 18px;
+    --focus-outline: 2px solid rgba(47, 107, 111, 0.72);
     --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
     --font-body: "Charter", "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
     --font-ui: "Avenir Next", "Aptos", "Segoe UI", sans-serif;
@@ -112,6 +114,7 @@ const footerNavSections = getSiteNavSections(githubUrl);
   body {
     margin: 0;
     min-height: 100vh;
+    min-height: 100dvh;
     background:
       radial-gradient(circle at top left, rgba(182, 96, 45, 0.18), transparent 28%),
       radial-gradient(circle at top right, rgba(47, 107, 111, 0.16), transparent 24%),
@@ -150,8 +153,30 @@ const footerNavSections = getSiteNavSections(githubUrl);
   strong {
     color: var(--fg);
   }
+  .skip-link {
+    position: absolute;
+    left: 1rem;
+    top: 1rem;
+    z-index: 60;
+    padding: 0.75rem 1rem;
+    border-radius: 999px;
+    background: var(--surface-strong);
+    color: var(--fg);
+    font-family: var(--font-ui);
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: var(--shadow-soft);
+    transform: translateY(-180%);
+    transition: transform 160ms ease;
+  }
+  .skip-link:focus-visible {
+    transform: translateY(0);
+    outline: var(--focus-outline);
+    outline-offset: 3px;
+  }
   .site-shell {
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
   }
@@ -201,10 +226,16 @@ const footerNavSections = getSiteNavSections(githubUrl);
     text-decoration: none;
     transition: color 160ms ease;
   }
-  .site-footer-nav-link:hover,
+  .site-footer-nav-link:hover {
+    color: var(--fg);
+    text-decoration: underline;
+  }
   .site-footer-nav-link:focus-visible {
     color: var(--fg);
     text-decoration: underline;
+    outline: var(--focus-outline);
+    outline-offset: 3px;
+    border-radius: 6px;
   }
   .top-nav {
     position: sticky;
@@ -272,11 +303,18 @@ const footerNavSections = getSiteNavSections(githubUrl);
     background: transparent;
     transition: transform 160ms ease, border-color 160ms ease, color 160ms ease;
   }
-  .nav-link:hover,
+  .nav-link:hover {
+    transform: translateY(-1px);
+    border-color: rgba(177, 79, 31, 0.2);
+    color: var(--fg);
+  }
   .nav-link:focus-visible {
     transform: translateY(-1px);
     border-color: rgba(177, 79, 31, 0.2);
     color: var(--fg);
+    outline: var(--focus-outline);
+    outline-offset: 4px;
+    border-radius: 8px;
   }
   .nav-link[aria-current="page"] {
     border-color: rgba(177, 79, 31, 0.24);
@@ -347,10 +385,15 @@ const footerNavSections = getSiteNavSections(githubUrl);
       background 160ms ease,
       transform 160ms ease;
   }
-  .nav-dropdown-link:hover,
+  .nav-dropdown-link:hover {
+    transform: translateY(-1px);
+    border-color: rgba(177, 79, 31, 0.2);
+  }
   .nav-dropdown-link:focus-visible {
     transform: translateY(-1px);
     border-color: rgba(177, 79, 31, 0.2);
+    outline: var(--focus-outline);
+    outline-offset: 3px;
   }
   .nav-dropdown-link[aria-current="page"] {
     border-color: rgba(177, 79, 31, 0.2);
@@ -394,6 +437,10 @@ const footerNavSections = getSiteNavSections(githubUrl);
   }
   .nav-mobile-toggle::-webkit-details-marker {
     display: none;
+  }
+  .nav-mobile-toggle:focus-visible {
+    outline: var(--focus-outline);
+    outline-offset: 3px;
   }
   .nav-mobile-toggle::after {
     content: "▾";
@@ -446,6 +493,16 @@ const footerNavSections = getSiteNavSections(githubUrl);
   .nav-mobile-link[aria-current="page"] {
     border-color: rgba(177, 79, 31, 0.2);
     background: rgba(177, 79, 31, 0.08);
+  }
+  .nav-mobile-link:hover {
+    border-color: rgba(177, 79, 31, 0.2);
+    background: rgba(255, 255, 255, 0.88);
+  }
+  .nav-mobile-link:focus-visible {
+    border-color: rgba(177, 79, 31, 0.2);
+    background: rgba(255, 255, 255, 0.88);
+    outline: var(--focus-outline);
+    outline-offset: 3px;
   }
   .nav-mobile-link-note {
     display: block;
@@ -593,10 +650,15 @@ const footerNavSections = getSiteNavSections(githubUrl);
     transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
     box-shadow: 0 10px 24px rgba(177, 79, 31, 0.22);
   }
-  .btn:hover,
+  .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(177, 79, 31, 0.28);
+  }
   .btn:focus-visible {
     transform: translateY(-1px);
     box-shadow: 0 14px 28px rgba(177, 79, 31, 0.28);
+    outline: var(--focus-outline);
+    outline-offset: 3px;
   }
   .btn.secondary {
     background: #275b5f;
@@ -865,6 +927,12 @@ const footerNavSections = getSiteNavSections(githubUrl);
   .link-cluster a:hover {
     color: var(--ring-thick);
   }
+  .link-cluster a:focus-visible {
+    color: var(--ring-thick);
+    outline: var(--focus-outline);
+    outline-offset: 4px;
+    border-radius: 6px;
+  }
   .link-cluster p {
     margin: 0.35rem 0 0;
     color: var(--muted);
@@ -895,6 +963,18 @@ const footerNavSections = getSiteNavSections(githubUrl);
     line-height: 1.7;
     font-family: var(--font-ui);
     font-size: 0.95rem;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
   @media (max-width: 960px) {
     .page-grid.cols-2,

@@ -1,5 +1,5 @@
 ---
-order: 3
+order: 4
 title: "Glossary"
 summary: "Working definitions for the key terms used across the memo, explorer, and related areas and papers page."
 date: "2026-03-12T00:00:00.000Z"

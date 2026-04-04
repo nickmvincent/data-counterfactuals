@@ -13,6 +13,9 @@ reading_paths:
   - title: Open the grid explorer
     href: /grid
     body: Explore the data counterfactuals "grid" framing directly.
+  - title: Follow the loose syllabus
+    href: /memo/loose-syllabus
+    body: A suggested 10-week sequence of 20 papers for getting oriented before the more technical memo.
   - title: Compare formalisms
     href: /memo/formalisms
     body: A more technical companion that lines up neighboring formalisms side by side. Currently very WIP.
