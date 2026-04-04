@@ -19,7 +19,7 @@ reading_paths:
   - title: Compare formalisms
     href: /memo/formalisms
     body: A more technical companion that lines up neighboring formalisms side by side. Currently very WIP.
-  - title: Related areas and papers
+  - title: Related work
     href: /collections
     body: A dynamic, non-exhaustive set of related areas and readings, updated via Semble.so.
 figures:

@@ -1,5 +1,5 @@
 ---
-title: Related areas and papers
+title: Related work
 description: Adjacent research areas and starting papers, curated in Semble and synced into the site.
 eyebrow: Reference shelf
 lede: A lightweight map of neighboring literatures, with each area curated as a Semble collection and synced into the site at build time.
