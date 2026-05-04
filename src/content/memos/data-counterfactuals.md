@@ -81,7 +81,17 @@ Some related concepts require a more complex model than the simple "grid" presen
 
 One important distinction is between interventions over data an AI operator already has, interventions over what data an AI operator can get, and interventions over what data the world produces in the first place. Those are related, but they are not identical. Removing a point from an existing training set, bargaining over whether a platform can access future contributions, and organizing to change how people behave online can all be described in counterfactual terms, but they operate at different levels.
 
-That distinction matters both technically and politically. Some methods only compare subsets of a fixed dataset. Others concern provenance, licensing, bargaining, and contribution governance, where the key question is which rows are available on acceptable terms. Still others involve feedback loops where deploying a model changes future behavior, and therefore changes the future data-generating process itself. I think the data counterfactual frame is useful partly because it helps make these differences explicit rather than hiding them.
+I think it is useful to name these as rough **types** of data counterfactuals:
+
+- **Subset counterfactuals**: worlds over a fixed realized dataset. Here we remove, reweight, corrupt, repair, or average over subsets of data the operator already has. Leave-one-out, influence estimation, Shapley-style valuation, many unlearning baselines, and a lot of data selection work fit most naturally here.
+- **Acquisition counterfactuals**: worlds in which the training set changes because new data become available, get labeled, or are intentionally contributed or withheld. Active learning, experimental design, data scaling, contribution campaigns, and bargaining over access fit more naturally in this bucket. The key question is not only "which existing point mattered?" but also "which next point or next source could move us to a better or worse row?"
+- **Data-generating-process counterfactuals**: worlds in which incentives, governance, platforms, or model deployment change what data gets produced in the first place. Strategic withholding, performative effects, provenance fights, licensing disputes, and long-run shifts in online behavior belong more clearly here.
+
+These labels are meant as working project language, not as a claim that the literature has already settled on this exact vocabulary. But I think the distinction itself matters both technically and politically. Some methods only compare subsets of a fixed dataset. Others concern provenance, licensing, bargaining, and contribution governance, where the key question is which rows are available on acceptable terms. Still others involve feedback loops where deploying a model changes future behavior, and therefore changes the future data-generating process itself.
+
+This also helps clarify an ambiguity around "adding" data. In a Shapley-style calculation, we often compare a subset $S$ to a nearby subset $S \cup \{i\}$. But if point $i$ was already one of the points in the fixed ground set under study, that is still a subset counterfactual, not yet an acquisition counterfactual in the stronger sense. Asking what happens if we acquire a genuinely new point, or gain access to a new source of data, is a different kind of move.
+
+I think the data counterfactual frame is useful partly because it helps make these differences explicit rather than hiding them.
 
 ## Clarifying the "more out there" connections
 

@@ -29,6 +29,7 @@ function normalizeCollectionName(title: string): string {
 const VERY_CORE_AREA_ORDER = [
   "collective action",
   "data dividends",
+  "data provenance and source attribution",
   "influence",
   "scaling laws",
   "selection and coresets",
@@ -42,6 +43,7 @@ function isVeryCoreCollection(title: string): boolean {
 
   return normalized === "collective action"
     || normalized === "data dividends"
+    || normalized === "data provenance and source attribution"
     || normalized === "influence"
     || normalized.startsWith("scaling")
     || normalized.startsWith("selection")
