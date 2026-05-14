@@ -1,13 +1,13 @@
 ---
-order: 3
+order: 4
 title: "Formalisms"
-summary: "A draft memo lining up several tasks that fit the data counterfactuals frame: influence, valuation, selection, distillation, unlearning, privacy, poisoning, and other neighboring cases."
+summary: "A draft memo lining up several tasks that fit the data counterfactuals frame: influence, valuation, evaluation value, selection, distillation, unlearning, privacy, poisoning, and other neighboring cases."
 date: '2026-03-12T00:00:00.000Z'
 visibility: public
 type: shared_memo
 ---
 
-WARNING! Whereas the rest of this site has been human-reviewed and curated, this particular post is still a *lightly reviewed AI first draft* generated mainly by GPT 5.4. I have read it through top to bottom and confirmed this close to what I think will be a useful "reference memo" for the site. I have a number of edits in mind, but have not actioned them yet. I think it's a valuable artifact already, but probably don't spend too much time looking at this now unless you'd like to critique/edit.
+Draft status: Whereas the rest of this site has been human-reviewed and curated, this particular post is still a *lightly reviewed AI-assisted first draft* generated mainly by GPT 5.4. I have read it top to bottom and confirmed that it is close to what I think will be a useful reference memo for the site. I have a number of edits in mind, but have not finished them yet. I think it is a useful artifact already, but probably not worth spending too much time on unless you'd like to critique or edit it.
 
 ---
 
@@ -17,13 +17,14 @@ The template below is deliberately lossy. Some tasks fit it neatly; others only 
 
 ## A simplified data-counterfactual formalism
 
-Start with five objects:
+Start with a small set of objects:
 
 $$
 \begin{aligned}
 D &= \text{observed training data} \\
 A &= \text{comparison protocol held fixed within one family of worlds} \\
 E &= \text{evaluation target, task, slice, or observer query} \\
+G &= \text{governance or trust state} \\
 U(A(D), E) &= \text{the behavior, score, transcript, or release we care about} \\
 T &= \text{an allowed transformation of the training data}
 \end{aligned}
@@ -40,6 +41,22 @@ $$
 
 This is the simplest version of a data counterfactual: hold the comparison protocol fixed, change the training data, and compare outcomes.
 
+The simplified version above is deliberately training-centered. Once the grid is explicit, two nearby extensions become useful. First, we can change the evaluation target while holding the training world fixed:
+
+$$
+\Delta_E =
+\operatorname{Compare}\bigl(U(A(D), E'), U(A(D), E)\bigr)
+$$
+
+This is the column move: the data object changes the measurement rather than the model. Second, we can change the governance or trust state:
+
+$$
+\Delta_G =
+\operatorname{Compare}\bigl(U_G(A(D), E), U_{G'}(A(D), E)\bigr)
+$$
+
+Here $G$ can include provenance, licensing, evaluator independence, contamination controls, label process, secrecy, or any other condition that decides whether a train/eval comparison should count. In this expanded version, the core question is not only "did the data change the model?" It is "did the data change the model, the measurement, or trust in the measurement?"
+
 That minimal form already captures a lot, but most literatures add at least one extra ingredient:
 
 - an **intervention family** $T$ such as deletion, upweighting, addition, replacement, corruption, or repair
@@ -49,7 +66,7 @@ That minimal form already captures a lot, but most literatures add at least one 
 
 For some literatures, those extra ingredients are not side notes. They are part of what must be held fixed if the comparison is to be well defined at all. Active learning needs a query policy and a label model. Distillation often fixes an initialization scheme and a truncated training loop. Unlearning compares a removal procedure to a retraining reference world. Differential privacy quantifies over the outputs of a randomized mechanism rather than one chosen test loss. So the template is best treated as a comparative scaffold, not as a claim that every section below is mathematically identical.
 
-So the family resemblance is not that every task uses the same utility, the same intervention unit, or even the same notion of success. It is that each task compares nearby training worlds and asks what those differences imply for prediction, value, privacy, robustness, or control.
+So the family resemblance is not that every task uses the same utility, the same intervention unit, or even the same notion of success. It is that each task compares nearby data, evaluation, or protocol worlds and asks what those differences imply for prediction, value, privacy, robustness, or control.
 
 ## What really changes across these tasks
 
@@ -60,8 +77,9 @@ Before going case by case, it helps to name the main axes along which the litera
 - **What is being compared?** prediction loss, aggregate utility, training transcript, observable release distribution, group-conditioned metric, fitted response surface, or attack success
 - **How are comparisons combined?** local derivative, leave-one-out gap, expectation over labels, average over coalitions, worst-case guarantee, sequential policy, or sampled scaling curve
 - **What must stay fixed for the comparison to mean anything?** optimizer, initialization, label oracle, observer model, threat model, or audit state
+- **Which axis is moving?** training row, evaluation column, coupled train/eval role, or governance state
 
-That is the roadmap for the rest of the memo. The shared object is not one universal objective. It is a comparison between training worlds, plus a choice about what sort of observer, institution, or aggregation makes that comparison matter.
+That is the roadmap for the rest of the memo. The shared object is not one universal objective. It is a comparison between nearby worlds, plus a choice about what sort of observer, institution, or aggregation makes that comparison matter.
 
 ## 1. Influence and leave-one-out
 
@@ -75,11 +93,11 @@ $$
 
 This asks what changes for test point $x$ when training point $z_i$ is removed.
 
-The classical influence-function version does not identify deletion with the derivative itself. Instead, it linearizes the effect of changing one example's weight inside the training objective:
+The classical influence-function version does not identify deletion with the derivative itself. Instead, it linearizes the effect of changing one example's weight inside the training objective. More explicitly, if $A_\varepsilon(D, z_i)$ denotes training after adding an $\varepsilon$-weighted copy of the loss term for $z_i$ to the averaged empirical risk, then:
 
 $$
 I_{\mathrm{up},\mathrm{loss}}(z_i, x)
-= \left.\frac{d}{d\varepsilon} \, \ell\bigl(x; A(D, \operatorname{weight}(z_i) + \varepsilon)\bigr)\right|_{\varepsilon = 0}
+= \left.\frac{d}{d\varepsilon} \, \ell\bigl(x; A_\varepsilon(D, z_i)\bigr)\right|_{\varepsilon = 0}
 $$
 
 If the empirical risk averages over $n$ points, then deleting $z_i$ is approximated by a small negative perturbation of size about $-1/n$:
@@ -100,7 +118,7 @@ This is a very direct specialization of the simplified formalism:
 
 ## 2. Data valuation and semivalue methods
 
-In the abstract, Jia et al. say they study the problem of "[data valuation by utilizing the Shapley value](https://proceedings.mlr.press/v89/jia19a.html)."
+Ghorbani and Zou popularized the term [Data Shapley](https://proceedings.mlr.press/v97/ghorbani19c.html), and in the abstract of a related efficient-valuation paper, Jia et al. say they study the problem of "[data valuation by utilizing the Shapley value](https://proceedings.mlr.press/v89/jia19a.html)."
 
 Here the key move is to add an aggregation rule over many training worlds rather than study one deletion. Let the observed dataset be indexed as $D = \{z_1, \dots, z_n\}$, let $N = \{1, \dots, n\}$, and write $D_S = \{z_j : j \in S\}$ for any index set $S \subseteq N$. Then the Shapley value of point $z_i$ can be written as
 
@@ -129,6 +147,41 @@ $$
 
 An intuitive way to read this is: hold the evaluation target fixed, look at every possible background training world that does not yet contain point $i$, add $i$, and ask how much the score moves. Banzhaf says to average those swings uniformly across worlds. Shapley instead redistributes weight so that coalition size matters in a more structured way, and Beta Shapley keeps the same marginal comparisons while deliberately tilting weight toward smaller or larger coalitions. That is why this section is better read as an aggregation family than as one single equation.
 
+## 2.5 Evaluation-side value and column moves
+
+The valuation section above is still row-centered: it asks how a training contribution changes utility under a fixed evaluation target. A parallel evaluation-side value asks what happens when an object enters the evaluation world:
+
+$$
+\eta_i(D_T, D_E)
+= U(A(D_T), D_E \cup \{z_i\}) - U(A(D_T), D_E)
+$$
+
+This scalar should not automatically be interpreted as model improvement. It can mean that the measured score went up, went down, became more precise, changed a model-selection decision, or revealed that the original evaluation slice was incomplete.
+
+This is especially important when data objects have role-specific rights:
+
+$$
+z_i \in \{\text{trainable}, \text{evaluable}, \text{both}, \text{reserved}, \text{unavailable}\}
+$$
+
+The same object may have different values under different roles:
+
+$$
+\begin{aligned}
+S_T(z_i) &= \text{training-side value} \\
+S_E(z_i) &= \text{evaluation-side value} \\
+S_G(z_i) &= \text{governance or trust value}
+\end{aligned}
+$$
+
+Any combined score should be explicit about its weights:
+
+$$
+S(z_i) = \lambda_T S_T(z_i) + \lambda_E S_E(z_i) + \lambda_G S_G(z_i)
+$$
+
+The point of this notation is mostly defensive. It prevents a column-side or trust-side value from being smuggled back in as if it were just another training-data attribution score.
+
 ## 3. Reweighting and fairness-by-data repair
 
 Some fairness interventions are best understood not as changing the model class but as changing how much different examples count. Kamiran and Calders's reweighing method is a canonical preprocessing example ([paper](https://link.springer.com/article/10.1007/s10115-011-0463-8)).
@@ -150,7 +203,7 @@ What makes this family distinctive is that the support of the dataset may stay f
 
 ## 4. Coresets, subset selection, and pruning
 
-Coreset and pruning methods deserve their own section because they stay inside the observed dataset while still searching over retained worlds under a budget. One influential modern formulation of this budgeted subset-selection move appears in work such as [Sener and Savarese](https://openreview.net/forum?id=H1aIuk-RW), though the broader design problem is not limited to active learning.
+Coreset, subset-selection, and pruning methods deserve their own section because many of them stay inside, or assign weights to, the observed dataset while still searching over retained worlds under a budget. One influential active-learning version of this budgeted selection move appears in work such as [Sener and Savarese](https://openreview.net/forum?id=H1aIuk-RW), though their concrete objective is closer to coverage in a learned representation space than to the abstract equations below. The broader design problem is not limited to active learning.
 
 One simple formulation is:
 
@@ -183,7 +236,7 @@ g(n)
 \bigl[U(A(S), E)\bigr]
 $$
 
-where $\mathcal{Q}_n(D)$ is some procedure for sampling size-$n$ subsets or retained worlds from $D$. Datamodel-style work goes further and tries to fit a surrogate that predicts performance across many subset worlds, compositions, or evaluation targets rather than recomputing every cell directly.
+where $\mathcal{Q}_n(D)$ is some procedure for sampling size-$n$ subsets or retained worlds from $D$. Datamodel-style work goes further and tries to fit a surrogate that predicts a chosen target output, prediction, or score across many subset worlds rather than recomputing every cell directly. Multiple targets can be modeled by fitting multiple such maps.
 
 This still belongs to the data-counterfactual family because the underlying evidence comes from training on different data worlds and comparing outcomes. But the output is no longer a local influence score or a fair-value assignment. It is a response surface, scaling curve, or learned map over the subset space. That makes these methods especially relevant for leverage analyses and for deciding which kinds of counterfactual worlds are worth simulating at all.
 
@@ -216,7 +269,8 @@ Here the counterfactual is prospective rather than retrospective. A simple pool-
 $$
 x^*
 = \operatorname*{arg\,max}_{x \in X_{\mathrm{pool}}}
-\mathbb{E}_y \bigl[U(A(D \cup \{(x, y)\}), E)\bigr]
+\mathbb{E}_{y \sim p(\cdot \mid x, D)}
+\bigl[U(A(D \cup \{(x, y)\}), E)\bigr]
 $$
 
 The expectation is over the unknown label $y$, or over whatever posterior the method assumes.
@@ -227,15 +281,16 @@ This should not be mistaken for the whole field. Uncertainty sampling, query-by-
 
 In the abstract, Wang et al. define dataset distillation as an attempt to "[distill the knowledge from a large training dataset into a small one](https://openreview.net/forum?id=Sy4lojC9tm)."
 
-The object now is a synthetic replacement dataset $\tilde{D}$, usually under a strict size budget and a fixed training protocol:
+The object now is a synthetic replacement dataset $\tilde{D}$, usually under a strict size budget and a fixed training protocol. One simple way to write the original distillation idea is to ask for a tiny synthetic set that, after a short fixed training run, performs well on the original task:
 
 $$
 \tilde{D}^*
 = \operatorname*{arg\,min}_{|\tilde{D}| = m}
-d\bigl(A_{k,\theta_0}(\tilde{D}), A_{k,\theta_0}(D)\bigr)
+\mathbb{E}_{\theta_0 \sim P_0}
+\bigl[\mathcal{L}_D(A_{k,\theta_0}(\tilde{D}))\bigr]
 $$
 
-Here $A_{k,\theta_0}$ stands in for a constrained training procedure such as a fixed number of gradient steps from a given or randomized initialization. The distance $d$ can mean many things: downstream loss, gradient matching, trajectory matching, or performance across initializations.
+Here $A_{k,\theta_0}$ stands in for a constrained training procedure such as a fixed number of gradient steps from a given or randomized initialization, and $\mathcal{L}_D$ evaluates performance against the original task or data distribution. Later condensation methods can also be written in distance-matching terms, where $d$ might compare gradients, trajectories, final predictions, or performance across initializations.
 
 This still fits the data-counterfactual frame, but only in a looser sense than leave-one-out or Shapley do. The intervention is now synthetic replacement rather than simple deletion or addition, and the search takes place in a constructed data space rather than over nearby observed subsets. Unlike coresets, the retained world need not be composed of actual observed examples. The question is whether a tiny constructed world can stand in for a much larger one under a fixed training recipe.
 
@@ -253,19 +308,19 @@ $$
 
 For targeted poisoning or backdoors, $U_{\mathrm{attack}}$ is not generic test error but some attack-specific failure mode.
 
-This is the same broad template with the sign flipped. The transformation $T$ is malicious, the utility is adversarial, and the point is to move the model into a worse part of the grid. But the adversarial setting also changes the epistemic posture of the problem: feasibility sets, stealth constraints, attacker knowledge, and threat models become central.
+This is the same broad template with an adversarial objective rather than a helpful or diagnostic one. The transformation $T$ is malicious, the utility is adversarial, and the point is to move the model into a worse part of the grid. But the adversarial setting also changes the epistemic posture of the problem: feasibility sets, stealth constraints, attacker knowledge, and threat models become central.
 
 ## 10. Differential privacy
 
 Differential privacy should be treated separately from membership inference because it is a different kind of formal object. It is not an attack. It is a guarantee over neighboring training worlds.
 
-For concreteness, fix the add/remove notion of adjacency: $D \sim D'$ if one can be obtained from the other by adding or removing one record. A related convention uses replace-one-record adjacency, but it should be treated as a different neighboring relation rather than silently swapped in. With that convention fixed, a randomized mechanism $M$ is $(\varepsilon, \delta)$-differentially private if for every measurable event $S$,
+For concreteness, fix the add/remove notion of adjacency: $D \sim D'$ if one can be obtained from the other by adding or removing one record. A related convention uses replace-one-record adjacency, but it should be treated as a different neighboring relation rather than silently swapped in. With that convention fixed, a randomized mechanism $M$ is $(\varepsilon, \delta)$-differentially private if for all adjacent $D \sim D'$ and every measurable event $S \subseteq \operatorname{Range}(M)$,
 
 $$
 \Pr[M(D) \in S] \le e^\varepsilon \Pr[M(D') \in S] + \delta
 $$
 
-Following [Dwork (2006)](https://www.microsoft.com/en-us/research/publication/differential-privacy/), the point is to bound how distinguishable two one-record-apart worlds can be from the outside.
+Following [Dwork (2006)](https://www.microsoft.com/en-us/research/publication/differential-privacy/) and later textbook treatments, the point is to bound how distinguishable two one-record-apart worlds can be from the outside. The probabilities above are over the randomness of the mechanism.
 
 This belongs in the same neighborhood as data counterfactuals, but it does not plug into the simplified $\Delta_T = \operatorname{Compare}(\cdots)$ template as directly as influence or Shapley do. The important correspondences are:
 
@@ -311,7 +366,7 @@ So MIA is best read as one empirical probe of whether a data counterfactual leak
 
 ## 12. Curriculum learning, training dynamics, and other order-sensitive methods
 
-Some important neighboring ideas do not primarily compare static sets at all. They compare trajectories. Curriculum learning, forgetting events, and data cartography are all useful examples of this shift.
+Some important neighboring ideas do not primarily compare static sets at all. They concern trajectories. Curriculum learning is a direct order-sensitive intervention; forgetting events and data cartography are trajectory-level diagnostics that inspect how examples behave during training.
 
 Let $\pi = (B_1, \dots, B_T)$ be a sequence of batches or curriculum choices, and let training evolve as
 
@@ -325,7 +380,7 @@ $$
 U_{\mathrm{traj}}(\pi, E) = U\bigl((\theta_t)_{t=0}^T, E\bigr)
 $$
 
-Curriculum learning changes the order and staging of exposure. Forgetting events and data cartography inspect per-example training trajectories such as correctness, confidence, or variability over time. Two worlds can therefore contain the same multiset of training examples and still differ meaningfully because they traverse the space in a different order.
+Curriculum learning changes the order and staging of exposure. Forgetting events and data cartography inspect per-example training trajectories such as correctness, confidence, or variability over time. Two worlds can therefore contain the same multiset of training examples and still differ meaningfully because they traverse the space in a different order, or because the observable of interest is the path itself rather than only the final model.
 
 This is exactly the kind of case where the simplified scaffold starts to strain. The relevant counterfactual is not only which data are present, but also in what order, with what schedule, and with what logged training history. That makes these methods important not because they fit perfectly, but because they clarify one of the main boundaries of the set-based picture.
 
@@ -345,7 +400,7 @@ $$
 That looks narrow at first, but it is actually a reusable experimental substrate for several important families of questions.
 
 - singleton strike simulations recover leave-one-out style comparisons
-- many coalition strike simulations are exactly the raw material that Shapley and semivalue methods aggregate over
+- many coalition strike simulations can supply the subset-utility evaluations that Shapley and semivalue methods aggregate over
 - fixed-budget strike simulations can benchmark pruning or coreset heuristics against full-data baselines
 - strike simulations at varying sizes and compositions support data-scaling, datamodel, or leverage-style analyses
 - unlearning can be benchmarked against the strike world in which the requested data had never been present
@@ -357,6 +412,43 @@ That looks narrow at first, but it is actually a reusable experimental substrate
 
 So a strike simulator is not just one application sitting beside the other formalisms. For leave-one-out, semivalue methods, coreset benchmarks, data-scaling analyses, leverage analyses, and unlearning baselines, it can generate the very counterfactual worlds those quantities are defined over. For privacy, distillation, active selection, or poisoning, it is better understood as a diagnostic baseline or comparison device than as the whole formal object.
 
-With enough strike-style simulations over the right subsets, you can estimate some of these concepts directly and stress-test others indirectly. Shapley values are the clearest example because they are built from marginal contributions across many subset worlds. Unlearning baselines are another because the relevant reference world is often "train as if the removed data had never been present." Data scaling curves and datamodel-style surrogates are another because they are summaries over many retained worlds. But for differential privacy, active learning, distillation, poisoning, or order-sensitive training methods, the bottleneck is not only access to neighboring data worlds. It is also the policy, mechanism, schedule, or threat model layered on top of them.
+With enough strike-style simulations over the right subsets, you can estimate some of these concepts directly and stress-test others indirectly. Shapley values are the clearest example because they are built from marginal contributions across many subset worlds, though in practice this requires matched subset evaluations rather than only single removals from the full dataset. Unlearning baselines are another because the relevant reference world is often "train as if the removed data had never been present." Data scaling curves and datamodel-style surrogates are another because they are summaries over many retained worlds. But for differential privacy, active learning, distillation, poisoning, or order-sensitive training methods, the bottleneck is not only access to neighboring data worlds. It is also the policy, mechanism, schedule, or threat model layered on top of them.
 
 That is the broader motivation for the project. A data strike simulation is a social and strategic object in its own right, but it is also a bridge to attribution, valuation, privacy, unlearning, and robustness. It tells us not just whether withholding data matters, but which other formalisms that withholding can help us measure.
+
+## A first simple unifying formalism
+
+If there is a useful unifying formalism here, it should probably stay small. The common object is not one universal loss function. It is a structured comparison over worlds:
+
+$$
+\mathcal{F} = (W_0, \mathcal{T}, A, O, C)
+$$
+
+where:
+
+- $W_0$ is the reference world, usually including a training dataset $D_0$, an evaluation target $E_0$, and any relevant governance or trust state $G_0$
+- $\mathcal{T}$ is the allowed family of moves, usually data moves but sometimes evaluation, role, or governance moves
+- $A$ is the learning, release, or query protocol held fixed across the comparison except where the move explicitly changes the protocol state
+- $O$ is the observer or release map, which can be the identity map when no special observer is needed
+- $C$ is the comparison rule, aggregation rule, or distinguishability criterion
+
+For a single move $t \in \mathcal{T}$,
+
+$$
+\begin{aligned}
+W_t &= t(W_0) \\
+Y_0 &= O(A(W_0), W_0) \\
+Y_t &= O(A(W_t), W_t) \\
+\Gamma(t) &= C(Y_t, Y_0)
+\end{aligned}
+$$
+
+This is the one-move version: change the world along an allowed axis, run the relevant protocol, observe the relevant output, and compare it to the reference world.
+
+Many of the literatures above add one more layer. Valuation methods aggregate $\Gamma(t)$ over many subset moves. Active learning and poisoning choose the move that optimizes $\Gamma(t)$ under a budget or feasibility constraint. Differential privacy replaces a scalar gap with a worst-case indistinguishability requirement over neighboring worlds and observable events. Unlearning asks a procedure to land close to the retraining reference world. Order-sensitive methods make the schedule part of $W$ or $A$, because the protocol must include the trajectory.
+
+So the proposed common sentence is:
+
+> A data-counterfactual analysis fixes a protocol and an observer, varies the world along an allowed data-related axis, and compares the resulting observable outcomes.
+
+That is simple enough to be useful and weak enough not to erase the differences. The real work in any concrete case is specifying which data moves are allowed, what protocol is held fixed, what the observer can see, and how the comparison is aggregated or optimized.

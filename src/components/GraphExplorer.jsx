@@ -204,6 +204,8 @@ function App() {
   const [k, setK] = useState(2);
   const [hydrated, setHydrated] = useState(false);
   const [hoveredNodeIndex, setHoveredNodeIndex] = useState(null);
+  const [missionKind, setMissionKind] = useState(null);
+  const [missionInfo, setMissionInfo] = useState(null);
 
   const scrollRef = useRef(null);
   const maxCountForMetric = metric === "covertype" ? Math.min(countMax, covertypeDomainMaxCount) : countMax;
@@ -481,6 +483,86 @@ function App() {
     k,
   ]);
 
+  const graphMissions = useMemo(
+    () => [
+      {
+        id: "read-node",
+        title: "Read one node",
+        summary: "Lock eval to the full set, then click a nearby training world.",
+        objective: "See how one node encodes train set, eval slice, and score.",
+        run: () => {
+          setLens("ablation");
+          if (fullSetIndex >= 0) {
+            setSelectedIndex(fullSetIndex);
+            setEvalIndex(fullSetIndex);
+          }
+          setFocusSet([base[Math.min(1, base.length - 1)] || base[0] || "A"]);
+        },
+      },
+      {
+        id: "remove-b",
+        title: "Remove B",
+        summary: "Follow the ablation edge from the full world to the world without B.",
+        objective: "Treat a highlighted edge as the legal move behind leave-one-out.",
+        run: () => {
+          setLens("ablation");
+          if (fullSetIndex >= 0) {
+            setSelectedIndex(fullSetIndex);
+            setEvalIndex(fullSetIndex);
+          }
+          setFocusSet([base.includes("B") ? "B" : base[0] || "A"]);
+        },
+      },
+      {
+        id: "strike-cd",
+        title: "Trace C and D",
+        summary: "Walk a coordinated strike path through several deletion edges.",
+        objective: "See how a group removal becomes a path instead of a single jump.",
+        run: () => {
+          setLens("strike");
+          if (fullSetIndex >= 0) {
+            setSelectedIndex(fullSetIndex);
+            setEvalIndex(fullSetIndex);
+          }
+          const strikeTokens = ["C", "D"].filter((token) => base.includes(token));
+          setFocusSet(strikeTokens.length ? strikeTokens : [base[0] || "A"]);
+        },
+      },
+      {
+        id: "shapley-sweep",
+        title: "Sweep Shapley",
+        summary: "Highlight every edge that adds the focus contributor.",
+        objective: "Read attribution as many small edge moves averaged together.",
+        run: () => {
+          setLens("shapley");
+          if (fullSetIndex >= 0) setEvalIndex(fullSetIndex);
+          setFocusSet([base.includes("B") ? "B" : base[0] || "A"]);
+        },
+      },
+      {
+        id: "scan-layer",
+        title: "Scan k=2 layer",
+        summary: "Collapse the lattice to one training-set size.",
+        objective: "Compare a layer average with the selected node's score.",
+        run: () => {
+          setLens("scaling");
+          if (fullSetIndex >= 0) setEvalIndex(fullSetIndex);
+          setK(Math.min(2, base.length));
+        },
+      },
+    ],
+    [base, fullSetIndex],
+  );
+
+  const activeMission = graphMissions.find((mission) => mission.id === missionKind) || null;
+  const runGraphMission = (id) => {
+    const mission = graphMissions.find((entry) => entry.id === id);
+    if (!mission) return;
+    mission.run();
+    setMissionKind(id);
+    setMissionInfo({ objective: mission.objective, move: mission.summary });
+  };
+
   const previewNodeIndex = clampIndex(hoveredNodeIndex ?? safeSelectedIndex, subsets.length);
   const previewSet = subsets[previewNodeIndex] || [];
   const previewValue = matrix[previewNodeIndex]?.[safeEvalIndex] ?? 0;
@@ -493,13 +575,27 @@ function App() {
   return html`
     <div class="graph-workspace" data-ready=${hydrated ? "true" : "false"}>
       <section class="graph-toolbar" data-testid="graph-explorer-toolbar">
-        <div class="graph-toolbar-copyblock">
-          <span class="graph-kicker">Graph explorer</span>
-          <h2 class="graph-toolbar-title">Walk the subset lattice directly.</h2>
-          <p class="graph-toolbar-copy">
-            Instead of scanning the full train-by-eval matrix, fix an evaluation slice and move through the graph of possible training sets.
-            Nodes are training worlds; one-step edges become ablations, augmentations, or steps inside a larger strike path.
-          </p>
+        <div class="graph-hud-bar">
+          <div class="graph-layer-strip" aria-label="Explorer layers">
+            <span class="graph-layer is-active">Play</span>
+            <a class="graph-layer" href="#graph-missions">Learn</a>
+            <a class="graph-layer" href="#graph-inspect">Inspect</a>
+            <a class="graph-layer graph-layer-link" href="/grid">Grid</a>
+          </div>
+          <div class="graph-toolbar-copyblock">
+            <span class="graph-kicker">Graph HUD</span>
+            <h2 class="graph-toolbar-title">Move through the subset lattice.</h2>
+            <p class="graph-toolbar-copy">
+              Fix eval, pick a lens, then click a training node. The side panel keeps the current answer and legal moves in view.
+            </p>
+            <div class="graph-state-strip" aria-label="Current graph state">
+              <span class="graph-pill">${lensMeta[lens].title}</span>
+              <span class="graph-pill">Train ${label(selectedSet)}</span>
+              <span class="graph-pill">Eval ${label(evalSet)}</span>
+              <span class="graph-pill">${metricMeta[metric].short}</span>
+              ${lens !== "scaling" ? html`<span class="graph-pill">Focus ${label(focusGroup)}</span>` : html`<span class="graph-pill">k=${k}</span>`}
+            </div>
+          </div>
         </div>
 
         <div class="graph-toolbar-grid">
@@ -544,6 +640,34 @@ function App() {
             </div>
             <div class="graph-control-note">${lensMeta[lens].summary}</div>
           </section>
+
+          <details class="graph-control-card graph-mission-drawer" id="graph-missions" data-testid="graph-missions">
+            <summary class="graph-drawer-summary">
+              <span>
+                <span class="graph-control-label">Missions</span>
+                <span class="graph-drawer-title">${activeMission ? activeMission.title : `${graphMissions.length} guided moves`}</span>
+              </span>
+              <span class="graph-summary-caret"></span>
+            </summary>
+            <div class="graph-mission-list">
+              ${graphMissions.map((mission) => html`
+                <button
+                  key=${mission.id}
+                  class=${`graph-mission-button ${missionKind === mission.id ? "is-active" : ""}`}
+                  type="button"
+                  onClick=${() => runGraphMission(mission.id)}
+                >
+                  <span class="graph-mission-title">${mission.title}</span>
+                  <span class="graph-mission-copy">${mission.summary}</span>
+                </button>
+              `)}
+            </div>
+            <div class="graph-control-note">
+              ${missionInfo
+                ? html`<b>Objective</b>: ${missionInfo.objective} <b>Move</b>: ${missionInfo.move}`
+                : "Missions set up the lattice for a useful first move without taking away direct control."}
+            </div>
+          </details>
 
           <section class="graph-control-card">
             <label class="graph-select-label">
@@ -708,7 +832,7 @@ function App() {
                       y=${-node.height / 2 - 5}
                       width=${node.width + 10}
                       height=${node.height + 10}
-                      rx="20"
+                      rx="8"
                     />
                     <rect
                       class="graph-node-plate"
@@ -716,7 +840,7 @@ function App() {
                       y=${-node.height / 2}
                       width=${node.width}
                       height=${node.height}
-                      rx="16"
+                      rx="6"
                       fill=${palette(normalized)}
                     />
                     <rect
@@ -725,7 +849,7 @@ function App() {
                       y=${-node.height / 2 + 2}
                       width=${Math.max(0, node.width - 4)}
                       height=${Math.max(0, node.height - 4)}
-                      rx="13"
+                      rx="5"
                     />
                     ${evalMirrored
                       ? html`<circle class="graph-node-eval" cx=${node.width / 2 - 10} cy=${-node.height / 2 + 10} r="4"></circle>`
@@ -789,59 +913,68 @@ function App() {
                   `
                 : null}
             </div>
-            <div class="graph-formula">${questionBlock.formula}</div>
-            ${lens === "strike"
-              ? html`
-                  <div class="graph-path-strip" data-testid="graph-path-strip">
-                    ${strikePath.map((index, step) => html`
-                      <button
-                        key=${`step-${index}`}
-                        class="graph-btn mini graph-path-node"
-                        type="button"
-                        onClick=${() => setSelectedIndex(index)}
-                      >
-                        ${label(subsets[index] || [])}${step < strikePath.length - 1 ? " ->" : ""}
-                      </button>
-                    `)}
-                  </div>
-                `
-              : null}
-            ${lens === "shapley" && shapleyStats.rows.length
-              ? html`
-                  <table class="graph-table">
-                    <thead>
-                      <tr><th>|S|</th><th>Avg delta</th><th>Edges</th></tr>
-                    </thead>
-                    <tbody>
-                      ${shapleyStats.rows.map((row) => html`
-                        <tr key=${`shape-${row.size}`}>
-                          <td>${row.size}</td>
-                          <td>${row.avg.toFixed(4)}</td>
-                          <td>${row.n}</td>
-                        </tr>
+            <details class="graph-inspect-drawer" id="graph-inspect">
+              <summary class="graph-drawer-summary">
+                <span>
+                  <span class="graph-control-label">Inspect</span>
+                  <span class="graph-drawer-title">Formula, path, and detail table</span>
+                </span>
+                <span class="graph-summary-caret"></span>
+              </summary>
+              <div class="graph-formula">${questionBlock.formula}</div>
+              ${lens === "strike"
+                ? html`
+                    <div class="graph-path-strip" data-testid="graph-path-strip">
+                      ${strikePath.map((index, step) => html`
+                        <button
+                          key=${`step-${index}`}
+                          class="graph-btn mini graph-path-node"
+                          type="button"
+                          onClick=${() => setSelectedIndex(index)}
+                        >
+                          ${label(subsets[index] || [])}${step < strikePath.length - 1 ? " ->" : ""}
+                        </button>
                       `)}
-                    </tbody>
-                  </table>
-                `
-              : null}
-            ${lens === "scaling"
-              ? html`
-                  <table class="graph-table">
-                    <thead>
-                      <tr><th>k</th><th>Avg score</th><th>Nodes</th></tr>
-                    </thead>
-                    <tbody>
-                      ${scalingRows.map((row) => html`
-                        <tr key=${`layer-${row.k}`} class=${row.k === k ? "is-active" : ""}>
-                          <td>${row.k}</td>
-                          <td>${row.avg.toFixed(4)}</td>
-                          <td>${row.n}</td>
-                        </tr>
-                      `)}
-                    </tbody>
-                  </table>
-                `
-              : null}
+                    </div>
+                  `
+                : null}
+              ${lens === "shapley" && shapleyStats.rows.length
+                ? html`
+                    <table class="graph-table">
+                      <thead>
+                        <tr><th>|S|</th><th>Avg delta</th><th>Edges</th></tr>
+                      </thead>
+                      <tbody>
+                        ${shapleyStats.rows.map((row) => html`
+                          <tr key=${`shape-${row.size}`}>
+                            <td>${row.size}</td>
+                            <td>${row.avg.toFixed(4)}</td>
+                            <td>${row.n}</td>
+                          </tr>
+                        `)}
+                      </tbody>
+                    </table>
+                  `
+                : null}
+              ${lens === "scaling"
+                ? html`
+                    <table class="graph-table">
+                      <thead>
+                        <tr><th>k</th><th>Avg score</th><th>Nodes</th></tr>
+                      </thead>
+                      <tbody>
+                        ${scalingRows.map((row) => html`
+                          <tr key=${`layer-${row.k}`} class=${row.k === k ? "is-active" : ""}>
+                            <td>${row.k}</td>
+                            <td>${row.avg.toFixed(4)}</td>
+                            <td>${row.n}</td>
+                          </tr>
+                        `)}
+                      </tbody>
+                    </table>
+                  `
+                : null}
+            </details>
           </section>
 
           <section class="graph-panel">

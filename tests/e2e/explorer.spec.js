@@ -78,6 +78,11 @@ test("grid explorer defaults to explore mode and exposes lettered axis labels", 
   await expect(page.getByTestId("grid-marker-controls")).toContainText("Most meaningful cells keep eval");
   await expect(page.getByTestId("question-controls")).toContainText("Focus contributor");
   await expect(gridCard).toContainText("Rows train");
+  await page.getByTestId("concept-select").selectOption("eval");
+  await expect(page.getByRole("button", { name: "Mark comparison cell" })).toBeEnabled();
+  await expect(valueDock.locator(".panel-title")).toHaveText("Add one point to the evaluation column");
+  await expect(page.getByTestId("question-controls")).toContainText("Eval object");
+  await expect(page.getByTestId("grid-marker-controls")).toContainText("Most meaningful cells keep train");
   const displayControls = page.getByTestId("display-controls");
   await displayControls.locator("summary").click();
   await expect(page.getByLabel("Show raw values")).toBeChecked();

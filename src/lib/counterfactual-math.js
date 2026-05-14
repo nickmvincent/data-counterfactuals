@@ -471,6 +471,31 @@ export function computeRowRemovalStats({
   };
 }
 
+export function computeEvalAdditionStats({
+  matrix,
+  subsets,
+  rowIndex,
+  colIndex,
+  tokensToAdd = [],
+}) {
+  const selectedEvalSet = subsets[colIndex] || [];
+  const addedTokens = tokensToAdd.filter((token) => !selectedEvalSet.includes(token));
+  const compareSet = [...selectedEvalSet, ...addedTokens].sort();
+  const compareColIndex = findSubsetIndex(subsets, compareSet);
+  const baseValue = matrix[rowIndex]?.[colIndex] ?? 0;
+  const compareValue = compareColIndex >= 0 ? (matrix[rowIndex]?.[compareColIndex] ?? baseValue) : baseValue;
+
+  return {
+    selectedEvalSet,
+    compareSet,
+    compareColIndex,
+    baseValue,
+    compareValue,
+    delta: compareValue - baseValue,
+    addedTokens,
+  };
+}
+
 export function computeColumnSensitivity({ matrix, rowIndex, compareRowIndex }) {
   const row = matrix[rowIndex] || [];
   if (compareRowIndex < 0) return 0;
@@ -557,6 +582,27 @@ export function createTutorialPresets(actions) {
         setPoisonActive?.(false);
         setGridView?.("real");
         setPendingSelection({ row: ["A", "B", "C"], col: ["A", "B", "C"] });
+      },
+    },
+    {
+      id: "addDToEval",
+      mode: "eval",
+      title: "Add D to eval",
+      summary: "Column-side measurement value.",
+      goal: "We want to see how the same trained model reads differently when the evaluation slice changes.",
+      how: "We keep train ABC fixed, start with eval AB, then add D to the evaluation column.",
+      concept: "Evaluation counterfactual / column move",
+      setup: () => {
+        setCount(4);
+        setMetric("jaccard");
+        setFocusSet(["D"]);
+        setK(3);
+        setShowNums(true);
+        setShowSingletonEvalCols?.(false);
+        setMode("eval");
+        setPoisonActive?.(false);
+        setGridView?.("real");
+        setPendingSelection({ row: ["A", "B", "C"], col: ["A", "B"] });
       },
     },
     {

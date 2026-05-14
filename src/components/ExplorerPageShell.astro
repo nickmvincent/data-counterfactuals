@@ -11,6 +11,7 @@ interface Props {
   lede?: string;
   helpSections?: HelpSection[];
   helpAriaLabel?: string;
+  helpPlacement?: "before" | "after";
   helpVariant?: "stack" | "faq";
   helpSummary?: string;
   exploreId?: string;
@@ -27,6 +28,7 @@ const {
   lede,
   helpSections = [],
   helpAriaLabel = "Explorer page guide",
+  helpPlacement = "before",
   helpVariant = "stack",
   helpSummary = "Quick FAQ",
   exploreId = "explore",
@@ -61,7 +63,7 @@ const hasMobileNotice = Astro.slots.has("mobileNotice");
     </div>
   ) : null}
 
-  {helpSections.length ? (
+  {helpPlacement === "before" && helpSections.length ? (
     <section class={helpStackClasses} aria-label={helpAriaLabel}>
       {helpVariant === "faq" ? (
         <details class="explorer-page-help-drawer explorer-page-help-drawer-faq">
@@ -96,16 +98,46 @@ const hasMobileNotice = Astro.slots.has("mobileNotice");
       <slot />
     </div>
   </section>
+
+  {helpPlacement === "after" && helpSections.length ? (
+    <section class={helpStackClasses} aria-label={helpAriaLabel}>
+      {helpVariant === "faq" ? (
+        <details class="explorer-page-help-drawer explorer-page-help-drawer-faq">
+          <summary>
+            <div class="explorer-page-help-summary-copy">
+              <span class="explorer-page-help-summary-kicker">{helpSummary}</span>
+            </div>
+            <span class="explorer-page-help-summary-meta">{helpSections.length} answers</span>
+          </summary>
+          <div class="explorer-page-help-faq-list">
+            {helpSections.map((section) => (
+              <article class="explorer-page-help-faq-item">
+                <h2 class="explorer-page-help-faq-title">{section.title}</h2>
+                <div class="explorer-page-help-body" set:html={section.html}></div>
+              </article>
+            ))}
+          </div>
+        </details>
+      ) : (
+        helpSections.map((section) => (
+          <details class="explorer-page-help-drawer">
+            <summary>{section.title}</summary>
+            <div class="explorer-page-help-body" set:html={section.html}></div>
+          </details>
+        ))
+      )}
+    </section>
+  ) : null}
 </main>
 
 <style is:global>
   .explorer-page-shell {
-    --explorer-radius-xxl: 24px;
-    --explorer-radius-xl: 20px;
-    --explorer-radius-lg: 16px;
-    --explorer-radius-md: 12px;
-    --explorer-radius-sm: 10px;
-    --explorer-radius-xs: 6px;
+    --explorer-radius-xxl: 12px;
+    --explorer-radius-xl: 10px;
+    --explorer-radius-lg: 8px;
+    --explorer-radius-md: 6px;
+    --explorer-radius-sm: 5px;
+    --explorer-radius-xs: 4px;
     --explorer-page-frame-bg:
       linear-gradient(180deg, rgba(34, 29, 25, 0.08), rgba(34, 29, 25, 0.02)),
       rgba(255, 250, 243, 0.56);

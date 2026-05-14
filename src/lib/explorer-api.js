@@ -3,6 +3,7 @@ import {
   applyGridEdits,
   buildSubsetGrid,
   computeColumnSensitivity,
+  computeEvalAdditionStats,
   computeRowRemovalStats,
   computeScalingStats,
   computeSemivalueStats,
@@ -17,6 +18,7 @@ import {
 const GRID_CONCEPT_MODES = [
   "explore",
   "loo",
+  "eval",
   "group",
   "shapley",
   "banzhaf",
@@ -30,7 +32,7 @@ const GRAPH_LENSES = ["ablation", "strike", "shapley", "scaling"];
 const GRID_METRICS = ["jaccard", "inter", "entropy", "real", "covertype"];
 const GRAPH_METRICS = ["jaccard", "inter", "entropy", "covertype"];
 const RESPONSE_TYPES = ["matrix", "cell", "answer"];
-const SINGLE_FOCUS_GRID_MODES = new Set(["explore", "loo", "shapley", "banzhaf", "beta", "dp", "unlearning"]);
+const SINGLE_FOCUS_GRID_MODES = new Set(["explore", "loo", "eval", "shapley", "banzhaf", "beta", "dp", "unlearning"]);
 const MULTI_FOCUS_GRID_MODES = new Set(["group", "poison"]);
 const RESERVED_REQUEST_KEYS = new Set(["explorer", "response", "state"]);
 
@@ -374,6 +376,13 @@ function buildGridSnapshot(rawState = {}) {
         delta: 0,
         removedTokens: [],
       };
+  const evalStats = computeEvalAdditionStats({
+    matrix: baseMatrix,
+    subsets,
+    rowIndex,
+    colIndex,
+    tokensToAdd: focusPrimary ? [focusPrimary] : [],
+  });
   const semivalueMode = conceptMode === "banzhaf" ? "banzhaf" : conceptMode === "beta" ? "beta" : "shapley";
   const semivalueStats = computeSemivalueStats({
     matrix: baseMatrix,
@@ -417,6 +426,13 @@ function buildGridSnapshot(rawState = {}) {
       value: looStats.delta,
       formula: `f(${labelSubset(trainSet)}, ${labelSubset(evalSet)}) - f(${labelSubset(looStats.compareSet)}, ${labelSubset(evalSet)})`,
       detail: `Removes ${focusPrimary} if it is present in the selected training world.`,
+    };
+  } else if (conceptMode === "eval") {
+    answer = {
+      label: "Eval delta",
+      value: evalStats.delta,
+      formula: `f(${labelSubset(trainSet)}, ${labelSubset(evalStats.compareSet)}) - f(${labelSubset(trainSet)}, ${labelSubset(evalSet)})`,
+      detail: `Adds ${focusPrimary} to the selected evaluation slice if it is not already present.`,
     };
   } else if (conceptMode === "group") {
     answer = {

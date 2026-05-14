@@ -6,6 +6,7 @@ import {
   applyGridEdits,
   buildSubsetGrid,
   computeColumnSensitivity,
+  computeEvalAdditionStats,
   computeRowRemovalStats,
   computeScalingStats,
   computeSemivalueStats,
@@ -105,6 +106,7 @@ const metricMeta = {
 const questionMeta = {
   explore: "Explore",
   loo: "Leave-one-out",
+  eval: "Eval value",
   group: "Group leave-one-out",
   shapley: "Shapley value",
   banzhaf: "Banzhaf value",
@@ -115,7 +117,7 @@ const questionMeta = {
   poison: "Poison (toy)",
 };
 
-const conceptOrder = ["explore", "loo", "group", "shapley", "banzhaf", "beta", "scaling", "dp", "unlearning", "poison"];
+const conceptOrder = ["explore", "loo", "eval", "group", "shapley", "banzhaf", "beta", "scaling", "dp", "unlearning", "poison"];
 const semivalueModes = new Set(["shapley", "banzhaf", "beta"]);
 const multiFocusModes = new Set(["group", "poison"]);
 
@@ -128,6 +130,11 @@ const conceptMeta = {
     label: "LOO",
     description:
       "Ask the most local counterfactual first: keep evaluation fixed and remove one contributor from the selected training world.",
+  },
+  eval: {
+    label: "Eval value",
+    description:
+      "Ask the column-side question: keep training fixed and add one object to the evaluation slice to see how the measurement changes.",
   },
   group: {
     label: "Group LOO",
@@ -497,12 +504,26 @@ function App() {
           },
     [baseMatrix, subs, safeRowIdx, safeColIdx, hasGroup, groupSet, cleanSelectedValue],
   );
+  const evalStats = useMemo(
+    () =>
+      computeEvalAdditionStats({
+        matrix: baseMatrix,
+        subsets: subs,
+        rowIndex: safeRowIdx,
+        colIndex: safeColIdx,
+        tokensToAdd: focusPrimary ? [focusPrimary] : [],
+      }),
+    [baseMatrix, subs, safeRowIdx, safeColIdx, focusPrimary],
+  );
   const strikeMinus = groupStats.compareSet;
   const strikeMinusIdx = groupStats.compareRowIndex;
   const looMinus = looStats.compareSet;
   const looMinusIdx = looStats.compareRowIndex;
+  const evalPlus = evalStats.compareSet;
+  const evalPlusIdx = evalStats.compareColIndex;
   const compareValueForLoo = looStats.compareValue;
   const compareValueForGroup = groupStats.compareValue;
+  const compareValueForEval = evalStats.compareValue;
 
   useEffect(() => {
     setRowIdx((previous) => {
@@ -675,6 +696,8 @@ function App() {
       ? groupSet.length
         ? `The current question treats ${label(groupSet)} as one coalition. Changing these tokens changes who gets removed together; it does not move the selected train row ${label(Srow)}.`
         : `Pick two or more tokens to ask what happens when that coalition leaves train ${label(Srow)} together. This control changes the question, not the selected row.`
+      : conceptMode === "eval"
+        ? `The current question asks what happens when ${focusPrimary} is added to eval ${label(evalSet)} while train ${label(Srow)} stays fixed. Changing the chip changes the candidate evaluation object, not the selected row.`
       : conceptMode === "poison"
         ? `The current attack targets rows containing ${groupSet.length ? label(groupSet) : focusPrimary}. Changing these chips changes which rows get corrupted; it does not move the selected row ${label(Srow)}.`
         : `The current question is about ${focusPrimary}. Clicking another token changes who is being removed, added, or valued, while the selected train row stays ${label(Srow)} until you change it on the grid.`;
@@ -766,6 +789,45 @@ function App() {
         label: `Without ${focusPrimary}`,
         value: compareValueForLoo.toFixed(3),
         note: looMinusIdx >= 0 ? `f(${label(looMinus)}, ${label(evalSet)})` : "The comparison row matches the selected row here.",
+        tone: "quiet",
+      },
+    ];
+  } else if (conceptMode === "eval") {
+    questionSummary = {
+      title: "Add one point to the evaluation column",
+      question: `If ${focusPrimary} were added to eval ${label(evalSet)} while train ${label(Srow)} stays fixed, how much would the measurement change?`,
+      answerLabel: "Eval delta",
+      answerValue: evalStats.delta.toFixed(4),
+      trace: evalSet.includes(focusPrimary)
+        ? `Eval ${label(evalSet)} already contains ${focusPrimary}, so the column move leaves this slice unchanged.`
+        : `We compare eval ${label(evalSet)} against ${label(evalPlus)} while train ${label(Srow)} stays fixed.`,
+    };
+    formulaLine = `Eval delta = f(${label(Srow)}, ${label(evalPlus)}) - f(${label(Srow)}, ${label(evalSet)}) = ${compareValueForEval.toFixed(4)} - ${cleanSelectedValue.toFixed(4)} = ${evalStats.delta.toFixed(4)}`;
+    lensGuide = {
+      title: "Column-side comparison",
+      body:
+        "Evaluation value mode keeps the training row fixed and moves across evaluation columns. It asks whether a point changes the measurement, confidence, or decision rather than the model itself.",
+    };
+    stageReadouts = [
+      {
+        key: "selected",
+        label: "Target cell",
+        value: cleanSelectedValue.toFixed(3),
+        note: `f(${label(Srow)}, ${label(evalSet)})`,
+        tone: "primary",
+      },
+      {
+        key: "answer",
+        label: "Eval delta",
+        value: evalStats.delta.toFixed(4),
+        note: questionSummary.trace,
+        tone: "accent",
+      },
+      {
+        key: "compare",
+        label: `Eval with ${focusPrimary}`,
+        value: compareValueForEval.toFixed(3),
+        note: evalPlusIdx >= 0 ? `f(${label(Srow)}, ${label(evalPlus)})` : "The comparison column matches the selected column here.",
         tone: "quiet",
       },
     ];
@@ -1076,6 +1138,12 @@ function App() {
       }
       return `On this row and eval slice, removing ${focusPrimary} changes the score by ${formatSigned(looDelta)}.`;
     }
+    if (conceptMode === "eval") {
+      if (evalSet.includes(focusPrimary)) {
+        return `${focusPrimary} is already in eval ${label(evalSet)}, so adding it again does not move the selected column.`;
+      }
+      return `With train ${label(Srow)} fixed, adding ${focusPrimary} to the evaluation slice changes the measured score by ${formatSigned(evalStats.delta)}.`;
+    }
     if (conceptMode === "group") {
       if (!groupSet.length) {
         return "Pick a coalition first so the explorer can compare the selected row to the row with that group removed.";
@@ -1101,7 +1169,7 @@ function App() {
       ? `With the attack active, the selected score moves by ${formatSigned(attackDelta)} relative to the clean reference.`
       : "Turn the attack on to compare the selected cell against its corrupted counterpart.";
   })();
-  const compareChooserDisabled = !["explore", "loo", "group", "dp", "unlearning"].includes(conceptMode);
+  const compareChooserDisabled = !["explore", "loo", "eval", "group", "dp", "unlearning"].includes(conceptMode);
   const visibleComparePoint = compareChooserDisabled ? null : comparePoint;
   const comparePointLabel = visibleComparePoint
     ? `Train ${label(subs[visibleComparePoint.rowIndex] || [])} / Eval ${label(subs[visibleComparePoint.colIndex] || [])}`
@@ -1115,6 +1183,10 @@ function App() {
       ? looMinusIdx >= 0 && looMinusIdx !== safeRowIdx
         ? { rowIndex: looMinusIdx, colIndex: safeColIdx }
         : null
+      : conceptMode === "eval"
+        ? evalPlusIdx >= 0 && evalPlusIdx !== safeColIdx
+          ? { rowIndex: safeRowIdx, colIndex: evalPlusIdx }
+          : null
       : conceptMode === "group"
         ? strikeMinusIdx >= 0 && strikeMinusIdx !== safeRowIdx
           ? { rowIndex: strikeMinusIdx, colIndex: safeColIdx }
@@ -1133,6 +1205,11 @@ function App() {
     visibleComparePoint &&
       canonicalComparePoint &&
       visibleComparePoint.colIndex === canonicalComparePoint.colIndex,
+  );
+  const comparePointKeepsTrainFixed = Boolean(
+    visibleComparePoint &&
+      canonicalComparePoint &&
+      visibleComparePoint.rowIndex === canonicalComparePoint.rowIndex,
   );
   const jumpTrainOptions = useMemo(
     () => subs.map((subset, index) => ({ index, label: label(subset) })),
@@ -1177,6 +1254,26 @@ function App() {
             : comparePointKeepsEvalFixed
               ? "Your marked cell keeps the eval slice fixed, so it is still a sensible row comparison, but it is not the exact leave-one-out neighbor."
               : "Your marked cell changes the eval slice, so it will not match the built-in leave-one-out statistic."
+          : "No comparison cell marked yet.",
+        canUseCanonical: Boolean(canonicalComparePoint),
+      };
+    }
+
+    if (conceptMode === "eval") {
+      return {
+        summary: "Meaningful here: yes. Eval value has a built-in comparison column, but a manual comparison marker can still help you inspect other measurement worlds.",
+        rule: canonicalCompareLabel
+          ? `Most meaningful cells keep train ${label(Srow)} fixed. The canonical eval-addition cell is ${canonicalCompareLabel}.`
+          : `${focusPrimary} is already in eval ${label(evalSet)}, so there is no distinct eval-addition comparison cell right now.`,
+        prompt: canonicalCompareLabel
+          ? `Click a cell to mark a manual comparison, or jump straight to ${canonicalCompareLabel}.`
+          : "Click a cell to mark a manual comparison.",
+        selectedNote: visibleComparePoint
+          ? comparePointMatchesCanonical
+            ? "Your marked cell matches the built-in eval-addition comparison exactly."
+            : comparePointKeepsTrainFixed
+              ? "Your marked cell keeps the train row fixed, so it is still a sensible column comparison, but it is not the exact eval-addition neighbor."
+              : "Your marked cell changes the train row, so it will not match the built-in eval value statistic."
           : "No comparison cell marked yet.",
         canUseCanonical: Boolean(canonicalComparePoint),
       };
@@ -1279,6 +1376,7 @@ function App() {
     comparePointLabel,
     comparePointMatchesCanonical,
     comparePointKeepsEvalFixed,
+    comparePointKeepsTrainFixed,
     canonicalComparePoint,
     canonicalCompareLabel,
     evalSet,
@@ -1304,6 +1402,9 @@ function App() {
     if (conceptMode === "explore") {
       return "Click any cell to read it directly as one train/eval world pair.";
     }
+    if (conceptMode === "eval") {
+      return `Eval value mode compares the selected column to eval ${label(evalPlus)} while train ${label(Srow)} stays fixed.`;
+    }
     if (conceptMode === "poison") {
       return `Poison mode compares the clean and attacked versions of the current cell. Rows containing ${groupSet.length ? label(groupSet) : focusPrimary} are marked in operator view.`;
     }
@@ -1317,7 +1418,7 @@ function App() {
       return `Marked comparison cell: ${comparePointLabel}`;
     }
     return "The teal squiggle marks the current target cell. In the supported local modes, you can also mark an ochre comparison cell.";
-  }, [selectionArmed, conceptMode, k, groupSet, focusPrimary, visibleComparePoint, comparePointLabel, compareMarkerGuide.prompt]);
+  }, [selectionArmed, conceptMode, k, groupSet, focusPrimary, visibleComparePoint, comparePointLabel, compareMarkerGuide.prompt, evalPlus, Srow]);
 
   const settingsView = useMemo(
     () => ({
@@ -1428,10 +1529,6 @@ function App() {
   const currentWorldLabel = effectiveGridView === "operator" ? "Operator view" : "Reference grid";
   const modeLabel = conceptMeta[conceptMode].label;
   const modeCopy = conceptMeta[conceptMode].description;
-  const toolbarGuideCopy =
-    conceptMode === "explore"
-      ? "Pick the question lens and the cell score, then choose a train row and eval slice below."
-      : modeCopy;
   const metricLabel = metricMeta[metric].name;
   const metricModeLabel =
     metric === "real"
@@ -1493,6 +1590,8 @@ function App() {
           ? "Adjacent contributor"
           : semivalueModes.has(conceptMode)
             ? "Value contributor"
+            : conceptMode === "eval"
+              ? "Eval object"
             : conceptMode === "group"
               ? "Focus coalition"
               : "Focus contributor";
@@ -1540,13 +1639,14 @@ function App() {
     : null;
 
   const analysisDetailBlock = html`
-    <section class=${`analysis-card ${computedFlash ? "computed-flash" : ""}`}>
-      <div class="analysis-head">
+    <details class=${`analysis-card inspect-drawer ${computedFlash ? "computed-flash" : ""}`} id="grid-inspect" data-testid="grid-inspector">
+      <summary class="analysis-head toolbar-summary">
         <div>
-          <span class="summary-kicker">Inspector</span>
-          <h3 class="card-title">Statistic details</h3>
+          <span class="summary-kicker">Inspect</span>
+          <h3 class="card-title">${questionSummary.answerLabel}: ${questionSummary.answerValue}</h3>
         </div>
-      </div>
+        <span class="toolbar-summary-caret"></span>
+      </summary>
       <div class="inspector-banner">
         <div class="inspector-banner-title">${lensGuide.title}</div>
         <div class="inspector-banner-copy">${lensGuide.body}</div>
@@ -1560,6 +1660,17 @@ function App() {
               <div class="inspector-row"><span class="inspector-key">Comparison row</span><span class="inspector-value">${label(looMinus)}</span></div>
               <div class="inspector-row"><span class="inspector-key">Evaluation slice</span><span class="inspector-value">${label(evalSet)}</span></div>
               <div class="inspector-row"><span class="inspector-key">Delta</span><span class="inspector-value">${looDelta.toFixed(4)}</span></div>
+            </div>
+          `
+        : null}
+
+      ${conceptMode === "eval"
+        ? html`
+            <div class="inspector-stack">
+              <div class="inspector-row"><span class="inspector-key">Selected train row</span><span class="inspector-value">${label(Srow)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Selected eval</span><span class="inspector-value">${label(evalSet)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Eval with ${focusPrimary}</span><span class="inspector-value">${label(evalPlus)}</span></div>
+              <div class="inspector-row"><span class="inspector-key">Eval delta</span><span class="inspector-value">${evalStats.delta.toFixed(4)}</span></div>
             </div>
           `
         : null}
@@ -1646,7 +1757,7 @@ function App() {
             </div>
           `
         : null}
-    </section>
+    </details>
   `;
 
   const modeControlsSection = html`
@@ -1877,10 +1988,9 @@ function App() {
     <section class="stage-panel selection-dock" data-testid="grid-side-rail">
       <div class="panel-head">
         <div class="panel-heading-group">
-          <span class="panel-step">3</span>
           <div>
-            <span class="summary-kicker">Selection workspace</span>
-            <h3 class="panel-title">Read, compare, and adjust one anchored train/eval pair.</h3>
+            <span class="summary-kicker">Move log</span>
+            <h3 class="panel-title">Current answer and legal adjustments.</h3>
           </div>
         </div>
       </div>
@@ -1898,23 +2008,44 @@ function App() {
     <div class="workspace-shell" data-testid="explorer-workspace" data-ready=${hydrated ? "true" : "false"}>
       <section class="workspace-toolbar" data-testid="explorer-toolbar">
         <div class="toolbar-bar">
+          <div class="hud-layer-strip" aria-label="Explorer layers">
+            <span class="hud-layer is-active">Play</span>
+            <a class="hud-layer" href="#grid-missions">Learn</a>
+            <a class="hud-layer" href="#grid-inspect">Inspect</a>
+            <a class="hud-layer hud-layer-link" href="/graph">Graph</a>
+          </div>
           <div class="toolbar-guide">
             <div class="toolbar-guide-head">
-              <span class="panel-step">1</span>
               <div>
-                <span class="summary-kicker">Choose what you're exploring</span>
-                ${toolbarGuideCopy ? html`<p class="toolbar-guide-copy">${toolbarGuideCopy}</p>` : null}
+                <span class="summary-kicker">Play HUD</span>
+                <p class="toolbar-guide-copy">${currentTakeaway}</p>
               </div>
             </div>
             <div class="toolbar-selection-strip" aria-label="Current explorer settings">
               <div class="toolbar-selection-chip">
-                <span class="toolbar-selection-chip-label">Question family</span>
+                <span class="toolbar-selection-chip-label">Lens</span>
                 <span class="toolbar-selection-chip-value">${modeLabel}</span>
               </div>
               <div class="toolbar-selection-chip">
-                <span class="toolbar-selection-chip-label">Cell score</span>
+                <span class="toolbar-selection-chip-label">Score</span>
                 <span class="toolbar-selection-chip-value">${metricMeta[metric].short}</span>
               </div>
+              <div class="toolbar-selection-chip">
+                <span class="toolbar-selection-chip-label">Train</span>
+                <span class="toolbar-selection-chip-value">${label(Srow)}</span>
+              </div>
+              <div class="toolbar-selection-chip">
+                <span class="toolbar-selection-chip-label">Eval</span>
+                <span class="toolbar-selection-chip-value">${label(evalSet)}</span>
+              </div>
+              ${usesFocus
+                ? html`
+                    <div class="toolbar-selection-chip">
+                      <span class="toolbar-selection-chip-label">Focus</span>
+                      <span class="toolbar-selection-chip-value">${focusLabel}</span>
+                    </div>
+                  `
+                : null}
               ${metric === "real"
                 ? html`
                     <div class="toolbar-selection-chip">
@@ -2034,18 +2165,18 @@ function App() {
             </div>
           </details>
 
-          <details class=${`toolbar-group toolbar-expand ${presetFlash ? "preset-flash" : ""}`} data-testid="scene-controls">
+          <details class=${`toolbar-group toolbar-expand mission-drawer ${presetFlash ? "preset-flash" : ""}`} id="grid-missions" data-testid="scene-controls">
             <summary class="toolbar-summary">
               <div class="toolbar-summary-copy">
-                <span class="toolbar-summary-label">Walk me through an example for this Question family</span>
+                <span class="toolbar-summary-label">Missions</span>
                 <span class="toolbar-summary-title">
                   ${activeTutorial?.mode === conceptMode
                     ? activeTutorial.title
-                    : `${visibleTutorials.length} scenes for ${questionMeta[conceptMode]}`}
+                    : `${visibleTutorials.length} missions for ${questionMeta[conceptMode]}`}
                 </span>
               </div>
               <div class="toolbar-summary-actions">
-                <span class="pill">${visibleTutorials.length} presets</span>
+                <span class="pill">Learn</span>
                 <span class="toolbar-summary-caret"></span>
               </div>
             </summary>
@@ -2068,12 +2199,12 @@ function App() {
                 ${tutorialInfo && activeTutorial?.mode === conceptMode
                   ? html`
                       <div>
-                        <div><b>Goal</b>: ${tutorialInfo.goal}</div>
-                        <div><b>Action</b>: ${tutorialInfo.how}</div>
-                        <div><b>Why it matters</b>: ${tutorialInfo.concept}</div>
+                        <div><b>Objective</b>: ${tutorialInfo.goal}</div>
+                        <div><b>Move</b>: ${tutorialInfo.how}</div>
+                        <div><b>Meaning</b>: ${tutorialInfo.concept}</div>
                       </div>
                     `
-                  : `Scenes for ${questionMeta[conceptMode]} preload a useful train/eval pair and the mode-specific controls.`}
+                  : `Missions preload a useful train/eval pair and the controls for ${questionMeta[conceptMode]}.`}
               </div>
             </div>
           </details>
@@ -2097,11 +2228,15 @@ function App() {
         <section class="grid-card grid-card-outer" data-testid="explorer-grid-card">
           <div class="grid-card-head">
             <div class="panel-heading-group">
-              <span class="panel-step">2</span>
               <div>
-                <span class="summary-kicker">Counterfactual grid</span>
-                <h2 class="grid-card-title">Choose a train row and eval slice.</h2>
+                <span class="summary-kicker">Grid board</span>
+                <h2 class="grid-card-title">Select a train/eval square.</h2>
               </div>
+            </div>
+            <div class="move-legend" aria-label="Grid move types">
+              <span class="move-key"><span class="move-icon move-icon-row" aria-hidden="true"></span>Row move</span>
+              <span class="move-key"><span class="move-icon move-icon-column" aria-hidden="true"></span>Column move</span>
+              <span class="move-key"><span class="move-icon move-icon-coupled" aria-hidden="true"></span>Coupled role</span>
             </div>
           </div>
 
@@ -2220,6 +2355,10 @@ function App() {
                               if (rowIndex === safeRowIdx) thick = true;
                               if (looMinusIdx >= 0 && rowIndex === looMinusIdx) thin = true;
                             }
+                            if (conceptMode === "eval" && rowIndex === safeRowIdx) {
+                              if (colIndex === safeColIdx) thick = true;
+                              if (evalPlusIdx >= 0 && colIndex === evalPlusIdx) thin = true;
+                            }
                             if (conceptMode === "group" && colIndex === safeColIdx) {
                               if (rowIndex === safeRowIdx) thick = true;
                               if (strikeMinusIdx >= 0 && rowIndex === strikeMinusIdx) thin = true;
@@ -2288,11 +2427,11 @@ function App() {
 
       ${showInspector ? analysisDetailBlock : null}
 
-      <details class="toolbar-group toolbar-expand json-drawer" data-testid="settings-json">
+      <details class="toolbar-group toolbar-expand json-drawer" id=${showInspector ? "grid-state" : "grid-inspect"} data-testid="settings-json">
         <summary class="toolbar-summary">
           <div class="toolbar-summary-copy">
-            <span class="toolbar-summary-label">Full JSON</span>
-            <span class="toolbar-summary-title">Current explorer state</span>
+            <span class="toolbar-summary-label">Inspect state</span>
+            <span class="toolbar-summary-title">JSON and matrix export</span>
           </div>
           <div class="toolbar-summary-actions">
             <span class="pill">Export</span>

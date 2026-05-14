@@ -1,21 +1,24 @@
 ---
 title: Data Counterfactuals
-description: "An interactive explainer for a unifying frame across valuation, scaling, selection, poisoning, privacy, and collective action."
-eyebrow: Interactive explainer
-lede: "What might change in an AI model if its training data changes?"
+description: "An interactive explainer for asking what changes when training data, evaluation data, data rights, or trust institutions change."
+eyebrow: Open course notes and explorables
+lede: "What changes when the data world, evaluation world, or trust institution changes?"
 reading_paths:
   - title: Read the launch memo
     href: /memo/data-counterfactuals
     body: More on the motivation for this site
+  - title: When the column changes
+    href: /memo/evaluation-counterfactuals
+    body: A short memo on evaluation data, secure holdouts, use rights, and trust as first-class counterfactual objects.
   - title: Open the glossary
     href: /glossary
     body: Quick definitions for the recurring terms without leaving the main thread for long.
   - title: Open the grid explorer
     href: /grid
-    body: Explore the data counterfactuals "grid" framing directly.
-  - title: Follow the loose syllabus
+    body: Explore row moves, column moves, and coupled train/eval comparisons directly.
+  - title: Follow the lightweight course path
     href: /memo/loose-syllabus
-    body: A suggested 10-week sequence of 20 papers for getting oriented before the more technical memo.
+    body: A suggested reading-and-explorable sequence for using the site as open course material without a heavy LMS.
   - title: Compare formalisms
     href: /memo/formalisms
     body: A more technical companion that lines up neighboring formalisms side by side. Currently very WIP.
@@ -28,5 +31,5 @@ figures:
     caption: With four toy data objects A, B, C, and D, the lower row leaves out B. The sharp drop on evaluation slice B is the kind of local contrast many attribution methods try to summarize.
   grid:
     label: Toy world with four observations
-    caption: Imagine every possible training set as a row and every evaluation slice as a column. The payoff of the metaphor is in comparing nearby cells, rows, and paths through the grid.
+    caption: Imagine every possible training set as a row and every evaluation slice as a column. Row moves ask what changed in training; column moves ask what changed in measurement.
 ---

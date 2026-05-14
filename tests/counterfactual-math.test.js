@@ -5,6 +5,7 @@ import {
   applyGridEdits,
   buildSubsetGrid,
   computeColumnSensitivity,
+  computeEvalAdditionStats,
   computeLooDelta,
   computeRowRemovalStats,
   computeScalingStats,
@@ -67,6 +68,26 @@ test("row-removal stats centralize the compare-row bookkeeping for single and gr
   assert.deepEqual(grouped.compareSet, ["B"]);
   assert.equal(grouped.compareRowIndex, findSubsetIndex(subsets, ["B"]));
   assert.deepEqual(grouped.removedTokens, ["A", "C"]);
+});
+
+test("eval-addition stats centralize column-move bookkeeping", () => {
+  const items = ["A", "B", "C", "D"];
+  const { matrix, subsets } = buildSubsetGrid(items, "jaccard");
+  const rowIndex = findSubsetIndex(subsets, ["A", "B", "C"]);
+  const colIndex = findSubsetIndex(subsets, ["A", "B"]);
+
+  const stats = computeEvalAdditionStats({
+    matrix,
+    subsets,
+    rowIndex,
+    colIndex,
+    tokensToAdd: ["D"],
+  });
+
+  assert.deepEqual(stats.compareSet, ["A", "B", "D"]);
+  assert.equal(stats.compareColIndex, findSubsetIndex(subsets, ["A", "B", "D"]));
+  assert.equal(stats.delta, matrix[rowIndex][stats.compareColIndex] - matrix[rowIndex][colIndex]);
+  assert.deepEqual(stats.addedTokens, ["D"]);
 });
 
 test("Shapley weights sum to 1 and recover the known empty-eval example", () => {
@@ -280,6 +301,6 @@ test("concept presets can all execute without missing setters", () => {
 
   for (const preset of presets) preset.setup();
 
-  assert.equal(presets.length, 10);
+  assert.equal(presets.length, 11);
   assert.ok(calls.length > 0);
 });

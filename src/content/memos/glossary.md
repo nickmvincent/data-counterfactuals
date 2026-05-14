@@ -1,5 +1,5 @@
 ---
-order: 4
+order: 5
 title: "Glossary"
 summary: "Working definitions for the key terms used across the memo, explorer, and related areas and papers page."
 date: "2026-03-12T00:00:00.000Z"
@@ -63,7 +63,7 @@ Plots from data cartography that place examples according to training dynamics l
 
 ### Data counterfactual
 
-A project-level umbrella term for "what if" questions about training data. What would happen to model performance if we trained on different data? The grid visualization is a teaching model for organizing those questions, not something we literally enumerate in real systems. This usage is inspired by the broader counterfactual tradition, but it is not meant as a claim that this phrase is already a standard textbook term in ML. Example links: the [main memo](/memo/data-counterfactuals) and [Pearl (2009)](https://doi.org/10.1017/CBO9780511803161).
+A project-level umbrella term for "what if" questions about the data world around an AI system. What would happen if we trained on different data, evaluated on different data, or changed the rights and trust state around that data? The grid visualization is a teaching model for organizing those questions, not something we literally enumerate in real systems. This usage is inspired by the broader counterfactual tradition, but it is not meant as a claim that this phrase is already a standard textbook term in ML. Example links: the [main memo](/memo/data-counterfactuals), [When the Column Changes](/memo/evaluation-counterfactuals), and [Pearl (2009)](https://doi.org/10.1017/CBO9780511803161).
 
 ### Data dividends
 
@@ -101,6 +101,10 @@ A mathematical privacy guarantee saying that an algorithm's output should not ch
 
 The data used to measure model performance. In the grid, each column represents one possible evaluation point or slice. Example link: the [grid](/grid).
 
+### Evaluation counterfactual
+
+A column-side data counterfactual. The training row stays fixed while the evaluation point or slice changes. The result should be read as a change in measurement, confidence, or decision quality, not automatically as a change in model capability. Example link: [When the Column Changes](/memo/evaluation-counterfactuals).
+
 ### Experimental design
 
 Choosing which data to collect, label, or test so the resulting evidence is maximally informative under a budget. It overlaps with active learning, but the emphasis is often on information gain, uncertainty reduction, or causal identification rather than only downstream accuracy. Example link: [Settles (2009)](https://burrsettles.com/pub/settles.activelearning.pdf).
@@ -108,6 +112,10 @@ Choosing which data to collect, label, or test so the resulting evidence is maxi
 ### Forgetting event
 
 A moment during training when an example flips from correctly classified to incorrectly classified. Many forgetting events can signal hard, noisy, or atypical data points. Example link: [Toneva et al. (2019)](https://www.microsoft.com/en-us/research/publication/an-empirical-study-of-example-forgetting-during-deep-neural-network-learning/).
+
+### Governance or trust state
+
+The institutional facts that decide whether a data comparison should count: provenance, licensing, evaluator independence, label process, contamination controls, secrecy, and related conditions. In the expanded formalism this is written as $G$. Example link: [Formalisms](/memo/formalisms).
 
 ### Influence function
 
@@ -141,6 +149,10 @@ A fairness-oriented preprocessing method that changes how much different example
 
 An empirical relationship describing how model performance changes with data size, model size, or compute. In the grid metaphor, data scaling laws look like summaries over rows grouped by size, but the broader literature is not limited to data alone. Example link: [Kaplan et al. (2020)](https://arxiv.org/abs/2001.08361).
 
+### Secure holdout
+
+Evaluation data protected from training access and contamination so that it can credibly measure model performance later. Its value can come from changing a model-selection or deployment decision, even when it never improves the model directly. Example link: [When the Column Changes](/memo/evaluation-counterfactuals).
+
 ### Training set
 
 The data used to train a model. In the grid, each row represents one possible training set. Example link: the [grid](/grid).
@@ -148,3 +160,7 @@ The data used to train a model. In the grid, each row represents one possible tr
 ### TracIn
 
 A training-data attribution method that estimates which examples were influential by tracking gradient similarity across training checkpoints. It is another way of asking which parts of the row most affected a prediction or outcome, but with a different approximation strategy from classical influence functions. Example link: [Pruthi et al. (2020)](https://arxiv.org/abs/2002.08484).
+
+### Use rights
+
+The permitted role of a data object: trainable, evaluable, both, reserved, or unavailable. Use rights matter because the same object can have different value depending on whether it trains a model, evaluates a model, stays hidden as a holdout, or cannot be used at all. Example link: [When the Column Changes](/memo/evaluation-counterfactuals).
