@@ -19,6 +19,28 @@ const DEFAULT_SEMBLE_CACHE_PATH = 'tmp/semble-cache.json';
 const DEFAULT_SEMBLE_CONFIG_FILE = 'semble.config.json';
 const PAGE_LIMIT = 100;
 const METADATA_ENRICHMENT_CONCURRENCY = 6;
+const RETIRED_SEMBLE_CARD_URIS = new Set([
+  'at://did:plc:doxvahqvyhyqf32v7wz7p5xk/at.margin.bookmark/3mge6poulpp27',
+]);
+const REFERENCE_REPAIRS: Record<string, Partial<SembleReference>> = {
+  feygin2021datadividendworks: {
+    title: 'A Data Dividend That Works: Steps Toward Building an Equitable Data Economy',
+    url: 'https://www.nickmvincent.com/static/Data-Dividend_final.pdf',
+    metadata_overrides: ['title'],
+  },
+  wadhwa2020economicimpactdatadividends: {
+    title: 'Economic Impact and Feasibility of Data Dividends',
+    url: 'https://datacatalyst.org/wp-content/uploads/2020/06/Economic-Impact-and-Feasibility-of-Data-Dividends.pdf',
+    venue: 'Data Catalyst report',
+    metadata_overrides: ['title', 'venue'],
+  },
+  jia2019knnvaluation: {
+    url: 'https://arxiv.org/abs/1908.08619',
+  },
+  lu2024dataacquisition: {
+    url: 'https://proceedings.neurips.cc/paper_files/paper/2024/hash/d5e8326bbec25e1c608787d24488521b-Abstract-Conference.html',
+  },
+};
 
 type SembleCachePolicy = 'network-first' | 'cache-only' | 'refresh' | 'off';
 
@@ -864,6 +886,60 @@ function normalizeReference(
   return record;
 }
 
+function shouldSkipSembleCard(card: SembleUrlCard): boolean {
+  return Boolean(card.uri && RETIRED_SEMBLE_CARD_URIS.has(card.uri));
+}
+
+function applyReferenceRepairs(reference: SembleReference): SembleReference {
+  const repair = REFERENCE_REPAIRS[reference.citation_key];
+  if (!repair) {
+    return reference;
+  }
+
+  const repaired: SembleReference = {
+    ...reference,
+    ...repair,
+    authors: repair.authors ? [...repair.authors] : reference.authors,
+    metadata_provenance: {
+      ...(reference.metadata_provenance || {}),
+    },
+    metadata_sources: mergeMetadataSources(reference.metadata_sources),
+  };
+  const repairSource = createReferenceSource('yaml-note', {
+    source_uri: reference.semble_note_uri,
+  });
+
+  if (repairSource) {
+    for (const [field, value] of Object.entries(repair)) {
+      if (field === 'metadata_overrides') continue;
+      if (value === undefined) continue;
+
+      repaired.metadata_provenance![field] = {
+        ...repairSource,
+        value,
+      };
+    }
+  }
+
+  if (repair.url) {
+    repaired.metadata_sources = repaired.metadata_sources?.map((source) => {
+      if (
+        (source.kind === 'card-url' || source.kind === 'card-preview')
+        && source.source_uri === reference.semble_card_uri
+      ) {
+        return {
+          ...source,
+          source_url: repair.url,
+        };
+      }
+
+      return source;
+    });
+  }
+
+  return repaired;
+}
+
 async function resolveReferenceAuthority(reference: SembleReference): Promise<SembleReference> {
   const retrievedAt = new Date().toISOString();
   let pageMetadata: Record<string, unknown> | null = null;
@@ -980,7 +1056,11 @@ async function buildSembleDataset(config: SembleConfig): Promise<SembleDataset> 
     };
 
     for (const card of page.cards) {
-      const reference = normalizeReference(card, collection);
+      if (shouldSkipSembleCard(card)) {
+        continue;
+      }
+
+      const reference = applyReferenceRepairs(normalizeReference(card, collection));
       references.set(reference.citation_key, mergeReference(references.get(reference.citation_key), reference));
       collection.citation_keys.push(reference.citation_key);
     }

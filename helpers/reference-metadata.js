@@ -31,6 +31,11 @@ const CORE_FIELDS = [
 ];
 
 const SOFT_FIELDS = ["abstract"];
+const MANUAL_OVERRIDE_FIELD_KEYS = [
+  "metadata_overrides",
+  "metadata_override_fields",
+  "prefer_note_fields",
+];
 
 function collapseWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -57,6 +62,43 @@ function sameValue(a, b) {
   }
 
   return collapseWhitespace(a) === collapseWhitespace(b);
+}
+
+function normalizeFieldSet(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => collapseWhitespace(item).toLowerCase()).filter(Boolean);
+  }
+
+  if (typeof value !== "string") {
+    return [];
+  }
+
+  return value
+    .split(/\r?\n|,/)
+    .map((item) => collapseWhitespace(item).toLowerCase())
+    .filter(Boolean);
+}
+
+function getManualOverrideFields(reference) {
+  const fields = [];
+
+  for (const key of MANUAL_OVERRIDE_FIELD_KEYS) {
+    fields.push(...normalizeFieldSet(reference?.[key]));
+  }
+
+  return new Set(fields);
+}
+
+function shouldPreserveManualField(reference, field, incomingProvenance) {
+  if (incomingProvenance?.kind === "doi-csl") {
+    return false;
+  }
+
+  if (!getManualOverrideFields(reference).has(field)) {
+    return false;
+  }
+
+  return reference.metadata_provenance?.[field]?.kind === "yaml-note";
 }
 
 function buildAuthorName(author) {
@@ -306,6 +348,10 @@ function maybeApplyField(reference, field, value, provenance, options = {}) {
   if (!isMeaningfulValue(currentValue)) {
     reference[field] = Array.isArray(value) ? [...value] : value;
     reference.metadata_provenance[field] = provenance;
+    return;
+  }
+
+  if (shouldPreserveManualField(reference, field, provenance)) {
     return;
   }
 
