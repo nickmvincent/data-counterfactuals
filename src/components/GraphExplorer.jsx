@@ -13,6 +13,18 @@ import {
   labelSubset as label,
   normalizeValue,
 } from "../lib/counterfactual-math.js";
+import {
+  buildExplorerHref,
+  copyExplorerShareUrl,
+  graphLensToGridMode,
+  gridModeToGraphLens,
+  hasExplorerGameStateParams,
+  normalizeSharedChoice,
+  normalizeSharedTokens,
+  parseExplorerGameState,
+  parseSharedCount,
+  replaceExplorerGameStateUrl,
+} from "../lib/explorer-game-state.js";
 import { scrollChildIntoContainer } from "../lib/scroll-helpers.js";
 
 const html = htm.bind(h);
@@ -197,6 +209,12 @@ function clampIndex(index, total) {
 function App() {
   const countMin = 2;
   const countMax = 7;
+  const initialUrlStateAppliedRef = useRef(false);
+  const countResetSkippedRef = useRef(false);
+  const pendingUrlSelectionRef = useRef(false);
+  const inheritedGridModeRef = useRef(null);
+  const urlSyncEnabledRef = useRef(false);
+  const [pendingSharedState, setPendingSharedState] = useState(null);
   const [count, setCount] = useState(4);
   const [metric, setMetric] = useState("jaccard");
   const [lens, setLens] = useState("ablation");
@@ -206,8 +224,30 @@ function App() {
   const [hoveredNodeIndex, setHoveredNodeIndex] = useState(null);
   const [missionKind, setMissionKind] = useState(null);
   const [missionInfo, setMissionInfo] = useState(null);
+  const [shareStatus, setShareStatus] = useState("idle");
 
   const scrollRef = useRef(null);
+  useEffect(() => {
+    const search = typeof window === "undefined" ? "" : window.location.search;
+    const sharedState = parseExplorerGameState(search);
+    const hasSelection = Boolean(sharedState.trainSet || sharedState.evalSet);
+    urlSyncEnabledRef.current = hasExplorerGameStateParams(search);
+    pendingUrlSelectionRef.current = hasSelection;
+    inheritedGridModeRef.current = sharedState.mode;
+
+    if (sharedState.count) setCount(parseSharedCount(sharedState.count, 4, countMin, countMax));
+    if (sharedState.metric) setMetric(normalizeSharedChoice(sharedState.metric, Object.keys(metricMeta), "jaccard"));
+    if (sharedState.lens) setLens(normalizeSharedChoice(sharedState.lens, Object.keys(lensMeta), "ablation"));
+    if (sharedState.focusSet) setFocusSet(sharedState.focusSet);
+    if (sharedState.k !== null) setK(parseSharedCount(sharedState.k, 2, 0, countMax));
+
+    if (hasSelection) {
+      setPendingSharedState(sharedState);
+    } else {
+      initialUrlStateAppliedRef.current = true;
+    }
+  }, []);
+
   const maxCountForMetric = metric === "covertype" ? Math.min(countMax, covertypeDomainMaxCount) : countMax;
   const base = useMemo(() => alphabet.slice(0, Math.min(count, maxCountForMetric)), [count, maxCountForMetric]);
   const covertypeDomains = useMemo(
@@ -248,10 +288,28 @@ function App() {
   }, [base.length, k]);
 
   useEffect(() => {
+    if (pendingUrlSelectionRef.current && !countResetSkippedRef.current) {
+      countResetSkippedRef.current = true;
+      return;
+    }
     const nextFullIndex = findSubsetIndex(subsets, base);
     setSelectedIndex(nextFullIndex >= 0 ? nextFullIndex : 0);
     setEvalIndex(nextFullIndex >= 0 ? nextFullIndex : 0);
   }, [count, subsets, base]);
+
+  useEffect(() => {
+    if (initialUrlStateAppliedRef.current || !subsets.length || !pendingSharedState) return;
+    if (pendingSharedState.trainSet) {
+      const trainIndex = findSubsetIndex(subsets, normalizeSharedTokens(pendingSharedState.trainSet, base));
+      if (trainIndex >= 0) setSelectedIndex(trainIndex);
+    }
+    if (pendingSharedState.evalSet) {
+      const evalIndexFromUrl = findSubsetIndex(subsets, normalizeSharedTokens(pendingSharedState.evalSet, base));
+      if (evalIndexFromUrl >= 0) setEvalIndex(evalIndexFromUrl);
+    }
+    initialUrlStateAppliedRef.current = true;
+    setPendingSharedState(null);
+  }, [subsets, base, pendingSharedState]);
 
   useEffect(() => {
     setHoveredNodeIndex((previous) => {
@@ -572,6 +630,47 @@ function App() {
       ? `Train ${label(selectedSet)} is locked in against eval ${label(evalSet)}. Click a node or use the command buttons to move.`
       : `Previewing train ${label(previewSet)} against eval ${label(evalSet)}. Click to commit this world.`;
 
+  const gridModeForLens =
+    inheritedGridModeRef.current && gridModeToGraphLens(inheritedGridModeRef.current) === lens
+      ? inheritedGridModeRef.current
+      : graphLensToGridMode(lens);
+  const sharedGameState = useMemo(
+    () => ({
+      count,
+      metric,
+      mode: gridModeForLens,
+      lens,
+      trainSet: selectedSet,
+      evalSet,
+      focusSet: normalizeSharedTokens(focusSet, base, focusPrimary ? [focusPrimary] : []),
+      k,
+    }),
+    [count, metric, gridModeForLens, lens, selectedSet, evalSet, focusSet, base, focusPrimary, k],
+  );
+  const gridExplorerHref = buildExplorerHref("/grid", sharedGameState);
+  const shareLabel = shareStatus === "copied" ? "Copied" : shareStatus === "failed" ? "Ready" : "Share";
+  const copyGraphShareUrl = async () => {
+    urlSyncEnabledRef.current = true;
+    try {
+      await copyExplorerShareUrl("/graph", sharedGameState);
+      setShareStatus("copied");
+    } catch {
+      setShareStatus("failed");
+    }
+    replaceExplorerGameStateUrl(sharedGameState);
+  };
+
+  useEffect(() => {
+    if (!hydrated || !initialUrlStateAppliedRef.current || !urlSyncEnabledRef.current) return;
+    replaceExplorerGameStateUrl(sharedGameState);
+  }, [hydrated, sharedGameState]);
+
+  useEffect(() => {
+    if (shareStatus === "idle") return undefined;
+    const resetTimer = setTimeout(() => setShareStatus("idle"), 1600);
+    return () => clearTimeout(resetTimer);
+  }, [shareStatus]);
+
   return html`
     <div class="graph-workspace" data-ready=${hydrated ? "true" : "false"}>
       <section class="graph-toolbar" data-testid="graph-explorer-toolbar">
@@ -580,7 +679,18 @@ function App() {
             <span class="graph-layer is-active">Play</span>
             <a class="graph-layer" href="#graph-missions">Learn</a>
             <a class="graph-layer" href="#graph-inspect">Inspect</a>
-            <a class="graph-layer graph-layer-link" href="/grid">Grid</a>
+            <a class="graph-layer graph-layer-link" href=${gridExplorerHref} data-testid="graph-to-grid-link">Grid</a>
+            <button
+              class="graph-layer graph-layer-link"
+              type="button"
+              aria-live="polite"
+              title=${shareStatus === "failed" ? "Clipboard blocked; state URL is in the address bar" : "Copy current state URL"}
+              data-testid="graph-share-link"
+              data-status=${shareStatus}
+              onClick=${copyGraphShareUrl}
+            >
+              ${shareLabel}
+            </button>
           </div>
           <div class="graph-toolbar-copyblock">
             <span class="graph-kicker">Graph HUD</span>

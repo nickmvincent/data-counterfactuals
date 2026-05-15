@@ -562,6 +562,14 @@ if (!helpSections.length) {
       letter-spacing: 0.08em;
       text-decoration: none;
       text-transform: uppercase;
+      appearance: none;
+    }
+    .explorer-shell button.hud-layer {
+      cursor: pointer;
+    }
+    .explorer-shell .hud-layer:focus-visible {
+      outline: 2px solid rgba(45, 115, 133, 0.34);
+      outline-offset: 2px;
     }
     .explorer-shell .hud-layer.is-active {
       border-color: rgba(45, 115, 133, 0.28);

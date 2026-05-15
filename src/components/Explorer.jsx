@@ -19,6 +19,17 @@ import {
   normalizeValue,
   selectAnalysisMatrix,
 } from "../lib/counterfactual-math.js";
+import {
+  buildExplorerHref,
+  copyExplorerShareUrl,
+  gridModeToGraphLens,
+  hasExplorerGameStateParams,
+  normalizeSharedChoice,
+  normalizeSharedTokens,
+  parseExplorerGameState,
+  parseSharedCount,
+  replaceExplorerGameStateUrl,
+} from "../lib/explorer-game-state.js";
 import { scrollChildIntoContainer } from "../lib/scroll-helpers.js";
 
 const html = htm.bind(h);
@@ -268,6 +279,11 @@ function clampIndex(index, total) {
 function App() {
   const countMin = 2;
   const countMax = 8;
+  const initialUrlStateAppliedRef = useRef(false);
+  const baseLengthResetSkippedRef = useRef(false);
+  const pendingUrlSelectionRef = useRef(false);
+  const urlSyncEnabledRef = useRef(false);
+  const [pendingSharedState, setPendingSharedState] = useState(null);
   const [count, setCount] = useState(3);
 
   const [metric, setMetric] = useState("jaccard");
@@ -299,6 +315,7 @@ function App() {
   const [switchPulse, setSwitchPulse] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [hoverTarget, setHoverTarget] = useState(null);
+  const [shareStatus, setShareStatus] = useState("idle");
   const [hydrated, setHydrated] = useState(false);
 
   const presetFlashRef = useRef(null);
@@ -322,6 +339,26 @@ function App() {
     setRealDataSample((previous) => (previous || 1) + 1);
   };
 
+  useEffect(() => {
+    const search = typeof window === "undefined" ? "" : window.location.search;
+    const sharedState = parseExplorerGameState(search);
+    const hasSelection = Boolean(sharedState.trainSet || sharedState.evalSet);
+    urlSyncEnabledRef.current = hasExplorerGameStateParams(search);
+    pendingUrlSelectionRef.current = hasSelection;
+
+    if (sharedState.count) setCount(parseSharedCount(sharedState.count, 3, countMin, countMax));
+    if (sharedState.metric) setMetric(normalizeSharedChoice(sharedState.metric, Object.keys(metricMeta), "jaccard"));
+    if (sharedState.mode) setConceptMode(normalizeSharedChoice(sharedState.mode, conceptOrder, "explore"));
+    if (sharedState.focusSet) setFocusSet(sharedState.focusSet);
+    if (sharedState.k !== null) setK(parseSharedCount(sharedState.k, 2, 0, countMax));
+
+    if (hasSelection) {
+      setPendingSharedState(sharedState);
+    } else {
+      initialUrlStateAppliedRef.current = true;
+    }
+  }, []);
+
   const metricOptions = useMemo(
     () => ({
       realDataMode,
@@ -342,11 +379,29 @@ function App() {
   }, [count, maxCountForMetric]);
 
   useEffect(() => {
+    if (pendingUrlSelectionRef.current && !baseLengthResetSkippedRef.current) {
+      baseLengthResetSkippedRef.current = true;
+      return;
+    }
     setRowIdx(1);
     setColIdx(1);
     setComparePoint(null);
     setSelectionArmed(null);
   }, [base.length]);
+
+  useEffect(() => {
+    if (initialUrlStateAppliedRef.current || !subs.length || !pendingSharedState) return;
+    if (pendingSharedState.trainSet) {
+      const trainIndex = findSubsetIndex(subs, normalizeSharedTokens(pendingSharedState.trainSet, base));
+      if (trainIndex >= 0) setRowIdx(trainIndex);
+    }
+    if (pendingSharedState.evalSet) {
+      const evalIndex = findSubsetIndex(subs, normalizeSharedTokens(pendingSharedState.evalSet, base));
+      if (evalIndex >= 0) setColIdx(evalIndex);
+    }
+    initialUrlStateAppliedRef.current = true;
+    setPendingSharedState(null);
+  }, [subs, base, pendingSharedState]);
 
   useEffect(() => {
     setFocusSet((previous) => {
@@ -1606,6 +1661,43 @@ function App() {
     metric === "covertype" ? `${covertypeDomains.length} real domains` : null,
   ].filter(Boolean);
 
+  const sharedGameState = useMemo(
+    () => ({
+      count,
+      metric,
+      mode: conceptMode,
+      lens: gridModeToGraphLens(conceptMode),
+      trainSet: Srow,
+      evalSet,
+      focusSet: normalizeSharedTokens(focusSet, base, focusPrimary ? [focusPrimary] : []),
+      k,
+    }),
+    [count, metric, conceptMode, Srow, evalSet, focusSet, base, focusPrimary, k],
+  );
+  const graphExplorerHref = buildExplorerHref("/graph", sharedGameState);
+  const shareLabel = shareStatus === "copied" ? "Copied" : shareStatus === "failed" ? "Ready" : "Share";
+  const copyGridShareUrl = async () => {
+    urlSyncEnabledRef.current = true;
+    try {
+      await copyExplorerShareUrl("/grid", sharedGameState);
+      setShareStatus("copied");
+    } catch {
+      setShareStatus("failed");
+    }
+    replaceExplorerGameStateUrl(sharedGameState);
+  };
+
+  useEffect(() => {
+    if (!hydrated || !initialUrlStateAppliedRef.current || !urlSyncEnabledRef.current) return;
+    replaceExplorerGameStateUrl(sharedGameState);
+  }, [hydrated, sharedGameState]);
+
+  useEffect(() => {
+    if (shareStatus === "idle") return undefined;
+    const resetTimer = setTimeout(() => setShareStatus("idle"), 1600);
+    return () => clearTimeout(resetTimer);
+  }, [shareStatus]);
+
   const semivalueTable = semivalueModes.has(conceptMode)
     ? html`
         <div class="inspector-stack">
@@ -2012,7 +2104,18 @@ function App() {
             <span class="hud-layer is-active">Play</span>
             <a class="hud-layer" href="#grid-missions">Learn</a>
             <a class="hud-layer" href="#grid-inspect">Inspect</a>
-            <a class="hud-layer hud-layer-link" href="/graph">Graph</a>
+            <a class="hud-layer hud-layer-link" href=${graphExplorerHref} data-testid="grid-to-graph-link">Graph</a>
+            <button
+              class="hud-layer hud-layer-link"
+              type="button"
+              aria-live="polite"
+              title=${shareStatus === "failed" ? "Clipboard blocked; state URL is in the address bar" : "Copy current state URL"}
+              data-testid="grid-share-link"
+              data-status=${shareStatus}
+              onClick=${copyGridShareUrl}
+            >
+              ${shareLabel}
+            </button>
           </div>
           <div class="toolbar-guide">
             <div class="toolbar-guide-head">
