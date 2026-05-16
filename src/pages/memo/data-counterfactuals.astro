@@ -1,0 +1,20 @@
+---
+const target = "/";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex" />
+    <meta http-equiv="refresh" content={`0; url=${target}`} />
+    <link rel="canonical" href="https://datacounterfactuals.org/" />
+    <title>Redirecting to Data Counterfactuals</title>
+    <script is:inline>
+      window.location.replace("/");
+    </script>
+  </head>
+  <body>
+    <p><a href="/">Continue to the Data Counterfactuals launch memo.</a></p>
+  </body>
+</html>

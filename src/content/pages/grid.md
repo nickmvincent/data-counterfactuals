@@ -7,7 +7,7 @@ quick_tips:
   - Operator view applies toy edits like poisoning or noise; Real world snaps back to the untouched reference grid.
 companion_links:
   - title: Read the main memo for the broader argument
-    href: /memo/data-counterfactuals
+    href: /
   - title: Read the evaluation-side memo
     href: /memo/evaluation-counterfactuals
   - title: Open the glossary for fast definitions

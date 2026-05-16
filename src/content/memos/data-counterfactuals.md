@@ -5,7 +5,6 @@ summary: "A shared launch post and site memo arguing that many questions about v
 date: '2026-03-14T00:00:00.000Z'
 visibility: public
 type: shared_memo
-homepageSections: 3
 ---
 
 This is a short memo meant to explain the [datacounterfactuals.org](https://datacounterfactuals.org/) project and website. It will be cross-posted on the [Data Leverage Substack](https://dataleverage.substack.com/). The site exists to:
@@ -23,6 +22,8 @@ A **data counterfactual** is a scenario in which the data world around an AI sys
 Consider this thought experiment: imagine you are going to train a machine learning model on a very small dataset: let's say the dataset has just four units of data (or, if it seems implausible that we'd ever want to do this, we can imagine it's a big dataset with distinct bundled subsets). Now imagine a grid where every possible combination of training objects appears as a row, every possible evaluation set appears as a column, and each cell records the performance for a given train/eval pairing. For our very small example with just four data objects, we can call them A, B, C, and D. (Again, these could literally map to four single observations in a toy example, or map to four large datasets we are considering mixing.)
 
 With this grid in mind, we can explore the most basic useful data counterfactual, "[leave-one-out](https://arxiv.org/abs/1703.04730)." By comparing a row that includes one point with the nearby row in which that point is missing, we can understand the impact (in a causal sense) of adding or removing that point. By computing the difference between these two cells, we can learn how much a given data point helped or hurt our model. From there the same logic can be extended to groups of points, weighting data points, replacing data with other synthetic data, corrupting certain examples, or coordinated withdrawal.
+
+{{< memo-example leave-one-out-toy >}}
 
 Very simply, we can imagine training an LLM with a bunch of fiction books, science articles, and social media posts. If we train a second LLM without the science articles and compare the performance, we are exploring the "no science articles" data counterfactual. Researchers have indeed performed such experiments, for instance at non-profit institutions like [AI2](https://arxiv.org/abs/2602.12237) and for-profit companies like [Meta](https://www.businessinsider.com/meta-ai-llama-models-training-data-ablation-2025-4).
 
@@ -50,6 +51,8 @@ $$
 
 Here $G$ stands for governance or trust state: provenance, licensing, evaluator independence, contamination controls, label process, secrecy, and other facts that decide whether a train/eval comparison should count. This does not replace the original training-data frame. It adds a second layer: the first version of the site focuses on changes to training data; the next layer asks what changes when the evaluation set, holdout institution, or permitted data use changes.
 
+{{< memo-example move-types >}}
+
 ## Why data counterfactuals are relevant to data leverage
 
 This frame helps us connect topics that might seem distinct, for instance connecting [influence estimation](https://proceedings.mlr.press/v70/koh17a.html) and [Shapley values](https://proceedings.mlr.press/v97/ghorbani19c.html) with [data strikes](https://doi.org/10.1145/3308558.3313742) and data contribution campaigns. In ML, we often want to ask questions about removing a point, reweighting a group, fitting a scaling curve, etc. with the purpose of understanding our data and model. But counterfactuals can also be induced by strategic actors. Strikes, boycotts, contribution campaigns, and bargaining efforts all try to impact AI through data.
@@ -73,6 +76,8 @@ The simplest way to use the grid is to name three move types:
 - **Row move**: same eval column, different train row. What if this data were used for training?
 - **Column move**: same train row, different eval column. What if this data were used for evaluation?
 - **Coupled move**: a data object shifts between train and eval roles. What if this object is reserved for holdout instead of training?
+
+{{< memo-example toy-grid >}}
 
 Once that picture is in view, various literatures that usually live in separate boxes start to sit nearer to one another. Most notably, we can see the direct connection between valuation and attribution methods and collective action simulations. Collective action experiments typically ask what happens when people or institutions intentionally change the data-generating process itself: strikes, contribution campaigns, bargaining, provenance demands, licensing disputes, and other efforts to shift AI operators toward less favorable rows. We can also understand how various kinds of scaling and selection methods share "building blocks" with attribution and collective action.
 
@@ -116,6 +121,8 @@ I think it is useful to name these as rough **types** of data counterfactuals:
 - **Subset counterfactuals**: worlds over a fixed realized dataset. Here we remove, reweight, corrupt, repair, or average over subsets of data the operator already has. Leave-one-out, influence estimation, Shapley-style valuation, many unlearning baselines, and a lot of data selection work fit most naturally here.
 - **Acquisition counterfactuals**: worlds in which the training set changes because new data become available, get labeled, or are intentionally contributed or withheld. Active learning, experimental design, data scaling, contribution campaigns, and bargaining over access fit more naturally in this bucket. The key question is not only "which existing point mattered?" but also "which next point or next source could move us to a better or worse row?"
 - **Data-generating-process counterfactuals**: worlds in which incentives, governance, platforms, or model deployment change what data gets produced in the first place. Strategic withholding, performative effects, provenance fights, licensing disputes, and long-run shifts in online behavior belong more clearly here.
+
+{{< memo-example counterfactual-scopes >}}
 
 That taxonomy mostly describes training-side movement. A parallel evaluation-side taxonomy asks whether data are trainable, evaluable, both, reserved, or unavailable. The same object can have different value depending on whether it improves a model, tests a model, keeps a benchmark uncontaminated, or makes a benchmark credible to outsiders.
 

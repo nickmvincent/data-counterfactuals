@@ -12,11 +12,6 @@ const linkItem = z.object({
   body: z.string().optional(),
 });
 
-const figure = z.object({
-  label: z.string().optional(),
-  caption: z.string().optional(),
-});
-
 const pages = defineCollection({
   type: "content",
   schema: z.object({
@@ -28,7 +23,6 @@ const pages = defineCollection({
     reading_paths: z.array(linkItem).optional(),
     quick_tips: z.array(z.string()).optional(),
     companion_links: z.array(linkItem).optional(),
-    figures: z.record(figure).optional(),
   }),
 });
 
@@ -41,7 +35,6 @@ const memos = defineCollection({
     date: z.coerce.date().optional(),
     visibility: z.string().optional(),
     type: z.string().optional(),
-    homepageSections: z.number().int().positive().optional(),
   }),
 });
 

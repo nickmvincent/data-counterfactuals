@@ -1,8 +1,10 @@
 import { getCollection } from "astro:content";
+import { stripMemoEmbeds } from "./memo-embeds";
 
 export const GLOSSARY_MEMO_SLUG = "glossary";
 export const LAUNCH_MEMO_SLUG = "data-counterfactuals";
 export const DIRECT_MEMO_ROUTES = {
+  [LAUNCH_MEMO_SLUG]: "/",
   [GLOSSARY_MEMO_SLUG]: "/glossary",
 } as const;
 
@@ -15,7 +17,7 @@ export function hasDirectMemoRoute(slug: string) {
 }
 
 export function countWords(body: string) {
-  return body.split(/\s+/).filter(Boolean).length;
+  return stripMemoEmbeds(body).split(/\s+/).filter(Boolean).length;
 }
 
 export function estimateReadMinutes(wordCount: number) {

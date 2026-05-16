@@ -1,5 +1,4 @@
 ---
-import { render } from "astro:content";
 import MemoPage from "../components/MemoPage.astro";
 import { GLOSSARY_MEMO_SLUG, getPublicMemoBySlug } from "../lib/memos";
 
@@ -9,7 +8,6 @@ if (!memo) {
   throw new Error(`Missing glossary memo '${GLOSSARY_MEMO_SLUG}'.`);
 }
 
-const { Content } = await render(memo);
 ---
 
-<MemoPage memo={memo} Content={Content} />
+<MemoPage memo={memo} />

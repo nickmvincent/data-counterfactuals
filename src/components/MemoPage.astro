@@ -3,13 +3,14 @@ import type { CollectionEntry } from "astro:content";
 import Layout from "../layouts/Base.astro";
 import Nav from "./Nav.astro";
 import { countWords, estimateReadMinutes, numberedMemoTitle } from "../lib/memos";
+import MemoArticle from "./MemoArticle.astro";
 
 interface Props {
   memo: CollectionEntry<"memos">;
-  Content: any;
+  isHome?: boolean;
 }
 
-const { memo, Content } = Astro.props;
+const { memo, isHome = false } = Astro.props;
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
@@ -20,10 +21,11 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 const wordCount = countWords(memo.body);
 const readMinutes = estimateReadMinutes(wordCount);
 const pageTitle = numberedMemoTitle(memo.data.title, memo.data.order);
+const layoutTitle = isHome ? "Data Counterfactuals" : memo.data.title;
 ---
 
 <Layout
-  title={memo.data.title}
+  title={layoutTitle}
   description={memo.data.summary || "A memo in the Data Counterfactuals project."}
 >
   <style>
@@ -61,7 +63,7 @@ const pageTitle = numberedMemoTitle(memo.data.title, memo.data.order);
     </header>
 
     <article class="prose memo-article">
-      <Content />
+      <MemoArticle memo={memo} />
     </article>
   </main>
 </Layout>

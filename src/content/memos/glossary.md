@@ -63,7 +63,7 @@ Plots from data cartography that place examples according to training dynamics l
 
 ### Data counterfactual
 
-A project-level umbrella term for "what if" questions about the data world around an AI system. What would happen if we trained on different data, evaluated on different data, or changed the rights and trust state around that data? The grid visualization is a teaching model for organizing those questions, not something we literally enumerate in real systems. This usage is inspired by the broader counterfactual tradition, but it is not meant as a claim that this phrase is already a standard textbook term in ML. Example links: the [main memo](/memo/data-counterfactuals), [When the Column Changes](/memo/evaluation-counterfactuals), and [Pearl (2009)](https://doi.org/10.1017/CBO9780511803161).
+A project-level umbrella term for "what if" questions about the data world around an AI system. What would happen if we trained on different data, evaluated on different data, or changed the rights and trust state around that data? The grid visualization is a teaching model for organizing those questions, not something we literally enumerate in real systems. This usage is inspired by the broader counterfactual tradition, but it is not meant as a claim that this phrase is already a standard textbook term in ML. Example links: the [main memo](/), [When the Column Changes](/memo/evaluation-counterfactuals), and [Pearl (2009)](https://doi.org/10.1017/CBO9780511803161).
 
 ### Data dividends
 

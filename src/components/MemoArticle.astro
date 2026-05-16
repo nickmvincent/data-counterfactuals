@@ -1,0 +1,24 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { renderMarkdown } from "../lib/page-content";
+import { splitMemoEmbeds } from "../lib/memo-embeds";
+import MemoExample from "./MemoExample.astro";
+
+interface Props {
+  memo: CollectionEntry<"memos">;
+}
+
+const { memo } = Astro.props;
+const parts = splitMemoEmbeds(memo.body);
+---
+
+{
+  parts.map((part) => {
+    if (part.type === "example") {
+      return <MemoExample id={part.id} />;
+    }
+
+    const html = renderMarkdown(part.markdown);
+    return <Fragment set:html={html} />;
+  })
+}
