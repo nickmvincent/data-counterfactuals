@@ -9,7 +9,7 @@ type: shared_memo
 
 This is a short memo meant to explain the [datacounterfactuals.org](https://datacounterfactuals.org/) project and website. It will be cross-posted on the [Data Leverage Substack](https://dataleverage.substack.com/). The site exists to:
 
-- show how cross-cutting the idea of "data counterfactuals" is (to name just a few relevant topics: [data valuation](https://proceedings.mlr.press/v89/jia19a.html), [data dividends](https://www.datadividends.org/), [algorithmic collective action](https://proceedings.mlr.press/v202/hardt23a.html), [data scaling](https://arxiv.org/abs/2001.08361), [data selection](https://neurips.cc/virtual/2024/tutorial/99530), [data poisoning](https://arxiv.org/abs/1206.6389), evaluation data, [privacy](https://www.microsoft.com/en-us/research/publication/differential-privacy/), [machine unlearning](https://arxiv.org/abs/1912.03817))
+- show how cross-cutting the idea of "data counterfactuals" is (to name just a few relevant topics: [data valuation](https://proceedings.mlr.press/v89/jia19a.html), [data dividends](https://www.datadividends.org/), [algorithmic collective action](https://proceedings.mlr.press/v202/hardt23a.html), [data scaling](https://arxiv.org/abs/2001.08361), [data selection](https://neurips.cc/virtual/2024/tutorial/99530), [data poisoning](https://arxiv.org/abs/1206.6389), [evaluation data](/memo/evaluation-counterfactuals), [privacy](https://www.microsoft.com/en-us/research/publication/differential-privacy/), [machine unlearning](https://arxiv.org/abs/1912.03817))
 - make data counterfactual measurements easier to understand
 - illustrate connections between technical and social data-centric work
 
@@ -17,11 +17,11 @@ There are many reasons we might want to understand how a specific piece of data 
 
 ## What is a data counterfactual?
 
-A **data counterfactual** is a scenario in which the data world around an AI system changes in some way. In the first version of this site, that mostly meant changes to training data. The next layer is broader: the evaluation set, permitted data uses, and the institutions that make a measurement trustworthy can also change. Often, we are interested in comparing two counterfactual scenarios to understand the impact of some change on AI capabilities, measurement, or confidence.
+A **data counterfactual** is a scenario in which the data upstream of an AI system changes in some way. Often, we are interested in comparing two counterfactual scenarios to understand the impact of some change on AI capabilities.
 
-Consider this thought experiment: imagine you are going to train a machine learning model on a very small dataset: let's say the dataset has just four units of data (or, if it seems implausible that we'd ever want to do this, we can imagine it's a big dataset with distinct bundled subsets). Now imagine a grid where every possible combination of training objects appears as a row, every possible evaluation set appears as a column, and each cell records the performance for a given train/eval pairing. For our very small example with just four data objects, we can call them A, B, C, and D. (Again, these could literally map to four single observations in a toy example, or map to four large datasets we are considering mixing.)
+Consider this thought experiment: imagine we are going to train a machine learning model on a dataset with four distinct units. Perhaps this is a "toy" scenario with four data points, or perhaps this is a big dataset with four distinctly bundled subsets. Now, let's imagine a grid where every possible combination of training objects appears as a row, every possible evaluation set appears as a column, and each cell records the performance for a given train/eval pairing. For our very small example with just four data objects, we can call them A, B, C, and D.
 
-With this grid in mind, we can explore the most basic useful data counterfactual, "[leave-one-out](https://arxiv.org/abs/1703.04730)." By comparing a row that includes one point with the nearby row in which that point is missing, we can understand the impact (in a causal sense) of adding or removing that point. By computing the difference between these two cells, we can learn how much a given data point helped or hurt our model. From there the same logic can be extended to groups of points, weighting data points, replacing data with other synthetic data, corrupting certain examples, or coordinated withdrawal.
+With this grid in mind, we can explore the most basic useful data counterfactual, [leave-one-out](https://arxiv.org/abs/1703.04730). By comparing a row that includes one point with the nearby row in which that point is missing, we can understand the impact (in a causal sense) of adding or removing that point. By computing the difference between these two cells, we can learn how much a given data point helped or hurt our model. From there the same logic can be extended to groups of points, weighting data points, replacing data with other synthetic data, corrupting certain examples, or coordinated withdrawal.
 
 {{< memo-example leave-one-out-toy >}}
 
@@ -29,27 +29,27 @@ Very simply, we can imagine training an LLM with a bunch of fiction books, scien
 
 ## Training, evaluation, and trust counterfactuals
 
-The grid also makes a second move visible. Most of the familiar examples are **row moves**:
+By imagining this large grid of all train-eval pairs, we can consider **row moves**, which we might formally describe like so (don't worry if this doesn't make sense yet!):
 
 $$
 f(D_T, D_E) \rightarrow f(D_T \setminus z, D_E)
 $$
 
-Here the evaluation target stays fixed while the training world changes. But we can also ask **column moves**:
+Here the evaluation target stays fixed while the training world changes. But we can also consider **column moves** within the grid:
 
 $$
 f(D_T, D_E) \rightarrow f(D_T, D_E \cup z)
 $$
 
-Here the trained model stays fixed while the evaluation world changes. This is an evaluation counterfactual: the data object changes what we measure, which claims we trust, or which deployment decision we make.
+Here the trained model stays fixed while the evaluation world changes. This is an [evaluation counterfactual](/memo/evaluation-counterfactuals): the data object changes what we measure, which claims we trust, or which deployment decision we make.
 
-And some questions are really **institution moves**:
+And some questions are really changes to the upstream governance of data:
 
 $$
 f(D_T, D_E, G) \rightarrow f(D_T, D_E, G')
 $$
 
-Here $G$ stands for governance or trust state: provenance, licensing, evaluator independence, contamination controls, label process, secrecy, and other facts that decide whether a train/eval comparison should count. This does not replace the original training-data frame. It adds a second layer: the first version of the site focuses on changes to training data; the next layer asks what changes when the evaluation set, holdout institution, or permitted data use changes.
+Here $G$ stands for governance or trust state: a given data world might differ in licensing, evaluator independence, contamination controls, secrecy, and other facts that decide whether a train/eval comparison should count. This does not replace the original training-data frame. It adds a second layer on top of the grid.
 
 {{< memo-example move-types >}}
 
@@ -61,21 +61,22 @@ When people can withhold, redirect, or condition the supply of data, data counte
 
 ## Why data counterfactuals are relevant to core AI
 
-This frame is not only relevant to data leverage or governance. It is also deeply relevant to what many people would recognize as "core AI" questions. If we want to know how models improve with more data, which data are worth keeping, which examples are redundant, what happens when we swap in synthetic data, why a model fails on one slice but not another, which holdout points would change a model-selection decision, or how to remove the effect of a problematic subset, we are asking questions about what changes when the data world changes.
+This frame is also deeply relevant to what many people would recognize as "core AI" questions. If we want to know how models improve with more data, which data are worth keeping, which examples are redundant, what happens when we swap in synthetic data, why a model fails on one slice but not another, which holdout points would change a model-selection decision, or how to remove the effect of a problematic subset, we are asking questions about what changes when the data world changes.
 
-Data scaling, ablations, selection, influence estimation, [distillation](https://openreview.net/forum?id=Sy4lojC9tm), synthetic data substitution, privacy interventions, poisoning, and unlearning are not all the same task. But they do all involve moving between nearby training worlds and measuring how model behavior shifts as we move. The point is not to collapse everything into one technique. The point is to notice that many central ML questions are already, in a practical sense, data counterfactual questions.
+Data scaling, ablations, selection, influence estimation, [distillation](https://openreview.net/forum?id=Sy4lojC9tm), synthetic data substitution, privacy interventions, poisoning, and unlearning are not all the same task. But they do all involve moving between nearby training worlds and measuring how model behavior shifts as we move. The grid can help us to notice that many central ML questions are already, in a practical sense, data counterfactual questions.
 
 ## The grid view
 
-The site's main "interactive explorer" is a grid. The grid shows possible training sets as rows and possible evaluation slices as columns. Each cell records what happens if we train on that row and evaluate on that column.
+The site's main [interactive explorer](/grid) is a grid. The grid shows possible training sets as rows and possible evaluation slices as columns. Each cell records what happens if we train on that row and evaluate on that column.
 
 Of course, nobody can completely fill out this "giant spreadsheet" (it's too computationally expensive). The grid can still be useful as a teaching model (and again, not a claim about how practitioners store or compute things).
 
-The simplest way to use the grid is to name three move types:
+The simplest way to use the grid is to name two main move types:
 
 - **Row move**: same eval column, different train row. What if this data were used for training?
 - **Column move**: same train row, different eval column. What if this data were used for evaluation?
-- **Coupled move**: a data object shifts between train and eval roles. What if this object is reserved for holdout instead of training?
+
+As noted above, "governance moves" might also impact a large swathe of the board at once (e.g., a bunch of training data becomes illegal to use, or a bunch of eval data are proven to have been leaked).
 
 {{< memo-example toy-grid >}}
 
@@ -83,7 +84,7 @@ Once that picture is in view, various literatures that usually live in separate 
 
 Critically, the counterfactual grid is conceptually useful as a baseline for areas that do not directly try to measure data counterfactuals. For instance, we can find relevant data counterfactuals that map to specific scenarios involving differential privacy, [membership inference](https://arxiv.org/abs/2112.03570), machine unlearning, benchmark contamination, and secure holdouts.
 
-On this site, we maintain a larger "loosely curated examples of generally related research" that's hosted via [semble.so](https://semble.so/) for easy updating and commenting.
+On this site, we maintain a larger [collection of loosely related research](/collections) that's hosted via [semble.so](https://semble.so/) for easy updating and commenting.
 
 ## Some backstory
 
@@ -93,20 +94,19 @@ Variations of the term appear across the related data valuation and data attribu
 
 So in short -- it is a term that has been used, but it currently isn't the case that every work or technique that explores "data counterfactual scenarios" always bills itself as a "data counterfactual" paper.
 
-A quick piece of context: the Data Counterfactuals site is part of a broader effort to create informative websites that externalize memos, spreadsheets, and insights that are relevant to various data and AI policy initiatives and discussions. Other projects include a list of data licensing and preference signaling mechanisms (datalicenses.org), napkin math about training data ([exploringai.org](https://exploringai.org/)), and a few more in the works (including a rework of [datalevers.org](https://www.datalevers.org/)). Of all these sites, Data Counterfactuals is, at present, a bit less broadly interesting than the others; the focus here is on trying to convince people who already might have an interest in data valuation, bargaining, data-centric approaches to privacy, and neighboring topics about undervalued connections between different computing research areas. A long-term goal is to make this site broadly accessible, but in short: if it doesn't seem too interesting yet, consider checking out the other sites listed above.
+A quick piece of context: the Data Counterfactuals site is part of a broader effort to create informative websites that externalize memos, spreadsheets, and insights that are relevant to various data and AI policy initiatives and discussions. Other projects include a list of data licensing and preference signaling mechanisms ([datalicenses.org](https://datalicenses.org/)), napkin math about training data ([exploringai.org](https://exploringai.org/)), and a few more in the works (including a rework of [datalevers.org](https://www.datalevers.org/)). Of all these sites, Data Counterfactuals is, at present, a bit less broadly interesting than the others; the focus here is on trying to convince people who already might have an interest in data valuation, bargaining, data-centric approaches to privacy, and neighboring topics about undervalued connections between different computing research areas. A long-term goal is to make this site broadly accessible, but in short: if it doesn't seem too interesting yet, consider checking out the other sites listed above.
 
 ## Some limitations of the grid view
 
-Of course, with this site we are not trying to claim these projects are all formally identical. There are many details that make the tasks and concepts different in important ways. Very critically, it is important to understand the distinction between techniques that only explore counterfactuals over data that already exist, approaches that try to change the data available to an AI operator, and approaches that try to change the world itself.
+Of course, with this site we are not trying to claim these projects are all formally identical. There are many details that make the tasks and concepts different in important ways. It is important to understand the distinction between techniques that only explore counterfactuals over data that already exist, approaches that try to change the data available to an AI operator, and approaches that try to change the world itself.
 
 In some cases, the grid helps us directly connect two concepts or literatures. For instance, running a large number of data strike experiments will give us a bunch of output data that can directly enable us to also compute certain scaling laws or Shapley values. That is, if we actually "fill out" the grid for a model, we can produce both valuation and collective action related results without running any more experiments!
 
-Some related concepts require a more complex model than the simple "grid" presented in our explorer here. 
+Some related concepts require a more complex model than the simple "grid" presented in our explorer here. See more in the site's [papers collection](/collections).
 
-- Training dynamics and curriculum learning care about the specific sequence of training actions, not just set membership. 
-- Active learning and experimental design care about policies for acquiring the next point. 
-- Privacy, memorization, poisoning, backdoor work, and adversarial training typically need a more detailed state space than one scalar per cell.
-- Meta-learning learns policies over rows rather than merely comparing fixed rows. 
+- Training dynamics questions care about the specific sequence of training actions and not just set membership.
+- Active learning and experimental design questions care about policies for acquiring the next point.
+- Privacy, memorization, poisoning, backdoor work, and adversarial training might need a more detailed "state space" than one scalar per cell.
 - Model collapse asks what happens when more and more rows are synthetic outputs of previous models.
 - Strategic or performative settings care about feedback loops in which deploying the model changes the future data-generating process.
 
@@ -126,7 +126,7 @@ I think it is useful to name these as rough **types** of data counterfactuals:
 
 That taxonomy mostly describes training-side movement. A parallel evaluation-side taxonomy asks whether data are trainable, evaluable, both, reserved, or unavailable. The same object can have different value depending on whether it improves a model, tests a model, keeps a benchmark uncontaminated, or makes a benchmark credible to outsiders.
 
-These labels are meant as working project language, not as a claim that the literature has already settled on this exact vocabulary. But I think the distinction itself matters both technically and politically. Some methods only compare subsets of a fixed dataset. Others concern provenance, licensing, bargaining, and contribution governance, where the key question is which rows are available on acceptable terms. Still others involve feedback loops where deploying a model changes future behavior, and therefore changes the future data-generating process itself.
+These labels are meant as working project language. But I think the distinction itself matters both technically and politically. Some methods only compare subsets of a fixed dataset. Others concern provenance, licensing, bargaining, and contribution governance, where the key question is which rows are available on acceptable terms. Still others involve feedback loops where deploying a model changes future behavior, and therefore changes the future data-generating process itself.
 
 This also helps clarify an ambiguity around "adding" data. In a Shapley-style calculation, we often compare a subset $S$ to a nearby subset $S \cup \{i\}$. But if point $i$ was already one of the points in the fixed ground set under study, that is still a subset counterfactual, not yet an acquisition counterfactual in the stronger sense. Asking what happens if we acquire a genuinely new point, or gain access to a new source of data, is a different kind of move.
 
