@@ -81,9 +81,9 @@ function createPalette(stops) {
 }
 
 const palettes = {
-  "Clear daylight": createPalette(["#14324a", "#2f5c7e", "#5f8fb0", "#c59d59", "#fbf4de"]),
-  "Sage ledger": createPalette(["#1b2d2b", "#365b56", "#6b9387", "#bfd0c3", "#f7f2e7"]),
-  "Ink and paper": createPalette(["#1d2434", "#38597d", "#7899ba", "#d1b27a", "#fff6e2"]),
+  "Textbook atlas": createPalette(["#18353b", "#2d6f72", "#779f87", "#d2b865", "#fff1d2"]),
+  "Cedar map": createPalette(["#202737", "#37676d", "#8aa37c", "#c99355", "#fae6d4"]),
+  "Library fieldwork": createPalette(["#242733", "#475f75", "#789a9b", "#c7aa6b", "#fff6df"]),
 };
 
 const metricMeta = {
@@ -289,7 +289,7 @@ function App() {
   const [metric, setMetric] = useState("jaccard");
   const [realDataMode, setRealDataMode] = useState("precomputed");
   const [realDataSample, setRealDataSample] = useState(0);
-  const [paletteName, setPaletteName] = useState("Clear daylight");
+  const [paletteName, setPaletteName] = useState("Textbook atlas");
   const palette = palettes[paletteName];
   const maxCountForMetric = metric === "covertype" ? Math.min(countMax, covertypeDomainMaxCount) : countMax;
   const base = useMemo(() => alphabet.slice(0, Math.min(count, maxCountForMetric)), [count, maxCountForMetric]);
@@ -305,6 +305,7 @@ function App() {
   const [pendingSelection, setPendingSelection] = useState(null);
   const [selectionArmed, setSelectionArmed] = useState(null);
   const [comparePoint, setComparePoint] = useState(null);
+  const [legalHelpOpen, setLegalHelpOpen] = useState(false);
   const [poisonActive, setPoisonActive] = useState(false);
   const [betaAlpha, setBetaAlpha] = useState(2);
   const [betaBeta, setBetaBeta] = useState(2);
@@ -1441,6 +1442,63 @@ function App() {
     k,
   ]);
 
+  const legalMoveItems = useMemo(() => {
+    const items = [
+      {
+        title: "Set the target world",
+        body: "Click a row header to change the training world, a column header to change the evaluation world, or a cell to set both at once.",
+      },
+    ];
+
+    if (compareChooserDisabled) {
+      items.push({
+        title: "Read the active pattern",
+        body: compareMarkerGuide.selectedNote,
+      });
+    } else {
+      items.push({
+        title: "Set the comparison world",
+        body: compareMarkerGuide.rule,
+      });
+    }
+
+    if (compareMarkerGuide.canUseCanonical && canonicalCompareLabel) {
+      items.push({
+        title: "Use the suggested neighbor",
+        body: `The built-in comparison for this question is ${canonicalCompareLabel}.`,
+      });
+    }
+
+    if (semivalueModes.has(conceptMode)) {
+      items.push({
+        title: "Average many legal pairs",
+        body: `${questionMeta[conceptMode]} reads every highlighted coalition-pair in eval ${label(evalSet)} for contributor ${focusPrimary}.`,
+      });
+    } else if (conceptMode === "scaling") {
+      items.push({
+        title: "Read a full row layer",
+        body: `Scaling reads every row with size k = ${k} on eval ${label(evalSet)}; the highlighted layer, not a single second cell, defines the comparison.`,
+      });
+    } else if (conceptMode === "poison") {
+      items.push({
+        title: "Compare grid layers",
+        body: "Poison mode compares the same selected cell across the reference and operator layers after the toy attack is toggled.",
+      });
+    }
+
+    return items;
+  }, [
+    compareChooserDisabled,
+    compareMarkerGuide.rule,
+    compareMarkerGuide.selectedNote,
+    compareMarkerGuide.canUseCanonical,
+    canonicalCompareLabel,
+    conceptMode,
+    evalSet,
+    focusPrimary,
+    k,
+  ]);
+
   const markerPanelMessage = useMemo(() => {
     if (selectionArmed === "target") {
       return "Click a cell to move the target cell that the rest of the page is currently reading.";
@@ -1624,6 +1682,26 @@ function App() {
     setHoverTarget(null);
   };
 
+  const handleRowHeaderClick = (rowIndex) => {
+    if (selectionArmed === "compare" && !compareChooserDisabled) {
+      setComparePoint({ rowIndex, colIndex: safeColIdx });
+      setSelectionArmed(null);
+      return;
+    }
+    setRowIdx(rowIndex);
+    setSelectionArmed(null);
+  };
+
+  const handleColumnHeaderClick = (colIndex) => {
+    if (selectionArmed === "compare" && !compareChooserDisabled) {
+      setComparePoint({ rowIndex: safeRowIdx, colIndex });
+      setSelectionArmed(null);
+      return;
+    }
+    setColIdx(colIndex);
+    setSelectionArmed(null);
+  };
+
   const handleCellClick = (rowIndex, colIndex) => {
     if (selectionArmed === "compare" && !compareChooserDisabled) {
       setComparePoint({ rowIndex, colIndex });
@@ -1634,6 +1712,15 @@ function App() {
     setColIdx(colIndex);
     setSelectionArmed(null);
   };
+
+  useEffect(() => {
+    if (!legalHelpOpen) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setLegalHelpOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [legalHelpOpen]);
 
   const usesFocus = !["explore", "scaling"].includes(conceptMode);
   const focusHeading =
@@ -1856,7 +1943,6 @@ function App() {
     <section class=${`selection-dock-section selection-dock-mode ${computedFlash ? "computed-flash" : ""}`} data-testid="question-controls">
       <div class="selection-dock-section-head">
         <div>
-          <span class="summary-kicker">Mode controls</span>
           <h3 class="selection-dock-section-title">${questionMeta[conceptMode]}</h3>
         </div>
       </div>
@@ -1993,17 +2079,17 @@ function App() {
     </section>
   `;
 
-  const gridMarkerSection = html`
-    <section class="selection-dock-section" data-testid="grid-marker-controls">
-      <div class="selection-dock-section-head">
+  const gridMarkerPanel = html`
+    <section class="grid-action-panel" data-testid="grid-marker-controls">
+      <div class="grid-action-copy">
         <div>
-          <span class="summary-kicker">Grid markers</span>
-          <h3 class="selection-dock-section-title">Mark the cells you want to talk about.</h3>
+          <h3 class="selection-dock-section-title">Choose worlds to compare.</h3>
+          <p class="toolbar-note">${markerPanelMessage}</p>
         </div>
       </div>
       <div class="grid-marker-actions">
         <button class="btn mini" aria-pressed=${selectionArmed === "target"} onClick=${() => setSelectionArmed("target")}>
-          Choose target cell
+          Set target
         </button>
         <button
           class="btn mini"
@@ -2011,7 +2097,7 @@ function App() {
           disabled=${compareChooserDisabled}
           onClick=${() => setSelectionArmed("compare")}
         >
-          Mark comparison cell
+          Set comparison
         </button>
         ${compareMarkerGuide.canUseCanonical
           ? html`
@@ -2020,8 +2106,10 @@ function App() {
               </button>
             `
           : null}
+        <button class="btn ghost mini" type="button" data-testid="legal-moves-button" onClick=${() => setLegalHelpOpen(true)}>
+          Legal moves
+        </button>
       </div>
-      <div class="toolbar-note">${markerPanelMessage}</div>
       <div class="grid-marker-guide">
         <div class="toolbar-label">Comparison marker</div>
         <div class="toolbar-note">${compareMarkerGuide.summary}</div>
@@ -2035,7 +2123,6 @@ function App() {
     <section class="selection-dock-reading value-dock value-dock-tight" data-testid="value-dock">
       <div class="selection-dock-section-head selection-dock-reading-head">
         <div>
-          <span class="summary-kicker">Current reading</span>
           <h3 class="panel-title">${questionSummary.title}</h3>
         </div>
         <span class="pill">${questionSummary.answerLabel}: ${questionSummary.answerValue}</span>
@@ -2081,7 +2168,6 @@ function App() {
       <div class="panel-head">
         <div class="panel-heading-group">
           <div>
-            <span class="summary-kicker">Move log</span>
             <h3 class="panel-title">Current answer and legal adjustments.</h3>
           </div>
         </div>
@@ -2090,7 +2176,6 @@ function App() {
         ${currentReadingSection}
         <div class="selection-dock-aside">
           ${modeControlsSection}
-          ${gridMarkerSection}
         </div>
       </div>
     </section>
@@ -2100,13 +2185,10 @@ function App() {
     <div class="workspace-shell" data-testid="explorer-workspace" data-ready=${hydrated ? "true" : "false"}>
       <section class="workspace-toolbar" data-testid="explorer-toolbar">
         <div class="toolbar-bar">
-          <div class="hud-layer-strip" aria-label="Explorer layers">
-            <span class="hud-layer is-active">Play</span>
-            <a class="hud-layer" href="#grid-missions">Learn</a>
-            <a class="hud-layer" href="#grid-inspect">Inspect</a>
-            <a class="hud-layer hud-layer-link" href=${graphExplorerHref} data-testid="grid-to-graph-link">Graph</a>
+          <div class="toolbar-action-strip" aria-label="Explorer actions">
+            <a class="toolbar-action-link" href=${graphExplorerHref} data-testid="grid-to-graph-link">Graph view</a>
             <button
-              class="hud-layer hud-layer-link"
+              class="toolbar-action-link"
               type="button"
               aria-live="polite"
               title=${shareStatus === "failed" ? "Clipboard blocked; state URL is in the address bar" : "Copy current state URL"}
@@ -2120,7 +2202,6 @@ function App() {
           <div class="toolbar-guide">
             <div class="toolbar-guide-head">
               <div>
-                <span class="summary-kicker">Explorer controls</span>
                 <p class="toolbar-guide-copy">${currentTakeaway}</p>
               </div>
             </div>
@@ -2271,15 +2352,14 @@ function App() {
           <details class=${`toolbar-group toolbar-expand mission-drawer ${presetFlash ? "preset-flash" : ""}`} id="grid-missions" data-testid="scene-controls">
             <summary class="toolbar-summary">
               <div class="toolbar-summary-copy">
-                <span class="toolbar-summary-label">Missions</span>
+                <span class="toolbar-summary-label">Suggested moves</span>
                 <span class="toolbar-summary-title">
                   ${activeTutorial?.mode === conceptMode
                     ? activeTutorial.title
-                    : `${visibleTutorials.length} missions for ${questionMeta[conceptMode]}`}
+                    : `${visibleTutorials.length} presets for ${questionMeta[conceptMode]}`}
                 </span>
               </div>
               <div class="toolbar-summary-actions">
-                <span class="pill">Learn</span>
                 <span class="toolbar-summary-caret"></span>
               </div>
             </summary>
@@ -2307,7 +2387,7 @@ function App() {
                         <div><b>Meaning</b>: ${tutorialInfo.concept}</div>
                       </div>
                     `
-                  : `Missions preload a useful train/eval pair and the controls for ${questionMeta[conceptMode]}.`}
+                  : `These presets preload useful train/eval worlds and controls for ${questionMeta[conceptMode]}.`}
               </div>
             </div>
           </details>
@@ -2329,11 +2409,12 @@ function App() {
 
       <div class="workspace-main">
         <section class="grid-card grid-card-outer" data-testid="explorer-grid-card">
+          ${gridMarkerPanel}
           <div class="grid-card-head">
             <div class="panel-heading-group">
               <div>
-                <span class="summary-kicker">Grid board</span>
-                <h2 class="grid-card-title">Select a train/eval square.</h2>
+                <h2 class="grid-card-title">Data counterfactual grid</h2>
+                <p class="grid-card-lede">Rows are training worlds; columns are evaluation worlds.</p>
               </div>
             </div>
             <div class="move-legend" aria-label="Grid move types">
@@ -2395,7 +2476,7 @@ function App() {
                           aria-pressed=${active}
                           aria-label=${`Select evaluation slice ${label(colSet)}`}
                           title=${`Select evaluation slice ${label(colSet)}. Click any cell to set both train and eval at once.`}
-                          onClick=${() => setColIdx(colIndex)}
+                          onClick=${() => handleColumnHeaderClick(colIndex)}
                           onMouseEnter=${() => previewGridTarget(safeRowIdx, colIndex)}
                           onMouseLeave=${clearGridPreview}
                           onFocus=${() => previewGridTarget(safeRowIdx, colIndex)}
@@ -2417,7 +2498,7 @@ function App() {
                           aria-pressed=${rowActive}
                           aria-label=${`Select training world ${label(rowSet)}`}
                           title=${`Select training world ${label(rowSet)}. Click any cell to set both train and eval at once.`}
-                          onClick=${() => setRowIdx(rowIndex)}
+                          onClick=${() => handleRowHeaderClick(rowIndex)}
                           onMouseEnter=${() => previewGridTarget(rowIndex, safeColIdx)}
                           onMouseLeave=${clearGridPreview}
                           onFocus=${() => previewGridTarget(rowIndex, safeColIdx)}
@@ -2510,7 +2591,7 @@ function App() {
                                 ${thick ? html`<span class="ring ring-thick"></span>` : null}
                                 ${edited ? html`<span class="edit-flag" title="Toy edit affects this row in operator view"></span>` : null}
                                 ${showNums
-                                  ? html`<span class="num" style=${{ color: normalized > 0.48 ? "#10273d" : "#f7fbff" }}>${value.toFixed(2)}</span>`
+                                  ? html`<span class="num" style=${{ color: normalized > 0.48 ? "#1d2f35" : "#fffaf2" }}>${value.toFixed(2)}</span>`
                                   : null}
                               </button>
                             `;
@@ -2549,6 +2630,39 @@ function App() {
           <pre class="json-block">${settingsJson}</pre>
         </div>
       </details>
+
+      ${legalHelpOpen
+        ? html`
+            <div class="legal-help-backdrop" role="presentation" onClick=${() => setLegalHelpOpen(false)}>
+              <section
+                class="legal-help-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="legal-help-title"
+                data-testid="legal-moves-dialog"
+                onClick=${(event) => event.stopPropagation()}
+              >
+                <div class="legal-help-head">
+                  <div>
+                    <h3 id="legal-help-title" class="panel-title">Legal moves for this view</h3>
+                    <p class="toolbar-note">${markerPanelMessage}</p>
+                  </div>
+                  <button class="btn ghost mini" type="button" onClick=${() => setLegalHelpOpen(false)}>Close</button>
+                </div>
+                <div class="legal-move-list">
+                  ${legalMoveItems.map(
+                    (item) => html`
+                      <div class="legal-move-item" key=${item.title}>
+                        <div class="legal-move-title">${item.title}</div>
+                        <div class="toolbar-note">${item.body}</div>
+                      </div>
+                    `,
+                  )}
+                </div>
+              </section>
+            </div>
+          `
+        : null}
     </div>
   `;
 }

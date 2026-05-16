@@ -50,9 +50,15 @@ test("grid explorer defaults to explore mode and exposes lettered axis labels", 
   await expect(valueDock.locator(".panel-title")).toHaveText("Read one train/eval cell");
   await expect(page.getByTestId("reading-takeaway")).toContainText("lands at");
   await expect(questionControls).toContainText("How to use this mode");
-  await expect(page.getByTestId("grid-marker-controls")).toContainText("Choose target cell");
+  await expect(page.getByTestId("grid-marker-controls")).toContainText("Set target");
+  await expect(page.getByTestId("explorer-workspace")).not.toContainText("Play");
+  await expect(page.getByTestId("explorer-workspace")).not.toContainText("Learn");
   await expect(page.getByTestId("grid-marker-controls")).toContainText("Click any cell to read it directly as one train/eval world pair");
   await expect(page.getByTestId("grid-marker-controls")).toContainText("Any second cell makes sense");
+  await page.getByTestId("legal-moves-button").click();
+  await expect(page.getByTestId("legal-moves-dialog")).toContainText("Legal moves for this view");
+  await expect(page.getByTestId("legal-moves-dialog")).toContainText("Set the target world");
+  await page.getByRole("button", { name: "Close" }).click();
   const gridBox = await gridCard.boundingBox();
   const explorerGridBox = await explorerGrid.boundingBox();
   const sideRailBox = await sideRail.boundingBox();
@@ -67,19 +73,19 @@ test("grid explorer defaults to explore mode and exposes lettered axis labels", 
   expect(Math.abs(sideRailBox.y - explorerGridBox.y)).toBeLessThan(80);
   expect(Math.abs(questionControlsBox.x - valueDockBox.x)).toBeLessThan(48);
   expect(questionControlsBox.y).toBeGreaterThan(valueDockBox.y);
-  await expect(page.getByRole("button", { name: "Mark comparison cell" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Set comparison" })).toBeEnabled();
   await page.getByTestId("grid-train-select").selectOption({ label: "ABC" });
   await page.getByTestId("grid-eval-select").selectOption({ label: "C" });
   await expect(valueDock).toContainText("Train ABC");
   await expect(valueDock).toContainText("Eval C");
   await page.getByTestId("concept-select").selectOption("loo");
-  await expect(page.getByRole("button", { name: "Mark comparison cell" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Set comparison" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Use built-in comparison" })).toBeVisible();
   await expect(page.getByTestId("grid-marker-controls")).toContainText("Most meaningful cells keep eval");
   await expect(page.getByTestId("question-controls")).toContainText("Focus contributor");
   await expect(gridCard).toContainText("Rows train");
   await page.getByTestId("concept-select").selectOption("eval");
-  await expect(page.getByRole("button", { name: "Mark comparison cell" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Set comparison" })).toBeEnabled();
   await expect(valueDock.locator(".panel-title")).toHaveText("Add one point to the evaluation column");
   await expect(page.getByTestId("question-controls")).toContainText("Eval object");
   await expect(page.getByTestId("grid-marker-controls")).toContainText("Most meaningful cells keep train");
@@ -98,7 +104,7 @@ test("grid explorer defaults to explore mode and exposes lettered axis labels", 
   await expect(page.getByTestId("metric-controls")).toContainText("Precomputed");
   await expect(page.getByTestId("metric-controls")).toContainText("Live");
   await page.getByTestId("concept-select").selectOption("shapley");
-  await expect(page.getByRole("button", { name: "Mark comparison cell" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Set comparison" })).toBeDisabled();
   await expect(page.getByTestId("grid-marker-controls")).toContainText("not as a primary control");
 });
 
