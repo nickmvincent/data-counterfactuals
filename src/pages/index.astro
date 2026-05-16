@@ -44,7 +44,7 @@ const gridFigureSectionIds = new Set([
       backdrop-filter: blur(10px);
     }
     .start-page {
-      width: min(calc(100% - 2rem), calc(var(--measure) + 24rem));
+      width: min(calc(100% - 2rem), calc(var(--measure) + 10rem));
       display: grid;
       gap: clamp(2.35rem, 4vw, 3.35rem);
       padding-top: clamp(1.35rem, 3vw, 2.4rem);
@@ -55,23 +55,21 @@ const gridFigureSectionIds = new Set([
       margin-inline: auto;
     }
     .start-intro {
-      width: min(100%, calc(var(--measure) + 24rem));
+      width: min(100%, var(--measure));
       display: grid;
-      grid-template-columns: minmax(27rem, 0.9fr) minmax(0, 1fr);
-      gap: 0.95rem 1.8rem;
+      gap: 0.95rem;
       align-items: start;
       margin-bottom: 0;
     }
     .start-intro .page-title {
-      grid-row: 1 / span 3;
-      max-width: 16ch;
-      font-size: clamp(2.35rem, 4.8vw, 3.85rem);
-      line-height: 1.04;
+      max-width: none;
+      font-size: clamp(2.45rem, 5.2vw, 4rem);
+      line-height: 1.02;
       letter-spacing: 0;
+      text-wrap: balance;
     }
     .start-intro .page-lede {
-      grid-column: 2;
-      max-width: 40rem;
+      max-width: 42rem;
       color: rgba(32, 26, 22, 0.84);
       font-size: clamp(1.12rem, 1.5vw, 1.28rem);
       line-height: 1.68;
@@ -93,6 +91,9 @@ const gridFigureSectionIds = new Set([
     .start-overview .intro-block li {
       margin: 0.45rem 0;
       line-height: 1.72;
+    }
+    .start-page .math-display {
+      margin: 1.45rem 0 1.6rem;
     }
     .start-section {
       padding-top: 2.35rem;
@@ -260,7 +261,7 @@ const gridFigureSectionIds = new Set([
 
     @media (max-width: 780px) {
       .start-page {
-        width: min(calc(100% - 1.25rem), calc(var(--measure) + 24rem));
+        width: min(calc(100% - 1.25rem), calc(var(--measure) + 10rem));
         padding-top: 1.25rem;
         gap: 3rem;
       }
@@ -276,6 +277,11 @@ const gridFigureSectionIds = new Set([
         padding-top: 2rem;
       }
     }
+    @media (min-width: 860px) {
+      .start-intro .page-title {
+        white-space: nowrap;
+      }
+    }
   </style>
 
   <Nav />
@@ -288,7 +294,7 @@ const gridFigureSectionIds = new Set([
 
     {introHtml && (
       <section class="start-section start-overview">
-        <div class="intro-block" set:html={introHtml}></div>
+        <div class="intro-block math-rich" set:html={introHtml}></div>
       </section>
     )}
 
@@ -300,7 +306,7 @@ const gridFigureSectionIds = new Set([
       return (
         <section class="start-section">
           <h2>{section.title}</h2>
-          <div set:html={section.html}></div>
+          <div class="math-rich" set:html={section.html}></div>
 
           {showLeaveOneOutFigure && (
             <div class="essay-figure">

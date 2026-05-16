@@ -9,6 +9,12 @@ export default defineConfig({
     remarkPlugins: [remarkMath],
     rehypePlugins: [rehypeKatex],
   },
+  vite: {
+    build: {
+      // The advanced prototype lazy-loads Three.js behind its own route-only chunk.
+      chunkSizeWarningLimit: 650,
+    },
+  },
   srcDir: 'src',
   experimental: {
     contentLayer: true,

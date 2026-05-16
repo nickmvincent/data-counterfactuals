@@ -730,10 +730,10 @@ const footerNavSections = getSiteNavSections(githubUrl);
     color: var(--fg);
     font-size: 0.9em;
   }
-  .prose :where(.katex) {
+  :where(.prose, .math-rich) :where(.katex) {
     color: var(--fg);
   }
-  .prose :where(.katex-display) {
+  :where(.prose, .math-rich) :where(.katex-display) {
     margin: 1.4rem 0 1.55rem;
     padding: 0.85rem 1rem;
     overflow-x: auto;
@@ -743,7 +743,7 @@ const footerNavSections = getSiteNavSections(githubUrl);
     background: rgba(255, 250, 243, 0.86);
     box-shadow: var(--shadow-soft);
   }
-  .prose :where(.katex-display > .katex) {
+  :where(.prose, .math-rich) :where(.katex-display > .katex) {
     min-width: fit-content;
     padding: 0 0.1rem;
     font-size: 1.03em;

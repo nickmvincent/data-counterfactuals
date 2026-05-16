@@ -1,4 +1,5 @@
 import { getEntry, type CollectionEntry } from "astro:content";
+import katex from "katex";
 import { marked } from "marked";
 
 export interface PageSection {
@@ -19,7 +20,30 @@ function slugify(value: string): string {
 }
 
 export function renderMarkdown(markdown: string): string {
-  return String(marked.parse(markdown.trim()));
+  const mathFragments: string[] = [];
+  const stashMath = (html: string) => {
+    const index = mathFragments.push(html) - 1;
+    return index;
+  };
+  const renderMath = (source: string, displayMode: boolean) =>
+    katex.renderToString(source.trim(), {
+      displayMode,
+      throwOnError: false,
+    });
+
+  const withDisplayMath = markdown.trim().replace(/\$\$([\s\S]+?)\$\$/g, (_, source: string) => {
+    const index = stashMath(`<div class="math-display">${renderMath(source, true)}</div>`);
+    return `\n\n<div data-math-fragment="${index}"></div>\n\n`;
+  });
+
+  const withInlineMath = withDisplayMath.replace(/(?<!\\)\$([^\n$]+?)(?<!\\)\$/g, (_, source: string) => {
+    const index = stashMath(renderMath(source, false));
+    return `<span data-math-fragment="${index}"></span>`;
+  });
+
+  return String(marked.parse(withInlineMath))
+    .replace(/<div data-math-fragment="(\d+)"><\/div>/g, (_, index: string) => mathFragments[Number(index)] ?? "")
+    .replace(/<span data-math-fragment="(\d+)"><\/span>/g, (_, index: string) => mathFragments[Number(index)] ?? "");
 }
 
 export function renderMarkdownBlocks(blocks: string[] = []): string[] {

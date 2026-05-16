@@ -1,8 +1,6 @@
 import { h } from "preact";
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import htm from "htm";
-import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import {
   buildDecisionBoundary,
   buildModelRun,
@@ -16,7 +14,7 @@ import {
 
 const html = htm.bind(h);
 
-const valueColor = (value) => {
+const valueColor = (THREE, value) => {
   const t = Math.max(0, Math.min(1, value || 0));
   const color = new THREE.Color();
   color.setHSL(0.55 - (0.5 * t), 0.65 + (0.2 * t), 0.32 + (0.25 * t));
@@ -27,7 +25,7 @@ const ACCENT_WARM = "#ffd166";
 const COLOR_CLASS0 = "#5dd4ff";
 const COLOR_CLASS1 = "#ff6b6b";
 
-function makeLabelSprite(text, color = "#f5fbff") {
+function makeLabelSprite(THREE, text, color = "#f5fbff") {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
   canvas.height = 128;
@@ -65,6 +63,7 @@ const BarGrid = ({
   const mountRef = useRef(null);
   const stateRef = useRef(null);
   const interactionsRef = useRef({ onSelect, mode, revealedRows, canRevealRow, onRevealRow });
+  const [sceneReady, setSceneReady] = useState(false);
 
   useEffect(() => {
     interactionsRef.current = { onSelect, mode, revealedRows, canRevealRow, onRevealRow };
@@ -72,101 +71,117 @@ const BarGrid = ({
 
   useEffect(() => {
     if (!mountRef.current) return undefined;
-    const width = mountRef.current.clientWidth || 600;
-    const height = Math.max(420, mountRef.current.clientHeight || 480);
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x050910);
-    const camera = new THREE.PerspectiveCamera(48, width / height, 0.1, 100);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio || 1);
-    renderer.setSize(width, height);
-    mountRef.current.appendChild(renderer.domElement);
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.maxPolarAngle = Math.PI / 2.05;
-    controls.minDistance = 4;
-    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-    dir.position.set(6, 9, 4);
-    scene.add(ambient);
-    scene.add(dir);
-    const gridHelper = new THREE.GridHelper(14, 14, 0x1d2b45, 0x10172b);
-    scene.add(gridHelper);
-    const raycaster = new THREE.Raycaster();
-    const pointer = new THREE.Vector2();
+    let disposed = false;
+    let cleanup = () => {};
 
-    const animate = () => {
-      if (!stateRef.current) return;
-      controls.update();
-      renderer.render(scene, camera);
-      stateRef.current.frame = requestAnimationFrame(animate);
+    const setupScene = async () => {
+      const { THREE, OrbitControls } = await import("../lib/advanced-three-toolkit.js");
+      if (disposed || !mountRef.current) return;
+
+      const width = mountRef.current.clientWidth || 600;
+      const height = Math.max(420, mountRef.current.clientHeight || 480);
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x050910);
+      const camera = new THREE.PerspectiveCamera(48, width / height, 0.1, 100);
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(window.devicePixelRatio || 1);
+      renderer.setSize(width, height);
+      mountRef.current.appendChild(renderer.domElement);
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+      controls.maxPolarAngle = Math.PI / 2.05;
+      controls.minDistance = 4;
+      const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+      const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+      dir.position.set(6, 9, 4);
+      scene.add(ambient);
+      scene.add(dir);
+      const gridHelper = new THREE.GridHelper(14, 14, 0x1d2b45, 0x10172b);
+      scene.add(gridHelper);
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+
+      const animate = () => {
+        if (!stateRef.current) return;
+        controls.update();
+        renderer.render(scene, camera);
+        stateRef.current.frame = requestAnimationFrame(animate);
+      };
+
+      const handleResize = () => {
+        if (!mountRef.current) return;
+        const nextWidth = mountRef.current.clientWidth || width;
+        const nextHeight = Math.max(380, mountRef.current.clientHeight || height);
+        renderer.setSize(nextWidth, nextHeight);
+        camera.aspect = nextWidth / nextHeight;
+        camera.updateProjectionMatrix();
+      };
+
+      const handlePointer = (event) => {
+        if (event.target !== renderer.domElement || !stateRef.current) return;
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = (((event.clientX - rect.left) / rect.width) * 2) - 1;
+        pointer.y = -((((event.clientY - rect.top) / rect.height) * 2) - 1);
+        raycaster.setFromCamera(pointer, camera);
+        const group = stateRef.current.group;
+        if (!group) return;
+        const barGroup = group.children[0];
+        if (!barGroup) return;
+        const intersects = raycaster.intersectObjects(barGroup.children, false);
+        if (!intersects.length) return;
+
+        const { rowIdx, colIdx } = intersects[0].object.userData || {};
+        const current = interactionsRef.current;
+        if (typeof rowIdx !== "number" || typeof colIdx !== "number") return;
+
+        if (current.mode === "operator" && !(current.revealedRows || []).includes(rowIdx)) {
+          if (current.canRevealRow?.(rowIdx)) current.onRevealRow?.(rowIdx);
+          return;
+        }
+
+        current.onSelect?.(rowIdx, colIdx);
+      };
+
+      window.addEventListener("resize", handleResize);
+      renderer.domElement.addEventListener("pointerdown", handlePointer);
+
+      stateRef.current = {
+        THREE,
+        scene,
+        camera,
+        renderer,
+        controls,
+        raycaster,
+        pointer,
+        group: null,
+      };
+      animate();
+      setSceneReady(true);
+
+      cleanup = () => {
+        const ref = stateRef.current;
+        if (ref?.frame) cancelAnimationFrame(ref.frame);
+        window.removeEventListener("resize", handleResize);
+        renderer.domElement.removeEventListener("pointerdown", handlePointer);
+        renderer.dispose();
+        controls.dispose();
+        scene.clear();
+        stateRef.current = null;
+      };
     };
 
-    const handleResize = () => {
-      if (!mountRef.current) return;
-      const nextWidth = mountRef.current.clientWidth || width;
-      const nextHeight = Math.max(380, mountRef.current.clientHeight || height);
-      renderer.setSize(nextWidth, nextHeight);
-      camera.aspect = nextWidth / nextHeight;
-      camera.updateProjectionMatrix();
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    const handlePointer = (event) => {
-      if (event.target !== renderer.domElement || !stateRef.current) return;
-      const rect = renderer.domElement.getBoundingClientRect();
-      pointer.x = (((event.clientX - rect.left) / rect.width) * 2) - 1;
-      pointer.y = -((((event.clientY - rect.top) / rect.height) * 2) - 1);
-      raycaster.setFromCamera(pointer, camera);
-      const group = stateRef.current.group;
-      if (!group) return;
-      const barGroup = group.children[0];
-      if (!barGroup) return;
-      const intersects = raycaster.intersectObjects(barGroup.children, false);
-      if (!intersects.length) return;
-
-      const { rowIdx, colIdx } = intersects[0].object.userData || {};
-      const current = interactionsRef.current;
-      if (typeof rowIdx !== "number" || typeof colIdx !== "number") return;
-
-      if (current.mode === "operator" && !(current.revealedRows || []).includes(rowIdx)) {
-        if (current.canRevealRow?.(rowIdx)) current.onRevealRow?.(rowIdx);
-        return;
-      }
-
-      current.onSelect?.(rowIdx, colIdx);
-    };
-
-    renderer.domElement.addEventListener("pointerdown", handlePointer);
-
-    stateRef.current = {
-      scene,
-      camera,
-      renderer,
-      controls,
-      raycaster,
-      pointer,
-      group: null,
-    };
-    animate();
+    setupScene();
 
     return () => {
-      const ref = stateRef.current;
-      if (ref?.frame) cancelAnimationFrame(ref.frame);
-      window.removeEventListener("resize", handleResize);
-      renderer.domElement.removeEventListener("pointerdown", handlePointer);
-      renderer.dispose();
-      controls.dispose();
-      scene.clear();
-      stateRef.current = null;
+      disposed = true;
+      cleanup();
     };
   }, []);
 
   useEffect(() => {
-    if (!stateRef.current) return;
-    const { scene, group } = stateRef.current;
+    if (!sceneReady || !stateRef.current) return;
+    const { THREE, scene, group } = stateRef.current;
     if (group) {
       scene.remove(group);
       group.traverse((obj) => {
@@ -192,7 +207,7 @@ const BarGrid = ({
         const affordable = isOperator && !revealed && canRevealRow?.(rowIndex);
         const height = revealed ? 0.12 + ((value || 0) * 1.4) : (affordable ? 0.12 : 0.06);
         const geometry = new THREE.BoxGeometry(tile, height, tile);
-        let color = valueColor(value);
+        let color = valueColor(THREE, value);
         if (isOperator && !revealed) {
           color = new THREE.Color(affordable ? ACCENT_WARM : "#242b3f");
         }
@@ -225,13 +240,13 @@ const BarGrid = ({
     const zMax = (((rowCount - 1) / 2) * (tile + gap));
 
     rows.forEach((row, rowIndex) => {
-      const sprite = makeLabelSprite(row?.label || row?.id || `Row ${rowIndex + 1}`);
+      const sprite = makeLabelSprite(THREE, row?.label || row?.id || `Row ${rowIndex + 1}`);
       sprite.position.set(xMin - (tile + 0.8), 0.1, (rowIndex - ((rowCount - 1) / 2)) * (tile + gap));
       labelsGroup.add(sprite);
     });
 
     cols.forEach((col, colIndex) => {
-      const sprite = makeLabelSprite(col?.label || col?.id || `Col ${colIndex + 1}`);
+      const sprite = makeLabelSprite(THREE, col?.label || col?.id || `Col ${colIndex + 1}`);
       sprite.position.set((colIndex - ((colCount - 1) / 2)) * (tile + gap), 0.1, zMax + (tile + 0.9));
       labelsGroup.add(sprite);
     });
@@ -245,7 +260,7 @@ const BarGrid = ({
     const distance = 4 + (span * 0.55);
     stateRef.current.camera.position.set(distance, distance * 0.7, distance);
     stateRef.current.controls.target.set(0, 0, 0);
-  }, [matrix, selectedRow, selectedCol, mode, revealedRows, rows, cols, canRevealRow]);
+  }, [sceneReady, matrix, selectedRow, selectedCol, mode, revealedRows, rows, cols, canRevealRow]);
 
   return html`<div class="scene-shell" ref=${mountRef}></div>`;
 };
