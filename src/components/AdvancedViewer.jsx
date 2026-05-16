@@ -524,21 +524,21 @@ export default function AdvancedViewer() {
       <header>
         <div>
           <h1>Live Counterfactual Board</h1>
-          <p class="lede">Advanced prototype: every tile now runs a regularized logistic-regression classifier on standardized synthetic data. Pick a training roster (rows) against evaluation worlds (columns), then inspect the actual scatter plots, confusion matrix, and a 3D accuracy board powered by Three.js.</p>
+          <p class="lede">A working board for inspecting how training rosters and evaluation worlds change classifier behavior. Each tile runs a regularized logistic-regression classifier on standardized synthetic data, with scatter plots, a confusion matrix, and a 3D accuracy board.</p>
         </div>
-        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+        <div class="advanced-meta">
           <div class="pill">${subsetList.length} train combos x ${scenarioConfigs.length} eval worlds</div>
           <div class="pill">Data seed: <strong>${modelSeed}</strong></div>
         </div>
       </header>
 
       <div class="layout">
-        <div>
+        <div class="advanced-controls">
           <div class="card">
             <h2>Board setup</h2>
             <p>Swap the toy explanations for A/B/C/D, regenerate synthetic data, and remind yourself how the 3D bars are scaled.</p>
             <div class="ctrl-row">
-              <select style="flex:1;padding:8px;border-radius:10px;background:#0b1225;color:var(--fg);border:1px solid #14203a" value=${toyExplanation} onChange=${(event) => setToyExplanation(event.target.value)}>
+              <select style="flex:1;padding:8px" value=${toyExplanation} onChange=${(event) => setToyExplanation(event.target.value)}>
                 ${explanationSets.map((set) => html`<option value=${set.id}>${set.label}</option>`)}
               </select>
               <button class="btn" onClick=${rerollData}>Re-roll training data</button>
@@ -563,11 +563,11 @@ export default function AdvancedViewer() {
           <div class="card">
             <h2>Selection</h2>
             <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">Training roster</label>
-            <select style="width:100%;padding:8px;border-radius:10px;background:#0b1225;color:var(--fg);border:1px solid #14203a" value=${rowIdx} onChange=${(event) => setRowIdx(+event.target.value)}>
+            <select style="width:100%;padding:8px" value=${rowIdx} onChange=${(event) => setRowIdx(+event.target.value)}>
               ${subsetList.map((row, index) => html`<option value=${index}>${index + 1}. ${row.label}</option>`)}
             </select>
             <label style="display:block;font-size:12px;color:var(--muted);margin:12px 0 4px">Evaluation world</label>
-            <select style="width:100%;padding:8px;border-radius:10px;background:#0b1225;color:var(--fg);border:1px solid #14203a" value=${colIdx} onChange=${(event) => setColIdx(+event.target.value)}>
+            <select style="width:100%;padding:8px" value=${colIdx} onChange=${(event) => setColIdx(+event.target.value)}>
               ${scenarioConfigs.map((cfg, index) => html`<option value=${index}>${cfg.label} - ${cfg.description}</option>`)}
             </select>
           </div>
@@ -576,7 +576,7 @@ export default function AdvancedViewer() {
             <h2>Scenario puzzles</h2>
             <p>These presets live in a tiny markdown manifest. Loading one sets the metric, focus tile, budget, and which rows are already revealed.</p>
             <div class="ctrl-row">
-              <select style="flex:1;padding:8px;border-radius:10px;background:#0b1225;color:var(--fg);border:1px solid #14203a" value=${puzzleId} onChange=${(event) => setPuzzleId(event.target.value)}>
+              <select style="flex:1;padding:8px" value=${puzzleId} onChange=${(event) => setPuzzleId(event.target.value)}>
                 ${puzzles.map((puzzle) => html`<option value=${puzzle.title}>${puzzle.title}</option>`)}
               </select>
               <button class="btn" onClick=${applyPuzzle}>Load puzzle</button>
@@ -642,7 +642,7 @@ export default function AdvancedViewer() {
           </div>
         </div>
 
-        <div>
+        <div class="advanced-figures">
           <div class="board-grid">
             <div class="card">
               <h2>Real world grid</h2>
@@ -682,7 +682,7 @@ export default function AdvancedViewer() {
             <div class="pill">Budget: <strong style="font-size:15px">${budget}</strong> credits</div>
             <div class="ctrl-row" style="margin-top:8px;align-items:center">
               <label style="font-size:12px;color:var(--muted)">Add starting budget</label>
-              <input type="number" min="0" step="1" value=${topUp} onInput=${(event) => setTopUp(event.target.value)} style="width:90px;padding:6px;border-radius:10px;background:#0b1225;color:var(--fg);border:1px solid #14203a" />
+              <input type="number" min="0" step="1" value=${topUp} onInput=${(event) => setTopUp(event.target.value)} style="width:90px;padding:6px" />
               <button class="btn" onClick=${addBudget}>Add credits</button>
             </div>
             <div class="row-badges">
@@ -694,7 +694,7 @@ export default function AdvancedViewer() {
                     <header>
                       <strong>${row.label}</strong>
                       ${revealed
-                        ? html`<span style="color:#5dd4ff;font-size:11px">Known</span>`
+                        ? html`<span style="color:var(--accent);font-size:11px">Known</span>`
                         : html`<span style="color:${affordable ? ACCENT_WARM : "#5a637c"};font-size:11px">${affordable ? "Hidden" : "Need credits"}</span>`}
                     </header>
                     ${row.blurb && html`<span style="font-size:11px;color:var(--muted)">${row.blurb}</span>`}

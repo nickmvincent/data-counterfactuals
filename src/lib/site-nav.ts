@@ -14,7 +14,7 @@ export const primarySiteLinks: SiteNavLink[] = [
   { href: "/", label: "Overview", title: "What data counterfactuals are and why they matter" },
   { href: "/grid", label: "Grid", title: "Interactive toy grid for exploring train/eval counterfactuals" },
   { href: "/memo", label: "Memos + Course", title: "Written notes, the lightweight course path, formalisms, and more" },
-  { href: "/collections", label: "Related Areas and Papers", title: "Curated shelf of neighboring literatures and representative papers" },
+  { href: "/collections", label: "Related Work", title: "Curated shelf of neighboring literatures and representative papers" },
 ];
 
 export const wipExplorableLinks: SiteNavLink[] = [
@@ -30,11 +30,11 @@ export const wipExplorableLinks: SiteNavLink[] = [
 export function getSiteNavSections(githubUrl?: string): SiteNavSection[] {
   return [
     { label: "Explore the site", links: primarySiteLinks },
-    { label: "WIP Explorables", links: wipExplorableLinks },
+    { label: "Interactive tools", links: wipExplorableLinks },
     ...(githubUrl
       ? [{
           label: "Project links",
-          links: [{ href: githubUrl, label: "GitHub Repo", external: true }],
+          links: [{ href: githubUrl, label: "GitHub", external: true }],
         }]
       : []),
   ];

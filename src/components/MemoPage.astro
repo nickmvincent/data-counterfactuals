@@ -7,10 +7,9 @@ import { countWords, estimateReadMinutes, numberedMemoTitle } from "../lib/memos
 interface Props {
   memo: CollectionEntry<"memos">;
   Content: any;
-  eyebrow?: string;
 }
 
-const { memo, Content, eyebrow = "Memo" } = Astro.props;
+const { memo, Content } = Astro.props;
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
@@ -51,7 +50,6 @@ const pageTitle = numberedMemoTitle(memo.data.title, memo.data.order);
   <main class="page memo-page" id="main-content" tabindex="-1">
     <header class="page-header">
       <div>
-        <span class="page-eyebrow">{eyebrow}</span>
         <h1 class="page-title">{pageTitle}</h1>
         {memo.data.summary && <p class="page-lede">{memo.data.summary}</p>}
         <div class="page-meta">

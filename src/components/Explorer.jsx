@@ -752,9 +752,9 @@ function App() {
         ? `The current question treats ${label(groupSet)} as one coalition. Changing these tokens changes who gets removed together; it does not move the selected train row ${label(Srow)}.`
         : `Pick two or more tokens to ask what happens when that coalition leaves train ${label(Srow)} together. This control changes the question, not the selected row.`
       : conceptMode === "eval"
-        ? `The current question asks what happens when ${focusPrimary} is added to eval ${label(evalSet)} while train ${label(Srow)} stays fixed. Changing the chip changes the candidate evaluation object, not the selected row.`
+        ? `The current question asks what happens when ${focusPrimary} is added to eval ${label(evalSet)} while train ${label(Srow)} stays fixed. Changing the focus token changes the candidate evaluation object, not the selected row.`
       : conceptMode === "poison"
-        ? `The current attack targets rows containing ${groupSet.length ? label(groupSet) : focusPrimary}. Changing these chips changes which rows get corrupted; it does not move the selected row ${label(Srow)}.`
+        ? `The current attack targets rows containing ${groupSet.length ? label(groupSet) : focusPrimary}. Changing these focus tokens changes which rows get corrupted; it does not move the selected row ${label(Srow)}.`
         : `The current question is about ${focusPrimary}. Clicking another token changes who is being removed, added, or valued, while the selected train row stays ${label(Srow)} until you change it on the grid.`;
 
   const scoreProxyCopy =
@@ -891,7 +891,7 @@ function App() {
       title: "Remove a group together",
       question: groupSet.length
         ? `If group ${label(groupSet)} walked out of train ${label(Srow)} while eval ${label(evalSet)} stays fixed, what would happen?`
-        : "Pick multiple focus chips to turn this into a group-removal question.",
+        : "Pick multiple focus tokens to turn this into a group-removal question.",
       answerLabel: "Group delta",
       answerValue: looDelta.toFixed(4),
       trace: groupSet.length
@@ -926,7 +926,7 @@ function App() {
         label: groupSet.length ? `Without ${label(groupSet)}` : "Comparison row",
         value: compareValueForGroup.toFixed(3),
         note:
-          strikeMinusIdx >= 0 ? `f(${label(strikeMinus)}, ${label(evalSet)})` : "Choose at least two focus chips to create a coalition comparison.",
+          strikeMinusIdx >= 0 ? `f(${label(strikeMinus)}, ${label(evalSet)})` : "Choose at least two focus tokens to create a coalition comparison.",
         tone: "quiet",
       },
     ];
@@ -1650,7 +1650,7 @@ function App() {
             : conceptMode === "group"
               ? "Focus coalition"
               : "Focus contributor";
-  const sidebarStatusChips = [
+  const sidebarStatusItems = [
     modeLabel,
     `Train ${label(Srow)}`,
     `Eval ${label(evalSet)}`,
@@ -1867,7 +1867,7 @@ function App() {
             <div class="control-cluster">
               <div class="control-head">${focusHeading}</div>
               <div class="ctrl-note">${focusTargetCopy}</div>
-              <div class="focus-chip-row">
+              <div class="focus-token-row">
                 ${base.map((token) => {
                   const active = focusSet.includes(token);
                   const handler = () => (allowsMultiFocus ? toggleFocus(token) : setFocusSet([token]));
@@ -1925,7 +1925,7 @@ function App() {
         ? html`
             <div class="control-cluster">
               <div class="control-head">Bucket size</div>
-              <div class="focus-chip-row">
+              <div class="focus-token-row">
                 ${Array.from({ length: base.length + 1 }, (_, bucket) => html`
                   <button class="btn mini" aria-pressed=${k === bucket} onClick=${() => setK(bucket)}>k=${bucket}</button>
                 `)}
@@ -2044,7 +2044,7 @@ function App() {
       <div class="current-reading-status">
         <div class="toolbar-label">Selected state</div>
         <div class="summary-inline toolbar-pills">
-          ${sidebarStatusChips.map((chip) => html`<span class="pill">${chip}</span>`)}
+          ${sidebarStatusItems.map((item) => html`<span class="pill">${item}</span>`)}
         </div>
       </div>
       <div class="stage-takeaway" data-testid="reading-takeaway">${currentTakeaway}</div>
@@ -2120,56 +2120,56 @@ function App() {
           <div class="toolbar-guide">
             <div class="toolbar-guide-head">
               <div>
-                <span class="summary-kicker">Play HUD</span>
+                <span class="summary-kicker">Explorer controls</span>
                 <p class="toolbar-guide-copy">${currentTakeaway}</p>
               </div>
             </div>
             <div class="toolbar-selection-strip" aria-label="Current explorer settings">
-              <div class="toolbar-selection-chip">
-                <span class="toolbar-selection-chip-label">Lens</span>
-                <span class="toolbar-selection-chip-value">${modeLabel}</span>
+              <div class="toolbar-selection-item">
+                <span class="toolbar-selection-item-label">Lens</span>
+                <span class="toolbar-selection-item-value">${modeLabel}</span>
               </div>
-              <div class="toolbar-selection-chip">
-                <span class="toolbar-selection-chip-label">Score</span>
-                <span class="toolbar-selection-chip-value">${metricMeta[metric].short}</span>
+              <div class="toolbar-selection-item">
+                <span class="toolbar-selection-item-label">Score</span>
+                <span class="toolbar-selection-item-value">${metricMeta[metric].short}</span>
               </div>
-              <div class="toolbar-selection-chip">
-                <span class="toolbar-selection-chip-label">Train</span>
-                <span class="toolbar-selection-chip-value">${label(Srow)}</span>
+              <div class="toolbar-selection-item">
+                <span class="toolbar-selection-item-label">Train</span>
+                <span class="toolbar-selection-item-value">${label(Srow)}</span>
               </div>
-              <div class="toolbar-selection-chip">
-                <span class="toolbar-selection-chip-label">Eval</span>
-                <span class="toolbar-selection-chip-value">${label(evalSet)}</span>
+              <div class="toolbar-selection-item">
+                <span class="toolbar-selection-item-label">Eval</span>
+                <span class="toolbar-selection-item-value">${label(evalSet)}</span>
               </div>
               ${usesFocus
                 ? html`
-                    <div class="toolbar-selection-chip">
-                      <span class="toolbar-selection-chip-label">Focus</span>
-                      <span class="toolbar-selection-chip-value">${focusLabel}</span>
+                    <div class="toolbar-selection-item">
+                      <span class="toolbar-selection-item-label">Focus</span>
+                      <span class="toolbar-selection-item-value">${focusLabel}</span>
                     </div>
                   `
                 : null}
               ${metric === "real"
                 ? html`
-                    <div class="toolbar-selection-chip">
-                      <span class="toolbar-selection-chip-label">Dataset mode</span>
-                      <span class="toolbar-selection-chip-value">
+                    <div class="toolbar-selection-item">
+                      <span class="toolbar-selection-item-label">Dataset mode</span>
+                      <span class="toolbar-selection-item-value">
                         ${realDataMode === "live" ? "Live sample" : "Precomputed"}
                       </span>
                     </div>
                   `
                 : metric === "covertype"
                   ? html`
-                      <div class="toolbar-selection-chip">
-                        <span class="toolbar-selection-chip-label">Real domains</span>
-                        <span class="toolbar-selection-chip-value">${covertypeDomains.length} cohorts</span>
+                      <div class="toolbar-selection-item">
+                        <span class="toolbar-selection-item-label">Real domains</span>
+                        <span class="toolbar-selection-item-value">${covertypeDomains.length} cohorts</span>
                       </div>
                     `
                   : conceptMode === "poison"
                     ? html`
-                        <div class="toolbar-selection-chip">
-                          <span class="toolbar-selection-chip-label">World layer</span>
-                          <span class="toolbar-selection-chip-value">${currentWorldLabel}</span>
+                        <div class="toolbar-selection-item">
+                          <span class="toolbar-selection-item-label">World layer</span>
+                          <span class="toolbar-selection-item-value">${currentWorldLabel}</span>
                         </div>
                       `
                     : null}

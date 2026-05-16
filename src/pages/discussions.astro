@@ -32,7 +32,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
       margin: 0;
       font-family: var(--font-display);
       font-size: clamp(1.6rem, 2vw, 2rem);
-      letter-spacing: -0.03em;
+      letter-spacing: 0;
     }
   </style>
 
@@ -41,7 +41,6 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   <main class="page essay-page discussion-page" id="main-content" tabindex="-1">
     <header class="essay-header page-header">
       <div>
-        {page.data.eyebrow && <span class="page-eyebrow">{page.data.eyebrow}</span>}
         <h1 class="page-title">{page.data.title}</h1>
         {page.data.lede && <p class="page-lede">{page.data.lede}</p>}
         <div class="page-meta">
@@ -75,13 +74,13 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
           header: "margin-bottom:1.5rem;",
           subtitle: "color:var(--muted); margin-bottom:1rem; line-height:1.75;",
           backLink: "color:var(--ring-thick); font-weight:700;",
-          section: "background:rgba(255, 250, 243, 0.62); border:1px solid var(--border); border-radius:22px; padding:1.2rem; margin-bottom:1rem;",
+          section: "background:transparent; border:1px solid var(--border); border-radius:0; padding:1.2rem; margin-bottom:1rem;",
           list: "list-style:none; padding:0; margin:0;",
           discussionListItem: "margin-bottom:0.85rem;",
           listItem: "margin-bottom:0.5rem;",
           description: "color:var(--muted); display:block; font-size:0.95rem; margin-top:0.25rem; line-height:1.65;",
           muted: "color:var(--muted); font-size:0.92rem;",
-          emptySection: "background:rgba(255, 250, 243, 0.62); border:1px solid var(--border); border-radius:22px; padding:1.2rem;",
+          emptySection: "background:transparent; border:1px solid var(--border); border-radius:0; padding:1.2rem;",
         }}
       />
     </section>

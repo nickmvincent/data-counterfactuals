@@ -1,7 +1,6 @@
 ---
 title: Data Counterfactuals
 description: "An interactive explainer for asking what changes when training data, evaluation data, data rights, or trust institutions change."
-eyebrow: Open course notes and explorables
 lede: "What changes when the data world, evaluation world, or trust institution changes?"
 reading_paths:
   - title: Read the launch memo

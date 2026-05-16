@@ -124,7 +124,6 @@ export default function ApiExplorer() {
     <div class="api-explorer" data-testid="api-explorer">
       <section class="api-hero-card">
         <div class="api-hero-copy">
-          <span class="api-kicker">API explorer</span>
           <h2 class="api-title">Run explorer state as JSON.</h2>
           <p class="api-copy">Paste JSON, run it in-browser, and inspect the response.</p>
         </div>
@@ -133,14 +132,15 @@ export default function ApiExplorer() {
           {exampleEntries.map((entry) => (
             <button
               key={entry.id}
-              class="api-chip"
+              class="api-example-button"
               type="button"
               aria-pressed={activeExampleId === entry.id}
               data-testid={`api-example-${entry.id}`}
               onClick={() => loadExample(entry.id)}
               title={entry.description}
             >
-              {entry.label}
+              <span class="api-example-title">{entry.label}</span>
+              <span class="api-example-desc">{entry.description}</span>
             </button>
           ))}
         </div>
@@ -159,7 +159,6 @@ export default function ApiExplorer() {
         <section class="api-panel-card">
           <div class="api-panel-head">
             <div>
-              <span class="api-panel-kicker">Request</span>
               <h3 class="api-panel-title">Request JSON</h3>
               <p class="api-panel-copy">
                 Use labels like <code>ABC</code>, arrays like <code>["A","B","C"]</code>, or numeric subset indices.
@@ -221,7 +220,6 @@ export default function ApiExplorer() {
 
         <aside class="api-side-rail">
           <section class="api-panel-card">
-            <span class="api-panel-kicker">Supported keys</span>
             <h3 class="api-panel-title">What this request understands</h3>
             <div class="api-field-groups">
               {apiExplorerFieldGroups.map((group) => (
@@ -242,7 +240,6 @@ export default function ApiExplorer() {
           </section>
 
           <section class="api-panel-card">
-            <span class="api-panel-kicker">Quick notes</span>
             <h3 class="api-panel-title">Useful shortcuts</h3>
             <div class="api-notes">
               <p>
@@ -265,7 +262,6 @@ export default function ApiExplorer() {
       <section class="api-panel-card api-response-card">
         <div class="api-panel-head">
           <div>
-            <span class="api-panel-kicker">Response</span>
             <h3 class="api-panel-title">Normalized output</h3>
             <p class="api-panel-copy">The response shows the resolved state and the requested result.</p>
           </div>

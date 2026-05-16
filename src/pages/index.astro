@@ -36,7 +36,7 @@ const gridFigureSectionIds = new Set([
 >
   <style is:global>
     body:has(.start-page) {
-      background: linear-gradient(180deg, #fbf8f2 0%, #f4ede3 56%, #eee4d6 100%);
+      background: #f7f1e8;
     }
     body:has(.start-page) .top-nav {
       background: rgba(251, 247, 240, 0.84);
@@ -44,10 +44,10 @@ const gridFigureSectionIds = new Set([
       backdrop-filter: blur(10px);
     }
     .start-page {
-      width: min(calc(100% - 2rem), calc(var(--measure) + 8rem));
+      width: min(calc(100% - 2rem), calc(var(--measure) + 24rem));
       display: grid;
-      gap: clamp(3rem, 5vw, 4.4rem);
-      padding-top: clamp(2rem, 4vw, 3.4rem);
+      gap: clamp(2.35rem, 4vw, 3.35rem);
+      padding-top: clamp(1.35rem, 3vw, 2.4rem);
     }
     .start-intro,
     .start-section {
@@ -55,42 +55,44 @@ const gridFigureSectionIds = new Set([
       margin-inline: auto;
     }
     .start-intro {
+      width: min(100%, calc(var(--measure) + 24rem));
       display: grid;
-      gap: 1.15rem;
+      grid-template-columns: minmax(27rem, 0.9fr) minmax(0, 1fr);
+      gap: 0.95rem 1.8rem;
+      align-items: start;
       margin-bottom: 0;
     }
-    .start-intro .page-eyebrow {
-      color: rgba(101, 90, 79, 0.86);
-    }
     .start-intro .page-title {
-      max-width: 11ch;
-      font-size: clamp(2.55rem, 5.6vw, 4.3rem);
-      line-height: 0.98;
-      letter-spacing: -0.035em;
+      grid-row: 1 / span 3;
+      max-width: 16ch;
+      font-size: clamp(2.35rem, 4.8vw, 3.85rem);
+      line-height: 1.04;
+      letter-spacing: 0;
     }
     .start-intro .page-lede {
+      grid-column: 2;
       max-width: 40rem;
       color: rgba(32, 26, 22, 0.84);
       font-size: clamp(1.12rem, 1.5vw, 1.28rem);
-      line-height: 1.84;
+      line-height: 1.68;
     }
-    .start-intro .intro-block {
-      max-width: 38rem;
+    .start-overview .intro-block {
+      max-width: 46rem;
     }
-    .start-intro .intro-block p {
+    .start-overview .intro-block p {
       margin: 0;
       color: var(--muted);
       font-size: 1.04rem;
-      line-height: 1.92;
+      line-height: 1.78;
     }
-    .start-intro .intro-block ul {
+    .start-overview .intro-block ul {
       margin: 0.95rem 0 0;
       padding-left: 1.3rem;
       color: var(--muted);
     }
-    .start-intro .intro-block li {
+    .start-overview .intro-block li {
       margin: 0.45rem 0;
-      line-height: 1.82;
+      line-height: 1.72;
     }
     .start-section {
       padding-top: 2.35rem;
@@ -102,7 +104,7 @@ const gridFigureSectionIds = new Set([
       font-family: var(--font-display);
       font-size: clamp(1.6rem, 2vw, 1.98rem);
       line-height: 1.12;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
     .start-section p {
       margin: 0 0 1.15rem;
@@ -143,7 +145,7 @@ const gridFigureSectionIds = new Set([
     .start-page .mini-row-label,
     .start-page .mini-col-label,
     .start-page .mini-cell {
-      border-radius: 10px;
+      border-radius: 4px;
     }
     .start-page .mini-corner {
       width: 58px;
@@ -229,7 +231,7 @@ const gridFigureSectionIds = new Set([
     .start-page .mini-tooltip {
       margin-top: 0;
       padding: 0.72rem 0.9rem;
-      border-radius: 12px;
+      border-radius: 4px;
       border: 1px solid rgba(92, 72, 52, 0.12);
       background: rgba(255, 250, 243, 0.92);
       max-width: min(100%, 34rem);
@@ -258,9 +260,17 @@ const gridFigureSectionIds = new Set([
 
     @media (max-width: 780px) {
       .start-page {
-        width: min(calc(100% - 1.25rem), calc(var(--measure) + 8rem));
+        width: min(calc(100% - 1.25rem), calc(var(--measure) + 24rem));
         padding-top: 1.25rem;
         gap: 3rem;
+      }
+      .start-intro {
+        grid-template-columns: 1fr;
+      }
+      .start-intro .page-title,
+      .start-intro .page-lede {
+        grid-column: auto;
+        grid-row: auto;
       }
       .start-section {
         padding-top: 2rem;
@@ -272,11 +282,15 @@ const gridFigureSectionIds = new Set([
 
   <main class="page start-page" id="main-content" tabindex="-1">
     <header class="page-header start-intro">
-      {page.data.eyebrow && <span class="page-eyebrow">{page.data.eyebrow}</span>}
       <h1 class="page-title">{page.data.title}</h1>
       {page.data.lede && <p class="page-lede">{page.data.lede}</p>}
-      {introHtml && <div class="intro-block" set:html={introHtml}></div>}
     </header>
+
+    {introHtml && (
+      <section class="start-section start-overview">
+        <div class="intro-block" set:html={introHtml}></div>
+      </section>
+    )}
 
     {featuredSections.map((section, index) => {
       const showLeaveOneOutFigure = leaveOneOutFigureSectionIds.has(section.id);

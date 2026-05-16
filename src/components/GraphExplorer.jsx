@@ -693,7 +693,7 @@ function App() {
             </button>
           </div>
           <div class="graph-toolbar-copyblock">
-            <span class="graph-kicker">Graph HUD</span>
+            <span class="graph-kicker">Graph controls</span>
             <h2 class="graph-toolbar-title">Move through the subset lattice.</h2>
             <p class="graph-toolbar-copy">
               Fix eval, pick a lens, then click a training node. The side panel keeps the current answer and legal moves in view.

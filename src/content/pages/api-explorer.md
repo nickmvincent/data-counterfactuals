@@ -1,7 +1,6 @@
 ---
 title: The API explorer
 description: Inspect the numbers behind the grid and graph explorers.
-eyebrow: Interactive lab
 lede: Paste explorer state as JSON and get back the matrix, a cell, or the current answer.
 ---
 

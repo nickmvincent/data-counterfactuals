@@ -108,13 +108,13 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 >
   <style>
     .collections-page {
-      max-width: 62rem;
+      max-width: 68rem;
       display: grid;
-      gap: 1.2rem;
+      gap: 1rem;
     }
     .collections-hero {
       display: grid;
-      gap: 1.2rem;
+      gap: 1rem;
       padding-top: 0.2rem;
     }
     .collections-head {
@@ -124,12 +124,14 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
     }
     .collections-intro {
       display: grid;
-      gap: 1rem;
-      padding-top: 1rem;
+      grid-template-columns: minmax(0, 0.78fr) minmax(18rem, 1.22fr);
+      gap: 1rem 1.6rem;
+      padding: 0.95rem 0;
       border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
     }
     .collections-copy {
-      max-width: 42rem;
+      max-width: 38rem;
       color: var(--muted);
       font-size: 0.98rem;
       line-height: 1.75;
@@ -139,57 +141,59 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
     }
     .collection-jump-groups {
       display: grid;
-      gap: 0.9rem;
+      grid-template-columns: minmax(12rem, 0.7fr) minmax(0, 1.3fr);
+      gap: 0.85rem 1.15rem;
+      align-items: start;
     }
     .collection-jump-group {
       display: grid;
       gap: 0.45rem;
     }
-    .collection-group-label,
     .collection-jump-label {
       margin: 0;
-      color: var(--ring-thick);
-      font-family: var(--font-ui);
-      font-size: 0.74rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
+      color: var(--muted);
+      font-family: var(--font-body);
+      font-size: 0.94rem;
+      font-weight: 600;
+      letter-spacing: 0;
+      text-transform: none;
     }
     .collection-jumps {
       list-style: none;
       padding: 0;
       margin: 0;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.55rem;
+      display: grid;
+      gap: 0;
+    }
+    .collection-jump-group:last-child .collection-jumps {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 1rem;
     }
     .collection-jumps li {
-      padding: 0;
-      border-top: 0;
+      padding: 0.28rem 0;
+      border-top: 1px solid rgba(92, 72, 52, 0.1);
     }
     .collection-jumps a {
-      display: inline-flex;
-      align-items: center;
-      padding: 0.52rem 0.82rem;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      background: rgba(255, 250, 243, 0.72);
+      display: inline;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
       color: var(--fg);
-      font-family: var(--font-ui);
-      font-size: 0.86rem;
-      font-weight: 600;
-      text-decoration: none;
-      transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+      font-family: var(--font-body);
+      font-size: 1rem;
+      font-weight: 400;
+      text-decoration: underline;
+      text-underline-offset: 0.15em;
+      transition: color 160ms ease;
     }
     .collection-jumps a:hover,
     .collection-jumps a:focus-visible {
-      transform: translateY(-1px);
-      border-color: rgba(177, 79, 31, 0.24);
-      background: rgba(255, 250, 243, 0.92);
+      color: var(--ring-thick);
     }
     .collection-groups {
       display: grid;
-      gap: 1.5rem;
+      gap: 1.35rem;
     }
     .collection-group {
       display: grid;
@@ -204,20 +208,22 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
       font-family: var(--font-display);
       font-size: clamp(1.3rem, 2vw, 1.7rem);
       line-height: 1.08;
-      letter-spacing: -0.03em;
+      letter-spacing: 0;
     }
     .collection-stack {
       display: grid;
-      gap: 0.9rem;
+      gap: 0;
+      border-top: 1px solid rgba(92, 72, 52, 0.14);
     }
     .collection-section {
       scroll-margin-top: 6rem;
       display: grid;
-      gap: 0.9rem;
-      padding: 1.2rem 1.25rem;
-      border: 1px solid var(--border);
-      border-radius: 22px;
-      background: rgba(255, 250, 243, 0.56);
+      gap: 0.78rem;
+      padding: 1.05rem 0;
+      border: 0;
+      border-bottom: 1px solid rgba(92, 72, 52, 0.14);
+      border-radius: 0;
+      background: transparent;
       box-shadow: none;
     }
     .collection-heading {
@@ -227,21 +233,25 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
       justify-content: space-between;
       gap: 0.8rem;
     }
-    .collection-label {
-      margin: 0 0 0.4rem;
-      color: var(--ring-thick);
+    .collection-count,
+    .paper-priority {
+      color: var(--muted);
       font-family: var(--font-ui);
-      font-size: 0.74rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
+      font-size: 0.84rem;
+      line-height: 1.5;
+      white-space: nowrap;
+    }
+    .paper-priority::before {
+      content: "/";
+      margin-right: 0.5rem;
+      color: rgba(101, 90, 79, 0.48);
     }
     .collection-title {
       margin: 0;
       font-family: var(--font-display);
       font-size: clamp(1.35rem, 2.1vw, 1.9rem);
       line-height: 1.06;
-      letter-spacing: -0.03em;
+      letter-spacing: 0;
     }
     .paper-list {
       list-style: none;
@@ -282,14 +292,18 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
       line-height: 1.58;
     }
     @media (max-width: 640px) {
+      .collections-intro,
+      .collection-jump-groups {
+        grid-template-columns: 1fr;
+      }
       .collection-section {
-        padding: 1rem;
+        padding: 1rem 0;
       }
       .collection-jumps {
-        gap: 0.45rem;
+        gap: 0;
       }
       .collection-jumps a {
-        padding: 0.48rem 0.72rem;
+        padding: 0;
       }
     }
   </style>
@@ -299,7 +313,6 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   <main class="page collections-page" id="main-content" tabindex="-1">
     <header class="collections-hero">
       <div class="collections-head">
-        {page.data.eyebrow && <span class="page-eyebrow">{page.data.eyebrow}</span>}
         <h1 class="page-title">{page.data.title}</h1>
         {page.data.lede && <p class="page-lede">{page.data.lede}</p>}
         <div class="page-meta">
@@ -333,7 +346,6 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
         {groupedCollections.map((group) => (
           <section class="collection-group" aria-labelledby={`group-${group.id}`}>
             <div class="collection-group-head">
-              <p class="collection-group-label">Shelf grouping</p>
               <h2 class="collection-group-title" id={`group-${group.id}`}>{group.title}</h2>
             </div>
 
@@ -342,10 +354,9 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
                 <section class="collection-section" id={collection.slug}>
                   <div class="collection-heading">
                     <div>
-                      <p class="collection-label">Related area</p>
                       <h3 class="collection-title">{collection.displayTitle}</h3>
                     </div>
-                    <span class="pill">{collection.papers.length} papers</span>
+                    <span class="collection-count">{collection.papers.length} papers</span>
                   </div>
                   {collection.papers.length ? (
                     <ul class="paper-list">
@@ -371,7 +382,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
                               ) : (
                                 <span class="paper-title">{paper.title}</span>
                               )}
-                              {isPriority && <span class="pill">{priorityLabel}</span>}
+                              {isPriority && <span class="paper-priority">{priorityLabel}</span>}
                             </div>
                             {meta && <div class="paper-meta">{meta}</div>}
                           </li>

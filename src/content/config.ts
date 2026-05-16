@@ -22,7 +22,6 @@ const pages = defineCollection({
   schema: z.object({
     title: z.string(),
     description: z.string(),
-    eyebrow: z.string().optional(),
     lede: z.string().optional(),
     intro: z.array(z.string()).optional(),
     notes: z.record(note).optional(),
