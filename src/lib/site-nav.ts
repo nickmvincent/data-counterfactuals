@@ -13,7 +13,7 @@ export interface SiteNavSection {
 export const primarySiteLinks: SiteNavLink[] = [
   { href: "/", label: "Memo #1", title: "Launch memo: what data counterfactuals are and why they matter" },
   { href: "/grid", label: "Grid", title: "Interactive toy grid for exploring train/eval counterfactuals" },
-  { href: "/memo", label: "Memos + Course", title: "Written notes, the lightweight course path, formalisms, and more" },
+  { href: "/memo", label: "Memos", title: "Written notes, the lightweight course path, formalisms, and more" },
   { href: "/collections", label: "Related Work", title: "Curated shelf of neighboring literatures and representative papers" },
 ];
 

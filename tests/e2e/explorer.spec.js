@@ -32,16 +32,18 @@ test("explore mode lets users select evidence and discover computable values", a
   await expect(rowLabels.nth(1)).toHaveText("A");
   await expect(page.locator('[data-testid="explorer-grid"] .num').first()).toBeVisible();
 
-  await expect(page.getByTestId("grid-marker-controls")).toContainText("Select evidence cells");
+  await expect(page.getByTestId("grid-marker-controls")).toContainText("Build the active set");
   await expect(page.getByTestId("explorer-workspace")).not.toContainText("Play");
   await expect(page.getByTestId("explorer-workspace")).not.toContainText("Learn");
   await expect(page.getByTestId("grid-to-graph-link")).toHaveAttribute("href", /mode=explore/);
   await expect(page.getByTestId("value-dock")).toContainText("Smart explorer");
   await expect(page.getByTestId("value-dock")).toContainText("Train A / Eval A");
-  await expect(page.getByTestId("capability-panel")).toContainText("What this selection can compute");
+  await expect(page.getByTestId("capability-panel")).toContainText("What this active set can compute");
   await expect(page.getByTestId("capability-panel")).toContainText("Leave-one-out");
 
-  await page.getByRole("button", { name: /Show Shapley column/i }).click();
+  const sceneControls = page.getByTestId("scene-controls");
+  await sceneControls.getByTestId("preset-select").selectOption("shapley");
+  await sceneControls.getByRole("button", { name: "Show" }).click();
   await expect(page.getByTestId("capability-panel")).toContainText("Shapley can be computed");
 
   const displayControls = page.getByTestId("display-controls");
@@ -55,8 +57,8 @@ test("explore mode lets users select evidence and discover computable values", a
 
   await expect(page.getByTestId("metric-controls")).toContainText("Real data");
   await page.getByTestId("metric-select").selectOption("real");
-  await expect(page.getByTestId("metric-controls")).toContainText("Precomputed");
-  await expect(page.getByTestId("metric-controls")).toContainText("Live");
+  await expect(displayControls).toContainText("Precomputed");
+  await expect(displayControls).toContainText("Live");
 });
 
 test("compute mode builds a query and walks through the required cells", async ({ page }) => {

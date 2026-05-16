@@ -182,6 +182,7 @@ function App() {
   const [paletteName, setPaletteName] = useState("Textbook atlas");
   const [appMode, setAppMode] = useState("explore");
   const [queryConcept, setQueryConcept] = useState("loo");
+  const [presetChoice, setPresetChoice] = useState("current");
   const [focusSet, setFocusSet] = useState(["A"]);
   const [k, setK] = useState(2);
   const [betaAlpha, setBetaAlpha] = useState(2);
@@ -330,6 +331,8 @@ function App() {
     () => selectedCells.map((cell) => describeCell({ cell, matrix, subsets })),
     [selectedCells, matrix, subsets],
   );
+  const visibleCellCount = subsets.length * visibleColIndices.length;
+  const inactiveCellCount = Math.max(0, visibleCellCount - selectedCells.length);
 
   const plans = useMemo(
     () =>
@@ -518,7 +521,7 @@ function App() {
 
   const modeSummary =
     appMode === "explore"
-      ? `${selectedCells.length} selected cell${selectedCells.length === 1 ? "" : "s"}; ${readyPlanCount} computation${readyPlanCount === 1 ? "" : "s"} ready.`
+      ? `${selectedCells.length} active cell${selectedCells.length === 1 ? "" : "s"}; ${inactiveCellCount} inactive; ${readyPlanCount} computation${readyPlanCount === 1 ? "" : "s"} ready.`
       : `${activePlan?.label || "Computation"} is ${planStatusLabel(activePlan)}.`;
 
   const focusCopy =
@@ -534,14 +537,42 @@ function App() {
 
   const presets = [
     {
+      id: "current",
       label: "Show current cell",
+      shortLabel: "Current cell",
       action: () => setSelectedCellsFromCells(cellsForCurrentCell(safeRowIdx, safeColIdx)),
     },
-    { label: "Show LOO pair", planId: "loo" },
-    { label: "Show eval pair", planId: "eval" },
-    { label: "Show Shapley column", planId: "shapley" },
-    { label: `Show k=${k} layer`, planId: "scaling" },
+    { id: "loo", label: "Show LOO pair", shortLabel: "LOO pair", planId: "loo" },
+    { id: "eval", label: "Show eval pair", shortLabel: "Eval pair", planId: "eval" },
+    { id: "shapley", label: "Show Shapley column", shortLabel: "Shapley column", planId: "shapley" },
+    { id: "scaling", label: `Show k=${k} layer`, shortLabel: `k=${k} layer`, planId: "scaling" },
   ];
+
+  const applyPreset = (presetId = presetChoice) => {
+    const preset = presets.find((entry) => entry.id === presetId) || presets[0];
+    if (preset.action) {
+      preset.action();
+      return;
+    }
+    choosePreset(preset.planId);
+  };
+
+  const summaryItems =
+    appMode === "explore"
+      ? [
+          { label: "Mode", value: "Explore" },
+          { label: "Score", value: metricMeta[metric].short },
+          { label: "Anchor", value: `${label(trainSet)} / ${label(evalSet)}` },
+          { label: "Active set", value: `${selectedCells.length}` },
+          { label: "Inactive", value: `${inactiveCellCount}` },
+        ]
+      : [
+          { label: "Mode", value: "Compute" },
+          { label: "Score", value: metricMeta[metric].short },
+          { label: "Train", value: label(trainSet) },
+          { label: "Eval", value: label(evalSet) },
+          { label: queryUsesFocus ? "Focus" : "Query", value: queryUsesFocus ? (queryAllowsMultiFocus ? label(focusSet) : focusPrimary) : activePlan?.shortLabel || "n/a" },
+        ];
 
   const renderPlanCard = (plan) => html`
     <div class=${`concept-plan-card concept-plan-card-${plan.status}`} key=${plan.id}>
@@ -562,7 +593,7 @@ function App() {
         ${plan.status === "unavailable"
           ? plan.unavailableReason
           : plan.status === "ready"
-            ? `${plan.shortLabel} can be computed from the selected set: ${plan.formula}`
+            ? `${plan.shortLabel} can be computed from the active set: ${plan.formula}`
             : `${plan.description} Missing ${plan.missingCells.length} of ${plan.requiredCells.length} required cells.`}
       </div>
     </div>
@@ -575,7 +606,7 @@ function App() {
           <div class="selection-dock-section-head selection-dock-reading-head">
             <div>
               <h3 class="panel-title">Smart explorer</h3>
-              <p class="panel-copy">Selected evidence is translated literally, then checked against every computation the grid knows how to make.</p>
+              <p class="panel-copy">Active cells are translated literally, then checked against every computation the grid knows how to make.</p>
             </div>
           </div>
           <div class="current-reading-status">
@@ -592,9 +623,9 @@ function App() {
                     </div>
                   `,
                 )
-              : html`<div class="toolbar-note">No cells selected yet. Click cells, rows, or columns to add evidence.</div>`}
+              : html`<div class="toolbar-note">No active cells yet. Click cells, rows, or columns to move them into the active set.</div>`}
             ${selectedFacts.length > 8
-              ? html`<div class="toolbar-note">${selectedFacts.length - 8} more selected cells are summarized by the computation cards below.</div>`
+              ? html`<div class="toolbar-note">${selectedFacts.length - 8} more active cells are summarized by the computation cards below.</div>`
               : null}
           </div>
         </section>
@@ -603,7 +634,7 @@ function App() {
           <section class="selection-dock-section" data-testid="capability-panel">
             <div class="selection-dock-section-head">
               <div>
-                <h3 class="selection-dock-section-title">What this selection can compute</h3>
+                <h3 class="selection-dock-section-title">What this active set can compute</h3>
               </div>
             </div>
             <div class="concept-plan-list">
@@ -748,21 +779,7 @@ function App() {
   return html`
     <div class="workspace-shell" data-testid="explorer-workspace" data-ready=${hydrated ? "true" : "false"}>
       <section class="workspace-toolbar" data-testid="explorer-toolbar">
-        <div class="toolbar-bar">
-          <div class="toolbar-action-strip" aria-label="Explorer actions">
-            <a class="toolbar-action-link" href=${graphExplorerHref} data-testid="grid-to-graph-link">Graph view</a>
-            <button
-              class="toolbar-action-link"
-              type="button"
-              aria-live="polite"
-              title=${shareStatus === "failed" ? "Clipboard blocked; state URL is in the address bar" : "Copy current state URL"}
-              data-testid="grid-share-link"
-              data-status=${shareStatus}
-              onClick=${copyGridShareUrl}
-            >
-              ${shareStatus === "copied" ? "Copied" : shareStatus === "failed" ? "Copy failed" : "Share"}
-            </button>
-          </div>
+        <div class="toolbar-hud">
           <div class="toolbar-guide">
             <div class="explorer-mode-switch" role="group" aria-label="Grid explorer mode">
               <button
@@ -785,122 +802,108 @@ function App() {
               </button>
             </div>
             <p class="toolbar-guide-copy">${modeSummary}</p>
-            <div class="toolbar-selection-strip" aria-label="Current explorer settings">
-              <div class="toolbar-selection-item">
-                <span class="toolbar-selection-item-label">Mode</span>
-                <span class="toolbar-selection-item-value">${appMode === "explore" ? "Explore" : "Compute"}</span>
-              </div>
-              <div class="toolbar-selection-item">
-                <span class="toolbar-selection-item-label">Score</span>
-                <span class="toolbar-selection-item-value">${metricMeta[metric].short}</span>
-              </div>
-              <div class="toolbar-selection-item">
-                <span class="toolbar-selection-item-label">Train</span>
-                <span class="toolbar-selection-item-value">${label(trainSet)}</span>
-              </div>
-              <div class="toolbar-selection-item">
-                <span class="toolbar-selection-item-label">Eval</span>
-                <span class="toolbar-selection-item-value">${label(evalSet)}</span>
-              </div>
-              <div class="toolbar-selection-item">
-                <span class="toolbar-selection-item-label">Focus</span>
-                <span class="toolbar-selection-item-value">${queryUsesFocus ? (queryAllowsMultiFocus ? label(focusSet) : focusPrimary) : "not used"}</span>
-              </div>
-            </div>
+          </div>
+          <div class="toolbar-action-strip" aria-label="Explorer actions">
+            <a class="toolbar-action-link" href=${graphExplorerHref} data-testid="grid-to-graph-link">Graph view</a>
+            <button
+              class="toolbar-action-link"
+              type="button"
+              aria-live="polite"
+              title=${shareStatus === "failed" ? "Clipboard blocked; state URL is in the address bar" : "Copy current state URL"}
+              data-testid="grid-share-link"
+              data-status=${shareStatus}
+              onClick=${copyGridShareUrl}
+            >
+              ${shareStatus === "copied" ? "Copied" : shareStatus === "failed" ? "Copy failed" : "Share"}
+            </button>
           </div>
         </div>
 
-        <div class="toolbar-grid">
-          <section class="toolbar-group toolbar-group-primary" data-testid="metric-controls">
-            <div class="toolbar-group-head">
-              <div class="toolbar-group-head-copy">
-                <span class="toolbar-label">Cell score</span>
-                <div class="toolbar-current-choice">${metricMeta[metric].name}</div>
+        <div class="toolbar-selection-strip" aria-label="Current explorer settings">
+          ${summaryItems.map(
+            (item) => html`
+              <div class="toolbar-selection-item" key=${item.label}>
+                <span class="toolbar-selection-item-label">${item.label}</span>
+                <span class="toolbar-selection-item-value">${item.value}</span>
               </div>
-            </div>
+            `,
+          )}
+        </div>
+
+        <div class="toolbar-compact-controls">
+          <section class="toolbar-group toolbar-preset-group" data-testid="scene-controls">
             <label class="toolbar-select-field">
-              <span class="toolbar-field-hint">Choose how each train/eval pair gets scored</span>
-              <select data-testid="metric-select" value=${metric} onChange=${(event) => setMetric(event.target.value)}>
-                ${Object.entries(metricMeta).map(([value, meta]) => html`<option value=${value}>${meta.short}</option>`)}
+              <span class="toolbar-label">Preset</span>
+              <select
+                data-testid="preset-select"
+                value=${presetChoice}
+                onChange=${(event) => setPresetChoice(event.target.value)}
+              >
+                ${presets.map((preset) => {
+                  const plan = preset.planId ? plans.find((entry) => entry.id === preset.planId) : null;
+                  const disabled = Boolean(plan && plan.status === "unavailable");
+                  return html`<option key=${preset.id} value=${preset.id} disabled=${disabled}>${preset.shortLabel}</option>`;
+                })}
               </select>
             </label>
-            ${metric === "real"
-              ? html`
-                  <div class="segmented-row">
-                    <button class="btn mini" type="button" aria-pressed=${realDataMode === "precomputed"} onClick=${switchToPrecomputedRealData}>Precomputed</button>
-                    <button class="btn mini" type="button" aria-pressed=${realDataMode === "live"} onClick=${switchToLiveRealData}>Live</button>
-                    <button class="btn ghost mini" type="button" disabled=${realDataMode !== "live"} onClick=${resampleRealData}>Resample</button>
-                  </div>
-                `
-              : metric === "covertype"
-                ? html`
-                    <div class="toolbar-note">
-                      A/B/C/D map to real wilderness-area domains from UCI Covertype. This metric supports up to ${covertypeDomains.length} active domains here.
-                    </div>
-                  `
-                : html`<div class="toolbar-note">${metricMeta[metric].description}</div>`}
+            <button class="btn mini" type="button" onClick=${() => applyPreset()}>Show</button>
           </section>
 
           <details class="toolbar-group toolbar-group-actions toolbar-expand" data-testid="display-controls">
             <summary class="toolbar-summary">
               <div class="toolbar-summary-copy">
-                <span class="toolbar-summary-label">Display settings</span>
-                <span class="toolbar-summary-title">${displaySummary}</span>
+                <span class="toolbar-summary-label">Options</span>
+                <span class="toolbar-summary-title">${metricMeta[metric].short}; ${displaySummary}</span>
               </div>
               <div class="toolbar-summary-actions">
                 <span class="toolbar-summary-caret"></span>
               </div>
             </summary>
             <div class="toolbar-expanded">
-              <label class="checkbox-row">
-                <input type="checkbox" checked=${showNums} onChange=${(event) => setShowNums(event.target.checked)} />
-                Show raw values
-              </label>
-              <div class="checkbox-row">
-                <input
-                  id="show-singleton-eval-cols"
-                  type="checkbox"
-                  checked=${showSingletonEvalCols}
-                  onChange=${(event) => setShowSingletonEvalCols(event.target.checked)}
-                />
-                <label for="show-singleton-eval-cols">Fewer cols</label>
-              </div>
-              <label class="toolbar-select-field">
-                <span class="toolbar-label">Palette</span>
-                <select value=${paletteName} onChange=${(event) => setPaletteName(event.target.value)}>
-                  ${Object.keys(palettes).map((name) => html`<option value=${name}>${name}</option>`)}
-                </select>
-              </label>
+              <section class="toolbar-options-grid" data-testid="metric-controls">
+                <label class="toolbar-select-field">
+                  <span class="toolbar-label">Cell score</span>
+                  <select data-testid="metric-select" value=${metric} onChange=${(event) => setMetric(event.target.value)}>
+                    ${Object.entries(metricMeta).map(([value, meta]) => html`<option value=${value}>${meta.short}</option>`)}
+                  </select>
+                </label>
+                <label class="checkbox-row">
+                  <input type="checkbox" checked=${showNums} onChange=${(event) => setShowNums(event.target.checked)} />
+                  Show raw values
+                </label>
+                <div class="checkbox-row">
+                  <input
+                    id="show-singleton-eval-cols"
+                    type="checkbox"
+                    checked=${showSingletonEvalCols}
+                    onChange=${(event) => setShowSingletonEvalCols(event.target.checked)}
+                  />
+                  <label for="show-singleton-eval-cols">Fewer cols</label>
+                </div>
+                <label class="toolbar-select-field">
+                  <span class="toolbar-label">Palette</span>
+                  <select value=${paletteName} onChange=${(event) => setPaletteName(event.target.value)}>
+                    ${Object.keys(palettes).map((name) => html`<option value=${name}>${name}</option>`)}
+                  </select>
+                </label>
+              </section>
+              ${metric === "real"
+                ? html`
+                    <div class="segmented-row">
+                      <button class="btn mini" type="button" aria-pressed=${realDataMode === "precomputed"} onClick=${switchToPrecomputedRealData}>Precomputed</button>
+                      <button class="btn mini" type="button" aria-pressed=${realDataMode === "live"} onClick=${switchToLiveRealData}>Live</button>
+                      <button class="btn ghost mini" type="button" disabled=${realDataMode !== "live"} onClick=${resampleRealData}>Resample</button>
+                    </div>
+                  `
+                : metric === "covertype"
+                  ? html`
+                      <div class="toolbar-note">
+                        A/B/C/D map to real wilderness-area domains from UCI Covertype. This metric supports up to ${covertypeDomains.length} active domains here.
+                      </div>
+                    `
+                  : html`<div class="toolbar-note">${metricMeta[metric].description}</div>`}
             </div>
           </details>
-
-          <section class="toolbar-group" data-testid="scene-controls">
-            <div class="toolbar-group-head">
-              <div class="toolbar-group-head-copy">
-                <span class="toolbar-label">Easy starts</span>
-                <div class="toolbar-current-choice">Just show me...</div>
-              </div>
-            </div>
-            <div class="tutorials preset-button-grid">
-              ${presets.map((preset) => {
-                const plan = preset.planId ? plans.find((entry) => entry.id === preset.planId) : null;
-                const disabled = Boolean(plan && plan.status === "unavailable");
-                return html`
-                  <button
-                    key=${preset.label}
-                    class="tutorial-btn"
-                    type="button"
-                    disabled=${disabled}
-                    title=${disabled ? plan.unavailableReason : preset.label}
-                    onClick=${preset.action || (() => choosePreset(preset.planId))}
-                  >
-                    <span class="tutorial-title">${preset.label}</span>
-                    <span class="tutorial-desc">${plan ? plan.description : "Read the anchor cell directly."}</span>
-                  </button>
-                `;
-              })}
-            </div>
-          </section>
         </div>
       </section>
 
@@ -910,7 +913,7 @@ function App() {
             <div class="grid-action-copy">
               <div>
                 <h3 class="selection-dock-section-title">
-                  ${appMode === "explore" ? "Select evidence cells." : "Run a computation over the grid."}
+                  ${appMode === "explore" ? "Build the active set." : "Run a computation over the grid."}
                 </h3>
                 <p class="toolbar-note">
                   ${appMode === "explore"
@@ -938,11 +941,6 @@ function App() {
                 <h2 class="grid-card-title">Data counterfactual grid</h2>
                 <p class="grid-card-lede">Rows are training worlds; columns are evaluation worlds.</p>
               </div>
-            </div>
-            <div class="move-legend" aria-label="Grid move types">
-              <span class="move-key"><span class="move-icon move-icon-row" aria-hidden="true"></span>Row</span>
-              <span class="move-key"><span class="move-icon move-icon-column" aria-hidden="true"></span>Column</span>
-              <span class="move-key"><span class="move-icon move-icon-coupled" aria-hidden="true"></span>Selected</span>
             </div>
           </div>
 

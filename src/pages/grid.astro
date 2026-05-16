@@ -159,9 +159,7 @@ if (!helpSections.length) {
       text-shadow: 0 1px 0 rgba(255, 255, 255, 0.42);
     }
     .explorer-shell .btn:hover,
-    .explorer-shell .btn:focus-visible,
-    .explorer-shell .tutorial-btn:hover,
-    .explorer-shell .tutorial-btn:focus-visible {
+    .explorer-shell .btn:focus-visible {
       transform: translateY(-1px);
       border-color: rgba(47, 92, 126, 0.34);
       background:
@@ -186,7 +184,6 @@ if (!helpSections.length) {
         0 12px 20px rgba(27, 56, 84, 0.1);
     }
     .explorer-shell .btn:active,
-    .explorer-shell .tutorial-btn:active,
     .explorer-shell .axis-corner-btn:active {
       transform: translateY(0);
     }
@@ -250,44 +247,6 @@ if (!helpSections.length) {
       width: auto;
       padding: 0;
     }
-    .explorer-shell .tutorials {
-      display: grid;
-      gap: 0.65rem;
-    }
-    .explorer-shell .tutorial-btn {
-      border: 1px solid rgba(33, 65, 95, 0.16);
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(241, 247, 251, 0.82)),
-        rgba(255, 255, 255, 0.76);
-      color: var(--explorer-fg);
-      text-align: left;
-      padding: 0.85rem 0.95rem;
-      border-radius: var(--explorer-radius-md);
-      cursor: pointer;
-      font-size: 0.84rem;
-      line-height: 1.35;
-      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
-    }
-    .explorer-shell .tutorial-btn.active {
-      border-color: rgba(45, 115, 133, 0.34);
-      box-shadow:
-        inset 0 0 0 1px rgba(47, 92, 126, 0.18),
-        0 0 0 1px rgba(45, 115, 133, 0.1),
-        0 12px 20px rgba(27, 56, 84, 0.08);
-      background:
-        linear-gradient(180deg, rgba(219, 238, 244, 0.88), rgba(199, 224, 233, 0.72)),
-        rgba(47, 92, 126, 0.08);
-    }
-    .explorer-shell .tutorial-title {
-      display: block;
-      font-weight: 600;
-    }
-    .explorer-shell .tutorial-desc {
-      display: block;
-      margin-top: 0.2rem;
-      color: var(--explorer-muted);
-      font-size: 0.82rem;
-    }
     .explorer-shell .workspace-main {
       grid-template-columns: minmax(0, 1fr);
       align-items: start;
@@ -307,10 +266,10 @@ if (!helpSections.length) {
         inset 0 1px 0 rgba(255, 255, 255, 0.8),
         0 10px 22px rgba(27, 56, 84, 0.07);
     }
-    .explorer-shell .toolbar-bar {
+    .explorer-shell .toolbar-hud {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      align-items: stretch;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
       justify-content: space-between;
       gap: 0.75rem;
       padding-bottom: 0.7rem;
@@ -423,9 +382,9 @@ if (!helpSections.length) {
       font-weight: 650;
       line-height: 1.35;
     }
-    .explorer-shell .toolbar-grid {
+    .explorer-shell .toolbar-compact-controls {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+      grid-template-columns: minmax(13rem, 18rem) minmax(0, 1fr);
       gap: 0.62rem;
       align-items: start;
     }
@@ -441,9 +400,6 @@ if (!helpSections.length) {
       min-width: 0;
       align-content: start;
     }
-    .explorer-shell .toolbar-group-primary {
-      gap: 0.7rem;
-    }
     .explorer-shell details.toolbar-group {
       padding: 0.64rem 0.68rem;
       margin: 0;
@@ -451,24 +407,11 @@ if (!helpSections.length) {
     .explorer-shell .toolbar-group-actions {
       align-content: start;
     }
-    .explorer-shell .toolbar-group-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 0.7rem;
-    }
-    .explorer-shell .toolbar-group-head-copy {
+    .explorer-shell .toolbar-preset-group {
       display: grid;
-      gap: 0.14rem;
-      min-width: 0;
-    }
-    .explorer-shell .toolbar-current-choice {
-      color: var(--explorer-fg);
-      font-family: var(--font-ui);
-      font-size: 0.98rem;
-      font-weight: 650;
-      line-height: 1.3;
-      text-wrap: balance;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 0.62rem;
     }
     .explorer-shell .toolbar-label {
       display: flex;
@@ -486,14 +429,6 @@ if (!helpSections.length) {
       font-family: var(--font-ui);
       font-size: 0.78rem;
       line-height: 1.55;
-    }
-    .explorer-shell .toolbar-field-hint {
-      color: var(--explorer-muted);
-      font-family: var(--font-ui);
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
     }
     .explorer-shell .toolbar-summary {
       list-style: none;
@@ -533,6 +468,16 @@ if (!helpSections.length) {
       display: grid;
       gap: 0.75rem;
       margin-top: 0.75rem;
+    }
+    .explorer-shell .toolbar-options-grid {
+      display: grid;
+      grid-template-columns: minmax(13rem, 1.2fr) minmax(8rem, 0.75fr) minmax(8rem, 0.75fr) minmax(12rem, 1fr);
+      gap: 0.65rem;
+      align-items: end;
+    }
+    .explorer-shell .toolbar-options-grid .checkbox-row {
+      min-height: 2.75rem;
+      align-content: center;
     }
     .explorer-shell .toolbar-summary:focus-visible,
     .explorer-shell details summary:focus-visible {
@@ -636,68 +581,6 @@ if (!helpSections.length) {
     .explorer-shell .grid-card-outer .grid-card-head {
       padding-bottom: 0.9rem;
       border-bottom: 1px solid rgba(33, 65, 95, 0.08);
-    }
-    .explorer-shell .move-legend {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 0.45rem;
-      min-width: min(100%, 18rem);
-      font-family: var(--font-ui);
-    }
-    .explorer-shell .move-key {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.38rem;
-      min-height: 1.85rem;
-      padding: 0.32rem 0.52rem;
-      border-radius: var(--explorer-radius-sm);
-      border: 1px solid rgba(33, 65, 95, 0.1);
-      background: rgba(255, 255, 255, 0.58);
-      color: var(--explorer-muted);
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-    .explorer-shell .move-icon {
-      width: 1.15rem;
-      height: 1.15rem;
-      position: relative;
-      display: inline-block;
-      border-radius: 5px;
-      background: rgba(47, 92, 126, 0.08);
-      box-shadow: inset 0 0 0 1px rgba(47, 92, 126, 0.12);
-      flex: 0 0 auto;
-    }
-    .explorer-shell .move-icon::before {
-      content: "";
-      position: absolute;
-      left: 0.24rem;
-      right: 0.24rem;
-      top: 50%;
-      height: 2px;
-      background: var(--ring-thick);
-      transform: translateY(-50%);
-    }
-    .explorer-shell .move-icon-column::before {
-      left: 50%;
-      right: auto;
-      top: 0.24rem;
-      bottom: 0.24rem;
-      width: 2px;
-      height: auto;
-      transform: translateX(-50%);
-    }
-    .explorer-shell .move-icon-coupled::before {
-      left: 0.25rem;
-      right: 0.25rem;
-      top: 50%;
-      transform: translateY(-50%) rotate(-35deg);
-      transform-origin: center;
-      background: var(--ring-select);
     }
     .explorer-shell .value-dock {
       border-color: rgba(45, 115, 133, 0.18);
@@ -1301,10 +1184,8 @@ if (!helpSections.length) {
     .explorer-shell .toolbar-selection-item-label,
     .explorer-shell .toolbar-summary-label,
     .explorer-shell .toolbar-label,
-    .explorer-shell .toolbar-field-hint,
     .explorer-shell .axis-index,
-    .explorer-shell .axis-corner-label,
-    .explorer-shell .move-key {
+    .explorer-shell .axis-corner-label {
       color: var(--explorer-muted);
       font-family: var(--font-ui);
       font-size: 0.76rem;
@@ -1314,18 +1195,28 @@ if (!helpSections.length) {
     }
 
     .explorer-shell .toolbar-selection-strip {
-      gap: 0.65rem 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 1rem;
+      padding: 0.42rem 0;
+      border-bottom: 1px solid rgba(92, 72, 52, 0.14);
     }
 
     .explorer-shell .toolbar-selection-item {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.3rem;
       min-width: 0;
-      padding: 0.4rem 0;
-      border-width: 1px 0 0;
+      padding: 0;
+      border: 0;
       background: transparent;
     }
 
+    .explorer-shell .toolbar-selection-item-label::after {
+      content: ":";
+    }
+
     .explorer-shell .btn,
-    .explorer-shell .tutorial-btn,
     .explorer-shell .axis-corner-btn {
       border-radius: var(--explorer-radius-sm);
       box-shadow: none;
@@ -1335,8 +1226,6 @@ if (!helpSections.length) {
 
     .explorer-shell .btn:hover,
     .explorer-shell .btn:focus-visible,
-    .explorer-shell .tutorial-btn:hover,
-    .explorer-shell .tutorial-btn:focus-visible,
     .explorer-shell .axis-corner-btn:hover,
     .explorer-shell .axis-corner-btn:focus-visible {
       transform: none;
@@ -1361,22 +1250,30 @@ if (!helpSections.length) {
     }
 
     .explorer-shell .workspace-toolbar {
-      padding: 0.95rem 0;
-      border-width: 1px 0;
-      border-radius: 0;
-      background: transparent;
+      position: sticky;
+      top: clamp(0.4rem, 1.4vw, 0.85rem);
+      z-index: 25;
+      overflow: visible;
+      padding: 0.78rem 0.9rem;
+      border: 1px solid rgba(92, 72, 52, 0.16);
+      border-radius: var(--explorer-radius-lg);
+      background: rgba(255, 250, 243, 0.95);
+      box-shadow: 0 14px 30px rgba(74, 62, 48, 0.08);
+      backdrop-filter: blur(10px);
     }
 
-    .explorer-shell .toolbar-bar {
-      grid-template-columns: 1fr;
-      gap: 0.7rem;
-      padding-bottom: 0.85rem;
+    .explorer-shell .toolbar-hud {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.75rem 1.1rem;
+      align-items: start;
+      padding-bottom: 0.65rem;
       border-bottom-color: rgba(92, 72, 52, 0.14);
     }
 
     .explorer-shell .toolbar-action-strip {
       min-width: 0;
       gap: 0.75rem;
+      justify-content: flex-end;
     }
 
     .explorer-shell .toolbar-action-link {
@@ -1386,32 +1283,49 @@ if (!helpSections.length) {
       line-height: 1.3;
     }
 
+    .explorer-shell .toolbar-guide {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.55rem 1rem;
+    }
+
+    .explorer-shell .explorer-mode-switch {
+      flex: 0 0 auto;
+    }
+
     .explorer-shell .toolbar-guide-copy {
+      flex: 1 1 22rem;
       max-width: 62rem;
       color: var(--explorer-muted);
       font-family: var(--font-body);
-      font-size: 0.98rem;
-      line-height: 1.58;
+      font-size: 0.94rem;
+      line-height: 1.48;
     }
 
-    .explorer-shell .toolbar-grid {
-      gap: 0.9rem 1.2rem;
-      padding-top: 0.1rem;
+    .explorer-shell .toolbar-compact-controls {
+      grid-template-columns: minmax(15rem, 19rem) minmax(0, 1fr);
+      gap: 0.8rem 1.1rem;
+      align-items: start;
     }
 
     .explorer-shell .toolbar-group,
     .explorer-shell details.toolbar-group {
-      padding: 0.75rem 0 0;
-      border-width: 1px 0 0;
+      padding: 0.62rem 0 0;
+      border-width: 0;
       border-radius: 0;
       background: transparent;
     }
 
-    .explorer-shell .toolbar-current-choice,
     .explorer-shell .toolbar-summary-title {
       font-family: var(--font-body);
-      font-size: 0.98rem;
+      font-size: 0.94rem;
       font-weight: 600;
+    }
+
+    .explorer-shell .toolbar-options-grid {
+      grid-template-columns: minmax(12rem, 1.1fr) minmax(7rem, 0.75fr) minmax(7rem, 0.75fr) minmax(11rem, 1fr);
+      gap: 0.6rem 0.8rem;
     }
 
     .explorer-shell .toolbar-select-field select,
@@ -1500,13 +1414,25 @@ if (!helpSections.length) {
     }
 
     @media (max-width: 1280px) {
-      .explorer-shell .toolbar-grid {
+      .explorer-shell .toolbar-options-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
     @media (max-width: 760px) {
-      .explorer-shell .toolbar-grid {
+      .explorer-shell .toolbar-compact-controls {
         grid-template-columns: 1fr;
+      }
+      .explorer-shell .toolbar-hud {
+        gap: 0.55rem;
+      }
+      .explorer-shell .toolbar-guide-copy {
+        flex-basis: 100%;
+        font-size: 0.88rem;
+        line-height: 1.42;
+      }
+      .explorer-shell .toolbar-selection-strip {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
     @media (max-width: 1080px) {
@@ -1543,24 +1469,24 @@ if (!helpSections.length) {
         --grid-axis-w: 88px;
         --grid-cell-w: 52px;
       }
-      .explorer-shell .toolbar-bar {
-        grid-template-columns: 1fr;
-      }
       .explorer-shell .workspace-toolbar,
       .explorer-shell .stage-panel,
       .explorer-shell .grid-card {
         padding: 0.95rem;
         border-radius: var(--explorer-radius-lg);
       }
-      .explorer-shell .toolbar-grid {
+      .explorer-shell .workspace-toolbar {
+        top: 0.35rem;
+        padding: 0.72rem;
+      }
+      .explorer-shell .toolbar-selection-strip {
+        display: none;
+      }
+      .explorer-shell .toolbar-options-grid {
         grid-template-columns: 1fr;
       }
       .explorer-shell .toolbar-selection-item {
-        flex: 1 1 10rem;
         min-width: 0;
-      }
-      .explorer-shell .toolbar-group-head {
-        flex-wrap: wrap;
       }
       .explorer-shell .grid-action-panel {
         grid-template-columns: 1fr;
@@ -1583,6 +1509,14 @@ if (!helpSections.length) {
       .explorer-shell .stage-grid {
         min-height: min(24rem, 56vh);
         max-height: min(60vh, 24rem);
+      }
+    }
+    @media (max-width: 360px) {
+      .explorer-shell .toolbar-hud {
+        grid-template-columns: 1fr;
+      }
+      .explorer-shell .toolbar-action-strip {
+        justify-content: flex-start;
       }
     }
   </style>
