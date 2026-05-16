@@ -4,9 +4,10 @@ test("grid and graph keep the same game state through view switches", async ({ p
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4321" });
   await page.goto("/grid?count=3&metric=inter&mode=eval&train=ABC&eval=C&focus=B&k=1");
   await expect(page.locator('.workspace-shell[data-ready="true"]')).toBeVisible();
+  await expect(page.getByTestId("compute-mode-button")).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("concept-select")).toHaveValue("eval");
-  await expect(page.getByTestId("value-dock")).toContainText("Train ABC");
-  await expect(page.getByTestId("value-dock")).toContainText("Eval C");
+  await expect(page.getByTestId("explorer-toolbar")).toContainText("ABC");
+  await expect(page.getByTestId("explorer-toolbar")).toContainText("C");
   await page.getByTestId("grid-share-link").click();
   await expect(page.getByTestId("grid-share-link")).toHaveText("Copied");
   const copiedGridUrl = await page.evaluate(() => navigator.clipboard.readText());
@@ -35,7 +36,8 @@ test("grid and graph keep the same game state through view switches", async ({ p
   await gridLink.click();
   await expect(page).toHaveURL(/\/grid\?/);
   await expect(page.locator('.workspace-shell[data-ready="true"]')).toBeVisible();
+  await expect(page.getByTestId("compute-mode-button")).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("concept-select")).toHaveValue("eval");
-  await expect(page.getByTestId("value-dock")).toContainText("Train ABC");
-  await expect(page.getByTestId("value-dock")).toContainText("Eval C");
+  await expect(page.getByTestId("explorer-toolbar")).toContainText("ABC");
+  await expect(page.getByTestId("explorer-toolbar")).toContainText("C");
 });

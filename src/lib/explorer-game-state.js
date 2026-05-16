@@ -5,10 +5,14 @@ export const gridModes = new Set([
   "loo",
   "eval",
   "group",
+  "interaction",
   "shapley",
   "banzhaf",
   "beta",
   "scaling",
+  "eval-scaling",
+  "diagonal-scaling",
+  "budget",
   "dp",
   "unlearning",
   "poison",
@@ -18,7 +22,7 @@ export const graphLenses = new Set(["ablation", "strike", "shapley", "scaling"])
 
 export function gridModeToGraphLens(mode) {
   if (mode === "group") return "strike";
-  if (mode === "scaling") return "scaling";
+  if (mode === "scaling" || mode === "eval-scaling" || mode === "diagonal-scaling" || mode === "budget") return "scaling";
   if (mode === "shapley" || mode === "banzhaf" || mode === "beta") return "shapley";
   return "ablation";
 }

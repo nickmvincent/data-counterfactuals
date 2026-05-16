@@ -56,9 +56,7 @@ if (!helpSections.length) {
     .explorer-shell .toolbar-group,
     .explorer-shell .control-cluster,
     .explorer-shell .stage-panel,
-    .explorer-shell .grid-card,
-    .explorer-shell .analysis-card,
-    .explorer-shell .stage-summary {
+    .explorer-shell .grid-card {
       position: relative;
       overflow: clip;
       isolation: isolate;
@@ -67,8 +65,7 @@ if (!helpSections.length) {
     .explorer-shell .toolbar-group::before,
     .explorer-shell .control-cluster::before,
     .explorer-shell .stage-panel::before,
-    .explorer-shell .grid-card::before,
-    .explorer-shell .analysis-card::before {
+    .explorer-shell .grid-card::before {
       content: "";
       position: absolute;
       inset: 0;
@@ -82,8 +79,7 @@ if (!helpSections.length) {
     }
     .explorer-shell .workspace-toolbar::after,
     .explorer-shell .stage-panel::after,
-    .explorer-shell .grid-card::after,
-    .explorer-shell .analysis-card::after {
+    .explorer-shell .grid-card::after {
       content: "";
       position: absolute;
       inset: 10px;
@@ -97,14 +93,6 @@ if (!helpSections.length) {
       gap: 1rem;
       min-width: 0;
     }
-    .explorer-shell .summary-kicker {
-      display: inline-block;
-      color: var(--explorer-accent);
-      font-family: var(--font-ui);
-      font-size: 0.68rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
     .explorer-shell .card-title,
     .explorer-shell .panel-title,
     .explorer-shell .grid-card-title {
@@ -112,8 +100,7 @@ if (!helpSections.length) {
       font-weight: 650;
     }
     .explorer-shell .panel-head,
-    .explorer-shell .grid-card-head,
-    .explorer-shell .analysis-head {
+    .explorer-shell .grid-card-head {
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
@@ -134,12 +121,8 @@ if (!helpSections.length) {
       font-size: 0.87rem;
       line-height: 1.62;
     }
-    .explorer-shell .summary-inline,
     .explorer-shell .segmented-row,
-    .explorer-shell .mode-toggle,
-    .explorer-shell .export-actions,
     .explorer-shell .focus-token-row,
-    .explorer-shell .question-button-row,
     .explorer-shell .slider-row,
     .explorer-shell .checkbox-row {
       display: flex;
@@ -147,24 +130,6 @@ if (!helpSections.length) {
       align-items: center;
       gap: 0.55rem;
       min-width: 0;
-    }
-    .explorer-shell .pill {
-      display: inline-block;
-      padding: 0.34rem 0.72rem;
-      border: 1px solid rgba(33, 65, 95, 0.16);
-      border-radius: 999px;
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(239, 247, 251, 0.82)),
-        rgba(255, 255, 255, 0.7);
-      color: var(--explorer-fg);
-      font-family: var(--font-ui);
-      font-size: 0.71rem;
-      font-weight: 650;
-      letter-spacing: 0.04em;
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.85),
-        inset 0 -1px 0 rgba(33, 65, 95, 0.05),
-        0 0 0 1px rgba(255, 255, 255, 0.18);
     }
     .explorer-shell .btn {
       border: 1px solid rgba(33, 65, 95, 0.18);
@@ -323,15 +288,6 @@ if (!helpSections.length) {
       color: var(--explorer-muted);
       font-size: 0.82rem;
     }
-    .explorer-shell .tutorial-note {
-      padding: 0.9rem 1rem;
-      border-radius: var(--explorer-radius-lg);
-      border: 1px solid var(--explorer-border);
-      background: rgba(255, 255, 255, 0.7);
-      color: var(--explorer-muted);
-      font-size: 0.82rem;
-      line-height: 1.6;
-    }
     .explorer-shell .workspace-main {
       grid-template-columns: minmax(0, 1fr);
       align-items: start;
@@ -394,14 +350,18 @@ if (!helpSections.length) {
       gap: 0.52rem;
       min-width: 0;
     }
-    .explorer-shell .toolbar-guide-head,
+    .explorer-shell .explorer-mode-switch {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      align-items: center;
+    }
     .explorer-shell .panel-heading-group {
       display: flex;
       align-items: flex-start;
       gap: 0.75rem;
       min-width: 0;
     }
-    .explorer-shell .toolbar-guide-head > div,
     .explorer-shell .panel-heading-group > div {
       display: grid;
       gap: 0.12rem;
@@ -491,10 +451,6 @@ if (!helpSections.length) {
     .explorer-shell .toolbar-group-actions {
       align-content: start;
     }
-    .explorer-shell .toolbar-group-compact {
-      gap: 0.46rem;
-      padding: 0.64rem 0.68rem;
-    }
     .explorer-shell .toolbar-group-head {
       display: flex;
       align-items: flex-start;
@@ -513,21 +469,6 @@ if (!helpSections.length) {
       font-weight: 650;
       line-height: 1.3;
       text-wrap: balance;
-    }
-    .explorer-shell .toolbar-group-pill {
-      white-space: nowrap;
-      align-self: flex-start;
-    }
-    .explorer-shell .toolbar-group-compact .mode-toggle {
-      gap: 0.38rem;
-    }
-    .explorer-shell .toolbar-group-compact .btn.mini {
-      padding: 0.4rem 0.62rem;
-      font-size: 0.72rem;
-    }
-    .explorer-shell .toolbar-group-compact .toolbar-note {
-      font-size: 0.75rem;
-      line-height: 1.45;
     }
     .explorer-shell .toolbar-label {
       display: flex;
@@ -553,9 +494,6 @@ if (!helpSections.length) {
       font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-    }
-    .explorer-shell .toolbar-pills {
-      margin-top: 0.1rem;
     }
     .explorer-shell .toolbar-summary {
       list-style: none;
@@ -596,54 +534,11 @@ if (!helpSections.length) {
       gap: 0.75rem;
       margin-top: 0.75rem;
     }
-    .explorer-shell .toolbar-inline-help {
-      padding: 0;
-      border: 0;
-      background: transparent;
-    }
-    .explorer-shell .toolbar-inline-help summary {
-      list-style: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.45rem;
-      color: var(--explorer-accent);
-      font-size: 0.75rem;
-      font-weight: 700;
-      line-height: 1.3;
-      letter-spacing: 0.01em;
-    }
-    .explorer-shell .toolbar-inline-help summary::-webkit-details-marker {
-      display: none;
-    }
     .explorer-shell .toolbar-summary:focus-visible,
-    .explorer-shell .toolbar-inline-help summary:focus-visible,
     .explorer-shell details summary:focus-visible {
       outline: var(--focus-outline);
       outline-offset: 4px;
       border-radius: 8px;
-    }
-    .explorer-shell .toolbar-inline-help-icon {
-      width: 1.05rem;
-      height: 1.05rem;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 999px;
-      border: 1px solid rgba(47, 92, 126, 0.16);
-      background: rgba(47, 92, 126, 0.08);
-      color: var(--explorer-accent);
-      font-size: 0.72rem;
-      font-weight: 700;
-    }
-    .explorer-shell .toolbar-inline-help-body {
-      margin-top: 0.5rem;
-      padding: 0.68rem 0.76rem;
-      border-radius: var(--explorer-radius-md);
-      border: 1px solid rgba(33, 65, 95, 0.08);
-      background: rgba(255, 255, 255, 0.6);
-      color: var(--explorer-muted);
-      font-size: 0.78rem;
-      line-height: 1.55;
     }
     .explorer-shell .control-cluster {
       display: grid;
@@ -710,8 +605,7 @@ if (!helpSections.length) {
       line-height: 1.4;
     }
     .explorer-shell .stage-panel,
-    .explorer-shell .grid-card,
-    .explorer-shell .analysis-card {
+    .explorer-shell .grid-card {
       --explorer-inset-radius: calc(var(--explorer-radius-xl) - 3px);
       display: grid;
       gap: 0.95rem;
@@ -725,20 +619,6 @@ if (!helpSections.length) {
         inset 0 1px 0 rgba(255, 255, 255, 0.8),
         0 16px 30px rgba(27, 56, 84, 0.07);
       color: var(--explorer-stage-fg);
-    }
-    .explorer-shell .inspect-drawer {
-      gap: 0.78rem;
-    }
-    .explorer-shell .inspect-drawer > summary {
-      list-style: none;
-      cursor: pointer;
-      padding: 0;
-    }
-    .explorer-shell .inspect-drawer > summary::-webkit-details-marker {
-      display: none;
-    }
-    .explorer-shell .inspect-drawer:not([open]) {
-      padding-block: 0.85rem;
     }
     .explorer-shell .grid-card-outer {
       gap: clamp(1rem, 1.8vw, 1.22rem);
@@ -819,18 +699,6 @@ if (!helpSections.length) {
       transform-origin: center;
       background: var(--ring-select);
     }
-    .explorer-shell .stage-panel .summary-kicker,
-    .explorer-shell .grid-card .summary-kicker,
-    .explorer-shell .analysis-card .summary-kicker {
-      color: var(--explorer-accent);
-    }
-    .explorer-shell .stage-panel .pill,
-    .explorer-shell .grid-card .pill,
-    .explorer-shell .analysis-card .pill {
-      background: rgba(255, 255, 255, 0.78);
-      border-color: rgba(33, 65, 95, 0.12);
-      color: var(--explorer-muted);
-    }
     .explorer-shell .value-dock {
       border-color: rgba(45, 115, 133, 0.18);
       background:
@@ -847,21 +715,6 @@ if (!helpSections.length) {
     .explorer-shell .value-dock-tight .panel-copy {
       font-size: 0.84rem;
       line-height: 1.5;
-    }
-    .explorer-shell .value-dock-tight .stage-summary-grid {
-      grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
-      gap: 0.65rem;
-    }
-    .explorer-shell .value-dock-tight .stage-summary {
-      gap: 0.35rem;
-      padding: 0.82rem 0.85rem;
-    }
-    .explorer-shell .value-dock-tight .stage-summary-value {
-      font-size: clamp(1.05rem, 1.5vw, 1.35rem);
-    }
-    .explorer-shell .value-dock-tight .stage-summary-note {
-      font-size: 0.76rem;
-      line-height: 1.45;
     }
     .explorer-shell .selection-dock {
       gap: 0.9rem;
@@ -912,12 +765,6 @@ if (!helpSections.length) {
         inset 0 1px 0 rgba(255, 255, 255, 0.82),
         inset 0 0 0 1px rgba(255, 255, 255, 0.18);
     }
-    .explorer-shell .selection-dock-mode {
-      border-color: rgba(191, 134, 66, 0.16);
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0)),
-        linear-gradient(180deg, rgba(252, 248, 239, 0.9), rgba(245, 238, 222, 0.56));
-    }
     .explorer-shell .selection-dock-section-head,
     .explorer-shell .selection-dock-reading-head {
       display: flex;
@@ -956,31 +803,11 @@ if (!helpSections.length) {
     .explorer-shell .selection-dock .grid-marker-actions {
       gap: 0.55rem;
     }
-    .explorer-shell .selection-dock .grid-marker-guide {
-      gap: 0.25rem;
-      padding-top: 0.55rem;
-    }
-    .explorer-shell .selection-dock .stage-summary-grid {
-      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-      gap: 0.65rem;
-    }
-    .explorer-shell .selection-dock .stage-summary {
-      gap: 0.35rem;
-      padding: 0.82rem 0.85rem;
-    }
-    .explorer-shell .selection-dock .stage-summary-value {
-      font-size: clamp(1.05rem, 1.5vw, 1.35rem);
-    }
-    .explorer-shell .selection-dock .stage-summary-note {
-      font-size: 0.76rem;
-      line-height: 1.45;
-    }
     .explorer-shell .current-reading-status {
       display: grid;
       gap: 0.45rem;
     }
-    .explorer-shell .stage-takeaway,
-    .explorer-shell .compare-readout {
+    .explorer-shell .stage-takeaway {
       display: grid;
       gap: 0.35rem;
       padding: 0.82rem 0.88rem;
@@ -995,24 +822,90 @@ if (!helpSections.length) {
       font-size: 0.83rem;
       line-height: 1.58;
     }
-    .explorer-shell .compare-readout-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    .explorer-shell .selection-text-line {
+      color: var(--explorer-fg);
+      font-family: var(--font-body);
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+    .explorer-shell .selected-fact-list,
+    .explorer-shell .concept-plan-list,
+    .explorer-shell .walkthrough-steps {
+      display: grid;
       gap: 0.65rem;
+    }
+    .explorer-shell .selected-fact,
+    .explorer-shell .concept-plan-card,
+    .explorer-shell .walkthrough-step {
+      display: grid;
+      gap: 0.28rem;
+      padding: 0.72rem 0;
+      border: 0;
+      border-top: 1px solid rgba(92, 72, 52, 0.14);
+      border-radius: 0;
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      font: inherit;
+    }
+    .explorer-shell .concept-plan-card-unavailable {
+      color: rgba(111, 105, 95, 0.72);
+    }
+    .explorer-shell .concept-plan-card-unavailable .concept-plan-title,
+    .explorer-shell .concept-plan-card-unavailable .toolbar-note {
+      color: rgba(111, 105, 95, 0.72);
+    }
+    .explorer-shell .concept-plan-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.7rem;
       flex-wrap: wrap;
     }
-    .explorer-shell .compare-readout-value {
+    .explorer-shell .selected-fact-title,
+    .explorer-shell .concept-plan-title,
+    .explorer-shell .walkthrough-step-title {
+      display: block;
       color: var(--explorer-fg);
       font-family: var(--font-ui);
-      font-size: 0.9rem;
+      font-size: 0.92rem;
       font-weight: 650;
       line-height: 1.35;
     }
-    .explorer-shell .compare-readout-copy {
+    .explorer-shell .concept-plan-status {
+      margin-top: 0.12rem;
+      color: var(--explorer-muted);
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+    .explorer-shell .walkthrough-step {
+      grid-template-columns: 1.7rem minmax(0, 1fr);
+      cursor: pointer;
+    }
+    .explorer-shell .walkthrough-step.active {
+      border-top-color: rgba(47, 111, 115, 0.34);
+      background: linear-gradient(90deg, rgba(47, 111, 115, 0.08), transparent 72%);
+    }
+    .explorer-shell .walkthrough-step-number {
+      width: 1.35rem;
+      height: 1.35rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      border: 1px solid rgba(47, 111, 115, 0.2);
+      color: var(--explorer-accent);
+      font-family: var(--font-ui);
+      font-size: 0.76rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .explorer-shell .walkthrough-step-body {
+      display: block;
+      margin-top: 0.16rem;
       color: var(--explorer-muted);
       font-size: 0.8rem;
-      line-height: 1.55;
+      line-height: 1.5;
     }
     .explorer-shell .grid-action-panel {
       display: grid;
@@ -1030,58 +923,14 @@ if (!helpSections.length) {
     .explorer-shell .grid-action-copy .toolbar-note {
       max-width: 62rem;
     }
-    .explorer-shell .grid-action-panel .grid-marker-guide {
-      grid-column: 1 / -1;
-    }
     .explorer-shell .grid-card-lede {
       margin: 0.18rem 0 0;
       color: var(--explorer-muted);
       font-size: 0.88rem;
       line-height: 1.5;
     }
-    .explorer-shell .grid-card-title,
-    .explorer-shell .analysis-card .card-title {
+    .explorer-shell .grid-card-title {
       color: var(--explorer-fg);
-    }
-    .explorer-shell .stage-summary-label {
-      color: var(--explorer-stage-muted);
-      font-family: var(--font-ui);
-      font-size: 0.7rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-    .explorer-shell .stage-summary-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 0.75rem;
-    }
-    .explorer-shell .stage-summary {
-      display: grid;
-      gap: 0.45rem;
-      padding: 0.95rem;
-      border-radius: var(--explorer-radius-md);
-      border: 1px solid rgba(33, 65, 95, 0.1);
-      background: rgba(255, 255, 255, 0.58);
-    }
-    .explorer-shell .stage-summary.primary {
-      background: linear-gradient(180deg, rgba(45, 115, 133, 0.18), rgba(45, 115, 133, 0.06));
-    }
-    .explorer-shell .stage-summary.accent {
-      background: linear-gradient(180deg, rgba(191, 134, 66, 0.22), rgba(191, 134, 66, 0.06));
-    }
-    .explorer-shell .stage-summary.quiet {
-      background: rgba(255, 255, 255, 0.48);
-    }
-    .explorer-shell .stage-summary-value {
-      color: var(--explorer-fg);
-      font-size: clamp(1.16rem, 1.8vw, 1.55rem);
-      font-weight: 700;
-      line-height: 1;
-    }
-    .explorer-shell .stage-summary-note {
-      color: var(--explorer-stage-muted);
-      font-size: 0.8rem;
-      line-height: 1.55;
     }
     .explorer-shell .grid-wrap {
       position: relative;
@@ -1245,19 +1094,6 @@ if (!helpSections.length) {
       font-size: 0.64rem;
       font-weight: 700;
     }
-    .explorer-shell .axis-label {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.08rem;
-      width: 100%;
-      line-height: 1.05;
-    }
-    .explorer-shell .axis-label-row {
-      align-items: flex-end;
-      text-align: right;
-    }
     .explorer-shell .axis-index {
       color: var(--explorer-stage-muted);
       font-family: var(--font-ui);
@@ -1312,9 +1148,6 @@ if (!helpSections.length) {
       font-weight: 700;
       text-shadow: 0 1px 1px rgba(255, 255, 255, 0.45);
     }
-    .explorer-shell .cell-emph {
-      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.26) inset, 0 0 0 1px rgba(33, 65, 95, 0.18);
-    }
     .explorer-shell .cell-track {
       box-shadow:
         0 0 0 1px rgba(45, 115, 133, 0.14) inset,
@@ -1330,12 +1163,6 @@ if (!helpSections.length) {
         0 12px 18px rgba(17, 37, 56, 0.14),
         0 0 0 1px rgba(255, 255, 255, 0.28) inset;
       filter: saturate(1.06);
-    }
-    .explorer-shell .cell-edited {
-      box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.22) inset,
-        0 0 0 1px rgba(33, 65, 95, 0.18),
-        0 0 0 1px rgba(255, 118, 98, 0.35);
     }
     .explorer-shell .ring {
       position: absolute;
@@ -1372,32 +1199,6 @@ if (!helpSections.length) {
       inset: 4px;
       box-shadow: 0 0 0 2px rgba(45, 115, 133, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.22) inset;
       outline-color: var(--ring-thick);
-    }
-    .explorer-shell .edit-flag {
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 0;
-      height: 0;
-      border-top: 12px solid #ff7662;
-      border-left: 12px solid transparent;
-      filter: drop-shadow(0 0 3px rgba(255, 118, 98, 0.45));
-      pointer-events: none;
-    }
-    .explorer-shell .cell-pulse::after {
-      content: "";
-      position: absolute;
-      inset: -6px;
-      border: 2px solid var(--ring-thick);
-      border-radius: var(--explorer-radius-xs);
-      opacity: 0;
-      animation: pulseCell 0.8s ease-out;
-      pointer-events: none;
-    }
-    @keyframes pulseCell {
-      0% { opacity: 0.8; transform: scale(0.9); }
-      50% { opacity: 0.4; transform: scale(1.05); }
-      100% { opacity: 0; transform: scale(1.12); }
     }
     .explorer-shell .axis-active {
       background: linear-gradient(180deg, rgba(219, 231, 218, 0.98), rgba(198, 218, 205, 0.98));
@@ -1446,12 +1247,6 @@ if (!helpSections.length) {
       flex: 1 1 11rem;
       max-width: 16rem;
     }
-    .explorer-shell .grid-jump-controls-inline {
-      flex: 0 1 auto;
-      justify-content: flex-end;
-      align-self: start;
-      gap: 0.55rem;
-    }
     .explorer-shell .grid-jump-controls-embedded {
       justify-content: stretch;
       align-items: start;
@@ -1473,164 +1268,8 @@ if (!helpSections.length) {
       gap: 0.75rem;
       justify-content: flex-start;
     }
-    .explorer-shell .grid-marker-guide {
-      display: grid;
-      gap: 0.3rem;
-      padding-top: 0.15rem;
-      border-top: 1px solid rgba(33, 65, 95, 0.08);
-    }
-    .explorer-shell .legal-help-backdrop {
-      position: fixed;
-      inset: 0;
-      z-index: 30;
-      display: grid;
-      place-items: center;
-      padding: 1rem;
-      background: rgba(29, 47, 53, 0.32);
-    }
-    .explorer-shell .legal-help-dialog {
-      width: min(42rem, 100%);
-      max-height: min(84vh, 42rem);
-      overflow: auto;
-      display: grid;
-      gap: 1rem;
-      padding: clamp(1rem, 2.4vw, 1.35rem);
-      border-radius: var(--explorer-radius-lg);
-      border: 1px solid rgba(92, 72, 52, 0.2);
-      background: #fffaf2;
-      box-shadow: 0 28px 70px rgba(29, 47, 53, 0.24);
-    }
-    .explorer-shell .legal-help-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-    .explorer-shell .legal-move-list {
-      display: grid;
-      gap: 0.75rem;
-    }
-    .explorer-shell .legal-move-item {
-      display: grid;
-      gap: 0.24rem;
-      padding-top: 0.72rem;
-      border-top: 1px solid rgba(92, 72, 52, 0.14);
-    }
-    .explorer-shell .legal-move-title {
-      color: var(--explorer-fg);
-      font-family: var(--font-ui);
-      font-size: 0.92rem;
-      font-weight: 650;
-      line-height: 1.35;
-    }
-    .explorer-shell .equation-block {
-      padding: 0.85rem 1rem;
-      border-radius: var(--explorer-radius-lg);
-      border: 1px solid rgba(47, 92, 126, 0.18);
-      background: linear-gradient(180deg, rgba(47, 92, 126, 0.1), rgba(47, 92, 126, 0.04));
-      color: #214764;
-      font-size: 0.82rem;
-      line-height: 1.6;
-    }
-    .explorer-shell .inspector-stack {
-      display: grid;
-      gap: 0.75rem;
-    }
-    .explorer-shell .inspector-banner {
-      display: grid;
-      gap: 0.28rem;
-      padding: 0.9rem 0.95rem;
-      border-radius: var(--explorer-radius-md);
-      border: 1px solid rgba(33, 65, 95, 0.1);
-      background: rgba(255, 255, 255, 0.56);
-    }
-    .explorer-shell .inspector-banner-title {
-      color: var(--explorer-fg);
-      font-family: var(--font-ui);
-      font-size: 0.92rem;
-      font-weight: 650;
-    }
-    .explorer-shell .inspector-banner-copy {
-      color: var(--explorer-muted);
-      font-size: 0.8rem;
-      line-height: 1.55;
-    }
-    .explorer-shell .inspector-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      padding: 0.72rem 0.82rem;
-      border-radius: var(--explorer-radius-sm);
-      border: 1px solid rgba(33, 65, 95, 0.1);
-      background: rgba(255, 255, 255, 0.56);
-    }
-    .explorer-shell .inspector-key {
-      color: var(--explorer-muted);
-      font-family: var(--font-ui);
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-    .explorer-shell .inspector-value {
-      color: var(--explorer-fg);
-      font-family: var(--font-ui);
-      font-size: 0.88rem;
-      font-weight: 600;
-      text-align: right;
-    }
-    .explorer-shell .spark-wrap {
-      padding: 0.7rem 0.8rem;
-      border-radius: var(--explorer-radius-md);
-      border: 1px solid rgba(33, 65, 95, 0.1);
-      background: rgba(255, 255, 255, 0.56);
-      overflow-x: auto;
-    }
-    .explorer-shell .spark {
-      width: 260px;
-      height: 50px;
-      display: block;
-    }
-    .explorer-shell .inspector-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
-      gap: 1rem;
-    }
-    .explorer-shell table.small {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-    }
-    .explorer-shell table.small th,
-    .explorer-shell table.small td {
-      border: 1px solid rgba(33, 65, 95, 0.1);
-      padding: 0.42rem 0.52rem;
-      text-align: right;
-    }
-    .explorer-shell table.small th:first-child,
-    .explorer-shell table.small td:first-child {
-      text-align: left;
-    }
-    .explorer-shell .preset-flash {
-      animation: presetFlash 0.8s ease;
-    }
     .explorer-shell .json-drawer {
       margin-top: 0.2rem;
-    }
-    @keyframes presetFlash {
-      0% { box-shadow: 0 0 0 0 rgba(45, 115, 133, 0.28); }
-      50% { box-shadow: 0 0 0 16px rgba(45, 115, 133, 0.1); }
-      100% { box-shadow: 0 0 0 0 rgba(45, 115, 133, 0); }
-    }
-    .explorer-shell .computed-flash {
-      animation: computedFlash 0.9s ease;
-    }
-    @keyframes computedFlash {
-      0% { box-shadow: 0 0 0 0 rgba(191, 134, 66, 0.2); }
-      40% { box-shadow: 0 0 0 12px rgba(191, 134, 66, 0.12); }
-      100% { box-shadow: 0 0 0 0 rgba(191, 134, 66, 0); }
     }
 
     .explorer-shell .workspace-toolbar,
@@ -1638,18 +1277,10 @@ if (!helpSections.length) {
     .explorer-shell .control-cluster,
     .explorer-shell .stage-panel,
     .explorer-shell .grid-card,
-    .explorer-shell .analysis-card,
-    .explorer-shell .stage-summary,
     .explorer-shell .selection-dock-reading,
     .explorer-shell .selection-dock-section,
     .explorer-shell .toolbar-selection-item,
-    .explorer-shell .tutorial-note,
-    .explorer-shell .inspector-banner,
-    .explorer-shell .inspector-row,
-    .explorer-shell .spark-wrap,
-    .explorer-shell .equation-block,
-    .explorer-shell .stage-takeaway,
-    .explorer-shell .compare-readout {
+    .explorer-shell .stage-takeaway {
       background: rgba(255, 250, 243, 0.68);
       border-color: rgba(92, 72, 52, 0.14);
       border-radius: var(--explorer-radius-md);
@@ -1661,21 +1292,16 @@ if (!helpSections.length) {
     .explorer-shell .control-cluster::before,
     .explorer-shell .stage-panel::before,
     .explorer-shell .grid-card::before,
-    .explorer-shell .analysis-card::before,
     .explorer-shell .workspace-toolbar::after,
     .explorer-shell .stage-panel::after,
-    .explorer-shell .grid-card::after,
-    .explorer-shell .analysis-card::after {
+    .explorer-shell .grid-card::after {
       display: none;
     }
 
-    .explorer-shell .summary-kicker,
     .explorer-shell .toolbar-selection-item-label,
     .explorer-shell .toolbar-summary-label,
     .explorer-shell .toolbar-label,
     .explorer-shell .toolbar-field-hint,
-    .explorer-shell .stage-summary-label,
-    .explorer-shell .inspector-key,
     .explorer-shell .axis-index,
     .explorer-shell .axis-corner-label,
     .explorer-shell .move-key {
@@ -1685,33 +1311,6 @@ if (!helpSections.length) {
       font-weight: 600;
       letter-spacing: 0;
       text-transform: none;
-    }
-
-    .explorer-shell .pill {
-      display: inline;
-      padding: 0;
-      border: 0;
-      border-radius: 0;
-      background: transparent;
-      box-shadow: none;
-      color: var(--explorer-muted);
-      font-family: var(--font-body);
-      font-size: 0.86rem;
-      font-weight: 400;
-      letter-spacing: 0;
-    }
-
-    .explorer-shell .stage-panel .pill,
-    .explorer-shell .grid-card .pill,
-    .explorer-shell .analysis-card .pill {
-      background: transparent;
-      border: 0;
-      color: var(--explorer-muted);
-    }
-
-    .explorer-shell .toolbar-pills,
-    .explorer-shell .summary-inline {
-      gap: 0.35rem 0.65rem;
     }
 
     .explorer-shell .toolbar-selection-strip {
@@ -1870,27 +1469,10 @@ if (!helpSections.length) {
 
     .explorer-shell .selection-dock-reading,
     .explorer-shell .selection-dock-section,
-    .explorer-shell .stage-takeaway,
-    .explorer-shell .compare-readout {
+    .explorer-shell .stage-takeaway {
       padding: 0.82rem 0 0;
       border-width: 1px 0 0;
       border-radius: 0;
-      background: transparent;
-    }
-
-    .explorer-shell .stage-summary,
-    .explorer-shell .inspector-row,
-    .explorer-shell .spark-wrap,
-    .explorer-shell .equation-block {
-      padding: 0.72rem 0;
-      border-width: 1px 0 0;
-      border-radius: 0;
-      background: transparent;
-    }
-
-    .explorer-shell .stage-summary.primary,
-    .explorer-shell .stage-summary.accent,
-    .explorer-shell .stage-summary.quiet {
       background: transparent;
     }
 
@@ -1900,6 +1482,21 @@ if (!helpSections.length) {
       transform: none;
       box-shadow: 0 0 0 2px rgba(45, 115, 133, 0.32) inset;
       filter: none;
+    }
+    .explorer-shell .cell-selected-set {
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.22) inset,
+        0 0 0 2px rgba(184, 117, 67, 0.3);
+    }
+    .explorer-shell .cell-plan {
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.2) inset,
+        0 0 0 2px rgba(47, 111, 115, 0.22);
+    }
+    .explorer-shell .cell-step {
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.26) inset,
+        0 0 0 3px rgba(47, 111, 115, 0.42);
     }
 
     @media (max-width: 1280px) {
@@ -1915,7 +1512,6 @@ if (!helpSections.length) {
     @media (max-width: 1080px) {
       .explorer-page .page-header,
       .explorer-shell .grid-stage-shell,
-      .explorer-shell .inspector-grid,
       .explorer-shell .workspace-main {
         grid-template-columns: 1fr;
       }
@@ -1931,11 +1527,6 @@ if (!helpSections.length) {
       }
     }
     @media (prefers-reduced-motion: reduce) {
-      .explorer-shell .cell-pulse::after,
-      .explorer-shell .preset-flash,
-      .explorer-shell .computed-flash {
-        animation: none;
-      }
       .explorer-shell .cell,
       .explorer-shell .btn {
         transition: none;
@@ -1957,13 +1548,11 @@ if (!helpSections.length) {
       }
       .explorer-shell .workspace-toolbar,
       .explorer-shell .stage-panel,
-      .explorer-shell .grid-card,
-      .explorer-shell .analysis-card {
+      .explorer-shell .grid-card {
         padding: 0.95rem;
         border-radius: var(--explorer-radius-lg);
       }
-      .explorer-shell .toolbar-grid,
-      .explorer-shell .stage-summary-grid {
+      .explorer-shell .toolbar-grid {
         grid-template-columns: 1fr;
       }
       .explorer-shell .toolbar-selection-item {

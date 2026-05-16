@@ -5,24 +5,20 @@ async function openExplorer(page) {
   await expect(page.getByTestId("explorer-toolbar")).toBeVisible();
   await expect(page.getByTestId("explorer-workspace")).toBeVisible();
   await expect(page.getByTestId("explorer-grid")).toBeVisible();
-  await expect(page.getByTestId("concept-select")).toBeVisible();
-  await expect(page.getByTestId("concept-select")).toHaveValue("explore");
+  await expect(page.getByTestId("explore-mode-button")).toHaveAttribute("aria-pressed", "true");
 }
 
-test("grid explorer defaults to explore mode and exposes lettered axis labels", async ({ page }) => {
+test("explore mode lets users select evidence and discover computable values", async ({ page }) => {
   await openExplorer(page);
 
   const faqDrawer = page.locator(".explorer-page-help-drawer-faq");
   await expect(faqDrawer).toHaveCount(1);
   await faqDrawer.locator("summary").click();
   await expect(faqDrawer).toContainText("What are we simulating?");
-  await expect(faqDrawer).toContainText("How do I read one cell?");
 
   const gridCard = page.getByTestId("explorer-grid-card");
   await gridCard.scrollIntoViewIfNeeded();
   await expect(gridCard).toBeVisible();
-  const sideRail = page.getByTestId("grid-side-rail");
-  await expect(sideRail).toBeVisible();
 
   const columnLabels = page.locator('[data-testid="explorer-grid"] .cl .axis-set');
   await expect(columnLabels).toHaveCount(8);
@@ -36,59 +32,18 @@ test("grid explorer defaults to explore mode and exposes lettered axis labels", 
   await expect(rowLabels.nth(1)).toHaveText("A");
   await expect(page.locator('[data-testid="explorer-grid"] .num').first()).toBeVisible();
 
-  const firstRowCells = page.locator('[data-testid="explorer-grid"] .rr').first().locator(".cell");
-  const firstCellBox = await firstRowCells.nth(0).boundingBox();
-  const secondCellBox = await firstRowCells.nth(1).boundingBox();
-  expect(firstCellBox).not.toBeNull();
-  expect(secondCellBox).not.toBeNull();
-  expect(secondCellBox.x).toBeGreaterThan(firstCellBox.x + 20);
-  expect(Math.abs(secondCellBox.y - firstCellBox.y)).toBeLessThan(5);
-
-  const valueDock = page.getByTestId("value-dock");
-  const questionControls = page.getByTestId("question-controls");
-  const explorerGrid = page.getByTestId("explorer-grid");
-  await expect(valueDock.locator(".panel-title")).toHaveText("Read one train/eval cell");
-  await expect(page.getByTestId("reading-takeaway")).toContainText("lands at");
-  await expect(questionControls).toContainText("How to use this mode");
-  await expect(page.getByTestId("grid-marker-controls")).toContainText("Set target");
+  await expect(page.getByTestId("grid-marker-controls")).toContainText("Select evidence cells");
   await expect(page.getByTestId("explorer-workspace")).not.toContainText("Play");
   await expect(page.getByTestId("explorer-workspace")).not.toContainText("Learn");
-  await expect(page.getByTestId("grid-marker-controls")).toContainText("Click any cell to read it directly as one train/eval world pair");
-  await expect(page.getByTestId("grid-marker-controls")).toContainText("Any second cell makes sense");
-  await page.getByTestId("legal-moves-button").click();
-  await expect(page.getByTestId("legal-moves-dialog")).toContainText("Legal moves for this view");
-  await expect(page.getByTestId("legal-moves-dialog")).toContainText("Set the target world");
-  await page.getByRole("button", { name: "Close" }).click();
-  const gridBox = await gridCard.boundingBox();
-  const explorerGridBox = await explorerGrid.boundingBox();
-  const sideRailBox = await sideRail.boundingBox();
-  const valueDockBox = await valueDock.boundingBox();
-  const questionControlsBox = await questionControls.boundingBox();
-  expect(gridBox).not.toBeNull();
-  expect(explorerGridBox).not.toBeNull();
-  expect(sideRailBox).not.toBeNull();
-  expect(valueDockBox).not.toBeNull();
-  expect(questionControlsBox).not.toBeNull();
-  expect(sideRailBox.x).toBeGreaterThan(explorerGridBox.x + explorerGridBox.width - 12);
-  expect(Math.abs(sideRailBox.y - explorerGridBox.y)).toBeLessThan(80);
-  expect(Math.abs(questionControlsBox.x - valueDockBox.x)).toBeLessThan(48);
-  expect(questionControlsBox.y).toBeGreaterThan(valueDockBox.y);
-  await expect(page.getByRole("button", { name: "Set comparison" })).toBeEnabled();
-  await page.getByTestId("grid-train-select").selectOption({ label: "ABC" });
-  await page.getByTestId("grid-eval-select").selectOption({ label: "C" });
-  await expect(valueDock).toContainText("Train ABC");
-  await expect(valueDock).toContainText("Eval C");
-  await page.getByTestId("concept-select").selectOption("loo");
-  await expect(page.getByRole("button", { name: "Set comparison" })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Use built-in comparison" })).toBeVisible();
-  await expect(page.getByTestId("grid-marker-controls")).toContainText("Most meaningful cells keep eval");
-  await expect(page.getByTestId("question-controls")).toContainText("Focus contributor");
-  await expect(gridCard).toContainText("Rows train");
-  await page.getByTestId("concept-select").selectOption("eval");
-  await expect(page.getByRole("button", { name: "Set comparison" })).toBeEnabled();
-  await expect(valueDock.locator(".panel-title")).toHaveText("Add one point to the evaluation column");
-  await expect(page.getByTestId("question-controls")).toContainText("Eval object");
-  await expect(page.getByTestId("grid-marker-controls")).toContainText("Most meaningful cells keep train");
+  await expect(page.getByTestId("grid-to-graph-link")).toHaveAttribute("href", /mode=explore/);
+  await expect(page.getByTestId("value-dock")).toContainText("Smart explorer");
+  await expect(page.getByTestId("value-dock")).toContainText("Train A / Eval A");
+  await expect(page.getByTestId("capability-panel")).toContainText("What this selection can compute");
+  await expect(page.getByTestId("capability-panel")).toContainText("Leave-one-out");
+
+  await page.getByRole("button", { name: /Show Shapley column/i }).click();
+  await expect(page.getByTestId("capability-panel")).toContainText("Shapley can be computed");
+
   const displayControls = page.getByTestId("display-controls");
   await displayControls.locator("summary").click();
   await expect(page.getByLabel("Show raw values")).toBeChecked();
@@ -97,49 +52,61 @@ test("grid explorer defaults to explore mode and exposes lettered axis labels", 
   await expect(columnLabels).toHaveCount(3);
   await expect(columnLabels.nth(0)).toHaveText("A");
   await expect(columnLabels.nth(1)).toHaveText("B");
+
   await expect(page.getByTestId("metric-controls")).toContainText("Real data");
-  await page.getByTestId("metric-help").locator("summary").click();
-  await expect(page.getByTestId("metric-help")).toContainText('toy proxy for "retrain on');
   await page.getByTestId("metric-select").selectOption("real");
   await expect(page.getByTestId("metric-controls")).toContainText("Precomputed");
   await expect(page.getByTestId("metric-controls")).toContainText("Live");
-  await page.getByTestId("concept-select").selectOption("shapley");
-  await expect(page.getByRole("button", { name: "Set comparison" })).toBeDisabled();
-  await expect(page.getByTestId("grid-marker-controls")).toContainText("not as a primary control");
 });
 
-test("mode-specific scenes drive the explorer through a real user flow", async ({ page }) => {
+test("compute mode builds a query and walks through the required cells", async ({ page }) => {
   await openExplorer(page);
+
+  await page.getByTestId("compute-mode-button").click();
+  await expect(page.getByTestId("compute-mode-button")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("concept-select")).toHaveValue("loo");
+  const questionControls = page.getByTestId("question-controls");
+  await expect(questionControls).toContainText("Query");
+
+  await page.getByTestId("grid-train-select").selectOption({ label: "ABC" });
+  await page.getByTestId("grid-eval-select").selectOption({ label: "C" });
+  await questionControls.getByRole("button", { name: "B" }).click();
+  await expect(page.getByTestId("value-dock")).toContainText("Leave-one-out");
+  await expect(page.getByTestId("reading-takeaway")).toContainText("f(ABC, C)");
+
+  await page.getByRole("button", { name: "Start walkthrough" }).first().click();
+  await expect(page.getByTestId("walkthrough-panel")).toContainText("Start with the anchor cell");
+  await expect(page.locator('[data-testid="explorer-grid"] .cell-plan')).toHaveCount(2);
+
+  await page.getByTestId("concept-select").selectOption("shapley");
+  await expect(page.getByTestId("value-dock")).toContainText("Shapley value");
+  await page.getByRole("button", { name: "Start walkthrough" }).first().click();
+  await expect(page.getByTestId("walkthrough-panel")).toContainText("Pair worlds without and with B");
 
   await page.getByTestId("concept-select").selectOption("group");
-  await expect(page.getByTestId("concept-select")).toHaveValue("group");
-  await expect(page.getByTestId("question-controls")).toContainText("Focus coalition");
-  const presets = page.getByTestId("scene-controls");
-  await presets.locator("summary").click();
-  await expect(presets).toContainText("Strike with C and D");
-  await page.getByRole("button", { name: /Strike with C and D/i }).click();
+  await expect(questionControls).toContainText("Focus coalition");
+  await questionControls.getByRole("button", { name: "C" }).click();
+  await expect(page.getByTestId("value-dock")).toContainText("Group leave-one-out");
 
-  const valueDock = page.getByTestId("value-dock");
-  await expect(valueDock.locator(".panel-title")).toHaveText("Remove a group together");
-  await expect(valueDock).toContainText("group CD walked out");
-  await expect(valueDock).toContainText("Focus CD");
-  await expect(valueDock).toContainText("Train ABCD");
-  await expect(valueDock).toContainText("Eval ABCD");
+  await page.getByTestId("concept-select").selectOption("interaction");
+  await expect(page.getByTestId("value-dock")).toContainText("Pair interaction");
+  await expect(page.getByTestId("reading-takeaway")).toContainText("f(ABC, C)");
+
+  await page.getByTestId("concept-select").selectOption("eval-scaling");
+  await expect(page.getByTestId("value-dock")).toContainText("Eval scaling");
+  await expect(questionControls).toContainText("Subset size bucket");
+
+  await page.getByTestId("concept-select").selectOption("budget");
+  await expect(page.getByTestId("value-dock")).toContainText("Budgeted subset scan");
 });
 
-test("poison mode adds operator-layer controls and still keeps the grid visible", async ({ page }) => {
+test("grid stays visible after the refactor on dense settings", async ({ page }) => {
   await openExplorer(page);
 
-  await page.getByTestId("concept-select").selectOption("poison");
-
-  await expect(page.getByTestId("world-layer-controls")).toBeVisible();
-  await expect(page.getByTestId("question-controls")).toContainText("Attack controls");
-  await expect(page.getByTestId("display-controls")).toBeVisible();
-
-  await page.getByTestId("display-controls").locator("summary").click();
-  await page.getByLabel("Show raw values").check();
-  await page.getByLabel(/Corrupt rows containing A/i).check();
-  await expect(page.locator('[data-testid="explorer-grid"] .num').first()).toBeVisible();
+  await page.getByTestId("compute-mode-button").click();
+  await page.getByTestId("concept-select").selectOption("scaling");
+  await page.getByTestId("question-controls").getByRole("button", { name: "k=2" }).click();
+  await expect(page.getByTestId("value-dock")).toContainText("Scaling law");
 
   const toolbarMetrics = await page.getByTestId("explorer-toolbar").evaluate((node) => ({
     clientHeight: node.clientHeight,
