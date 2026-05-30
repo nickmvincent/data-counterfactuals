@@ -40,6 +40,202 @@ const REFERENCE_REPAIRS: Record<string, Partial<SembleReference>> = {
   lu2024dataacquisition: {
     url: 'https://proceedings.neurips.cc/paper_files/paper/2024/hash/d5e8326bbec25e1c608787d24488521b-Abstract-Conference.html',
   },
+  ash2020badge: {
+    year: '2020',
+    metadata_overrides: ['year'],
+  },
+  basu2021fragileinfluence: {
+    year: '2021',
+    metadata_overrides: ['year'],
+  },
+  vincent2021dataleverage: {
+    title: 'Data Leverage: A Framework for Empowering the Public in its Relationship with Technology Companies',
+    venue: 'FAccT',
+    metadata_overrides: ['title', 'venue'],
+  },
+  shapley1953value: {
+    title: 'A Value for n-Person Games',
+    venue: 'Contributions to the Theory of Games II',
+    metadata_overrides: ['title', 'venue'],
+  },
+  nakkiran2021deepdoubledescent: {
+    title: 'Deep Double Descent: Where Bigger Models and More Data Hurt',
+    metadata_overrides: ['title'],
+  },
+  just2023lava: {
+    authors: ['Hoang Anh Just', 'Feiyang Kang', 'Jiachen T. Wang', 'Yi Zeng', 'Myeongseob Ko', 'Ming Jin', 'Ruoxi Jia'],
+    year: '2023',
+    venue: 'ICLR',
+    metadata_overrides: ['authors', 'year', 'venue'],
+  },
+  kamiran2012preprocessing: {
+    title: 'Data preprocessing techniques for classification without discrimination',
+    year: '2012',
+    metadata_overrides: ['title', 'year'],
+  },
+  kessler2025sava: {
+    year: '2025',
+    venue: 'ICLR',
+    metadata_overrides: ['year', 'venue'],
+  },
+  khaddaj2023backdoor: {
+    title: 'Rethinking Backdoor Attacks',
+    authors: ['Alaa Khaddaj', 'Guillaume Leclerc', 'Aleksandar Makelov', 'Kristian Georgiev', 'Hadi Salman', 'Andrew Ilyas', 'Aleksander Madry'],
+    year: '2023',
+    venue: 'ICML',
+    url: 'https://proceedings.mlr.press/v202/khaddaj23a.html',
+    metadata_overrides: ['title', 'authors', 'year', 'venue'],
+  },
+  ki2023nomodeltraining: {
+    authors: ['Nohyun Ki', 'Hoyong Choi', 'Hye Won Chung'],
+    year: '2023',
+    venue: 'ICLR',
+    metadata_overrides: ['authors', 'year', 'venue'],
+  },
+  kreer2025bayesian: {
+    title: 'Bayesian Influence Functions for Hessian-Free Data Attribution',
+    authors: ['Philipp Alexander Kreer', 'Wilson Wu', 'Maxwell Adam', 'Zach Furman', 'Jesse Hoogland'],
+    year: '2026',
+    venue: 'ICLR',
+    url: 'https://iclr.cc/virtual/2026/poster/10008904',
+    metadata_overrides: ['title', 'authors', 'year', 'venue'],
+  },
+  'https-arxiv-org-abs-2507-14740': {
+    citation_key: 'wang2025bettertda',
+    authors: ['Andrew Wang', 'Elisa Nguyen', 'Runshi Yang', 'Juhan Bae', 'Sheila A. McIlraith', 'Roger Baker Grosse'],
+    year: '2025',
+    venue: 'NeurIPS',
+    url: 'https://papers.nips.cc/paper_files/paper/2025/hash/936ce22b767cf1a1496083e4725d3b21-Abstract-Conference.html',
+    metadata_overrides: ['authors', 'year', 'venue'],
+  },
+  wang2025bettertda: {
+    authors: ['Andrew Wang', 'Elisa Nguyen', 'Runshi Yang', 'Juhan Bae', 'Sheila A. McIlraith', 'Roger Baker Grosse'],
+    year: '2025',
+    venue: 'NeurIPS',
+    url: 'https://papers.nips.cc/paper_files/paper/2025/hash/936ce22b767cf1a1496083e4725d3b21-Abstract-Conference.html',
+    metadata_overrides: ['authors', 'year', 'venue'],
+  },
+  'https-aclanthology-org-2026-eacl-long-251': {
+    citation_key: 'shetty2026nonmembership',
+    venue: 'EACL',
+    metadata_overrides: ['venue'],
+  },
+  shetty2026nonmembership: {
+    venue: 'EACL',
+    metadata_overrides: ['venue'],
+  },
+  rosenbaum1984subclassification: {
+    authors: ['Paul R. Rosenbaum', 'Donald B. Rubin'],
+    year: '1984',
+    url: 'https://doi.org/10.1080/01621459.1984.10478078',
+    metadata_overrides: ['authors', 'year'],
+  },
+  shumailov2023curseofrecursion: {
+    year: '2023',
+    venue: 'arXiv',
+    metadata_overrides: ['year', 'venue'],
+  },
+  sorscher2022beyondscaling: {
+    year: '2022',
+    venue: 'arXiv',
+    metadata_overrides: ['year', 'venue'],
+  },
+  tamine2026utility: {
+    year: '2026',
+    venue: 'ICLR',
+    metadata_overrides: ['year', 'venue'],
+  },
+  tian2024derdava: {
+    year: '2024',
+    venue: 'AAAI',
+    metadata_overrides: ['year', 'venue'],
+  },
+  toneva2019forgetting: {
+    authors: ['Mariya Toneva', 'Alessandro Sordoni', 'Remi Tachet des Combes', 'Adam Trischler', 'Yoshua Bengio', 'Geoffrey J. Gordon'],
+    year: '2019',
+    venue: 'ICLR',
+    metadata_overrides: ['authors', 'year', 'venue'],
+  },
+  zhao2021gradientmatching: {
+    year: '2021',
+    venue: 'ICLR',
+    metadata_overrides: ['year', 'venue'],
+  },
+  zhao2023distributionmatching: {
+    year: '2023',
+    venue: 'WACV',
+    url: 'https://openaccess.thecvf.com/content/WACV2023/html/Zhao_Dataset_Condensation_With_Distribution_Matching_WACV_2023_paper.html',
+    metadata_overrides: ['year', 'venue'],
+  },
+  staab2024verticaldataminimization: {
+    venue: 'IEEE Symposium on Security and Privacy',
+    metadata_overrides: ['venue'],
+  },
+  pallas2022perquerydataminimization: {
+    venue: 'International Conference on Web Engineering',
+    metadata_overrides: ['venue'],
+  },
+  biega2020personalizationminimization: {
+    authors: ['Asia J. Biega', 'Peter Potash', 'Hal Daumé III', 'Fernando Diaz', 'Michèle Finck'],
+    venue: 'SIGIR',
+    metadata_overrides: ['authors', 'venue'],
+  },
+  antignac2017languagebased: {
+    venue: 'IFIP SEC',
+    metadata_overrides: ['venue'],
+  },
+  veeningen2014communicationprotocols: {
+    title: 'Data Minimisation in Communication Protocols: A Formal Analysis Framework and Application to Identity Management',
+    metadata_overrides: ['title'],
+  },
+  staab2026sokdataminimization: {
+    year: '2026',
+    venue: 'SaTML',
+    metadata_overrides: ['year', 'venue'],
+  },
+  shaowang2026iotdataminimization: {
+    year: '2025',
+    venue: 'PVLDB',
+    metadata_overrides: ['year', 'venue'],
+  },
+  yao2024privacyqte: {
+    title: 'Privacy-Preserving Quantile Treatment Effect Estimation for Randomized Controlled Trials',
+    metadata_overrides: ['title'],
+  },
+  tran2023inferenceminimization: {
+    authors: ['Cuong Tran', 'Ferdinando Fioretto'],
+    venue: 'NeurIPS',
+    metadata_overrides: ['authors', 'venue'],
+  },
+  witt2023topicsapi: {
+    title: "The Interplay Between Machine Learning and Data Minimization Under the GDPR: The Case of Google's Topics API",
+    metadata_overrides: ['title'],
+  },
+  shanmugam2022limitdatacollection: {
+    authors: ['Divya Shanmugam', 'Fernando Diaz', 'Samira Shabanian', 'Michele Finck', 'Asia J. Biega'],
+    venue: 'FAccT',
+    metadata_overrides: ['authors', 'venue'],
+  },
+  goldsteen2022dataminimizationgdpr: {
+    title: 'Data Minimization for GDPR Compliance in Machine Learning Models',
+    year: '2022',
+    metadata_overrides: ['title', 'year'],
+  },
+  senarath2019dataminimizationmodel: {
+    title: 'A Data Minimization Model for Embedding Privacy into Software Systems',
+    venue: 'Computers & Security',
+    metadata_overrides: ['title', 'venue'],
+  },
+  antignac2014privacyarchitectures: {
+    title: 'Privacy Architectures: Reasoning About Data Minimisation and Integrity',
+    venue: 'Security and Trust Management',
+    metadata_overrides: ['title', 'venue'],
+  },
+  lemetayer2013privacybydesign: {
+    title: 'Privacy by Design: A Formal Framework for the Analysis of Architectural Choices',
+    venue: 'CODASPY',
+    metadata_overrides: ['title', 'venue'],
+  },
 };
 
 type SembleCachePolicy = 'network-first' | 'cache-only' | 'refresh' | 'off';
@@ -1077,7 +1273,7 @@ async function buildSembleDataset(config: SembleConfig): Promise<SembleDataset> 
         return [citationKey, reference] as const;
       }
 
-      return [citationKey, await resolveReferenceAuthority(reference)] as const;
+      return [citationKey, applyReferenceRepairs(await resolveReferenceAuthority(reference))] as const;
     },
   );
 

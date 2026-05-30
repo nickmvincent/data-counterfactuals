@@ -144,3 +144,19 @@ test("manual override fields protect YAML from generic page metadata", () => {
   assert.deepEqual(resolved.authors, ["Generic Site Author"]);
   assert.equal(resolved.metadata_provenance.authors.kind, "page-citation-meta");
 });
+
+test("author display names are normalized from citation meta order", () => {
+  const resolved = resolveReferenceMetadata({
+    citation_key: "example",
+    title: "Example",
+    authors: ["Gebru, Timnit", "Daumé III, Hal", "Casas, Diego de Las"],
+    year: "2021",
+    venue: "Example Venue",
+  });
+
+  assert.deepEqual(resolved.authors, [
+    "Timnit Gebru",
+    "Hal Daumé III",
+    "Diego de Las Casas",
+  ]);
+});
