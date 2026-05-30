@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildSubsetGrid } from "../src/lib/counterfactual-math.js";
+import { applyGridEdits, buildSubsetGrid } from "../src/lib/counterfactual-math.js";
 import {
   buildConceptPlan,
   buildConceptPlans,
@@ -166,4 +166,48 @@ test("budget scan and interaction plans expose their required cells", () => {
   assert.equal(interaction.requiredCells.length, 4);
   assert.equal(interaction.status, "partial");
   assert.match(interaction.formula, /f\(ABC, C\)/);
+});
+
+test("privacy and poisoning plans expose mechanism-specific counterfactuals", () => {
+  const universe = ["A", "B", "C"];
+  const { matrix, subsets } = buildSubsetGrid(universe, "jaccard");
+  const rowIndex = subsets.findIndex((subset) => subset.join("") === "ABC");
+  const colIndex = subsets.findIndex((subset) => subset.join("") === "C");
+  const operatorMatrix = applyGridEdits(matrix, subsets, {
+    focusSet: ["B"],
+    poisonActive: true,
+  });
+
+  const privacy = buildConceptPlan({
+    conceptId: "dp",
+    matrix,
+    subsets,
+    universe,
+    rowIndex,
+    colIndex,
+    focusSet: ["B"],
+    selectedCellIds: [],
+    epsilon: 2,
+  });
+
+  const poisoning = buildConceptPlan({
+    conceptId: "poison",
+    matrix: operatorMatrix,
+    cleanMatrix: matrix,
+    operatorMatrix,
+    subsets,
+    universe,
+    rowIndex,
+    colIndex,
+    focusSet: ["B"],
+    selectedCellIds: [],
+    poisonActive: true,
+  });
+
+  assert.equal(privacy.status, "partial");
+  assert.equal(privacy.requiredCells.length, subsets.length * 2);
+  assert.match(privacy.formula, /epsilon/);
+  assert.equal(poisoning.status, "partial");
+  assert.ok(Math.abs(poisoning.value + 0.15) < 1e-9);
+  assert.match(poisoning.formula, /f_operator/);
 });

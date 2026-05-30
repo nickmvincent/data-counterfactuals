@@ -1,36 +1,43 @@
-export const sharedExplorerParamKeys = ["count", "metric", "mode", "lens", "train", "eval", "focus", "k"];
+import { conceptSpecIds, graphLensIds } from "./concept-lens-specs.js";
 
-export const gridModes = new Set([
-  "explore",
-  "loo",
+export const sharedExplorerParamKeys = [
+  "count",
+  "metric",
+  "mode",
+  "lens",
+  "train",
   "eval",
-  "group",
-  "interaction",
-  "shapley",
-  "banzhaf",
-  "beta",
-  "scaling",
-  "eval-scaling",
-  "diagonal-scaling",
-  "budget",
-  "dp",
-  "unlearning",
+  "focus",
+  "k",
+  "epsilon",
+  "audit",
   "poison",
-]);
+  "gridView",
+];
 
-export const graphLenses = new Set(["ablation", "strike", "shapley", "scaling"]);
+export const gridModes = new Set(conceptSpecIds);
+
+export const graphLenses = new Set(graphLensIds);
 
 export function gridModeToGraphLens(mode) {
   if (mode === "group") return "strike";
-  if (mode === "scaling" || mode === "eval-scaling" || mode === "diagonal-scaling" || mode === "budget") return "scaling";
+  if (mode === "interaction") return "interaction";
+  if (mode === "eval-scaling") return "eval-scaling";
+  if (mode === "dp" || mode === "unlearning") return "dp";
+  if (mode === "poison") return "poison";
+  if (mode === "scaling" || mode === "diagonal-scaling" || mode === "budget") return "scaling";
   if (mode === "shapley" || mode === "banzhaf" || mode === "beta") return "shapley";
   return "ablation";
 }
 
 export function graphLensToGridMode(lens) {
   if (lens === "strike") return "group";
+  if (lens === "interaction") return "interaction";
   if (lens === "shapley") return "shapley";
+  if (lens === "eval-scaling") return "eval-scaling";
   if (lens === "scaling") return "scaling";
+  if (lens === "dp") return "dp";
+  if (lens === "poison") return "poison";
   return "loo";
 }
 
@@ -59,16 +66,27 @@ export function parseExplorerGameState(search = "") {
   const mode = params.get("mode");
   const lens = params.get("lens");
   const focus = params.get("focus");
+  const normalizedMode = gridModes.has(mode) ? mode : null;
+  const normalizedLens = graphLenses.has(lens) ? lens : null;
+  const compatibleLens = normalizedMode
+    ? normalizedLens === gridModeToGraphLens(normalizedMode)
+      ? normalizedLens
+      : gridModeToGraphLens(normalizedMode)
+    : normalizedLens;
 
   return {
     count: params.get("count"),
     metric: params.get("metric"),
-    mode: gridModes.has(mode) ? mode : null,
-    lens: graphLenses.has(lens) ? lens : gridModes.has(mode) ? gridModeToGraphLens(mode) : null,
+    mode: normalizedMode,
+    lens: compatibleLens,
     trainSet: params.has("train") ? parseSharedSubset(params.get("train")) : null,
     evalSet: params.has("eval") ? parseSharedSubset(params.get("eval")) : null,
     focusSet: focus ? parseSharedSubset(focus) : null,
     k: params.get("k"),
+    epsilon: params.get("epsilon"),
+    auditTolerance: params.get("audit"),
+    poisonActive: params.get("poison"),
+    gridView: params.get("gridView"),
   };
 }
 
@@ -96,6 +114,10 @@ export function createExplorerGameStateSearch(state = {}, existingSearch = "") {
   if (state.evalSet) params.set("eval", formatSharedSubset(state.evalSet));
   if (state.focusSet?.length) params.set("focus", formatSharedSubset(state.focusSet));
   if (typeof state.k === "number") params.set("k", String(state.k));
+  if (typeof state.epsilon === "number") params.set("epsilon", String(state.epsilon));
+  if (typeof state.auditTolerance === "number") params.set("audit", String(state.auditTolerance));
+  if (typeof state.poisonActive === "boolean") params.set("poison", state.poisonActive ? "1" : "0");
+  if (state.gridView) params.set("gridView", state.gridView);
 
   const query = params.toString();
   return query ? `?${query}` : "";
