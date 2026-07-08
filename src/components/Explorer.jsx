@@ -46,7 +46,14 @@ import {
 } from "../lib/explorer-game-state.js";
 import { conceptAtlasEntries, getConceptAtlasEntry, getConceptComparisons } from "../lib/concept-atlas.js";
 import { graphLensSpecs, visualGrammarEntries } from "../lib/concept-lens-specs.js";
+import {
+  buildCellNarration,
+  buildGuidedSteps,
+  sameCell,
+  validGuideCells,
+} from "../lib/explorer-guides.js";
 import { scrollChildIntoContainer } from "../lib/scroll-helpers.js";
+import { playSurfaceStyles } from "./explorerStyles.js";
 
 const metricMeta = {
   jaccard: {
@@ -346,6 +353,7 @@ function Explorer({ initialView = "grid" }) {
   const initialUrlStateAppliedRef = useRef(false);
   const pendingUrlSelectionRef = useRef(false);
   const skipNextDefaultSelectionRef = useRef(false);
+  const setupAutoShownRef = useRef(false);
   const urlSyncEnabledRef = useRef(false);
 
   const [view, setView] = useState(routeView);
@@ -379,11 +387,16 @@ function Explorer({ initialView = "grid" }) {
   const [walkthroughRunning, setWalkthroughRunning] = useState(false);
   const [hoverTarget, setHoverTarget] = useState(null);
   const [hoveredNodeIndex, setHoveredNodeIndex] = useState(null);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [modeDialogOpen, setModeDialogOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [atlasOpen, setAtlasOpen] = useState(false);
   const [atlasConceptId, setAtlasConceptId] = useState("explore");
   const [comparisonId, setComparisonId] = useState("shapley-influence");
   const [activeGuideId, setActiveGuideId] = useState(null);
+  const [guidePreviewId, setGuidePreviewId] = useState("evalConfidence");
+  const [guideStepIndex, setGuideStepIndex] = useState(0);
+  const [guideNarration, setGuideNarration] = useState("");
   const [shareStatus, setShareStatus] = useState("idle");
   const [hydrated, setHydrated] = useState(false);
 
@@ -446,6 +459,12 @@ function Explorer({ initialView = "grid" }) {
   useEffect(() => {
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (!hydrated || setupAutoShownRef.current || typeof window === "undefined") return;
+    setupAutoShownRef.current = true;
+    if (!hasExplorerGameStateParams(window.location.search)) setSetupOpen(true);
+  }, [hydrated]);
 
   useEffect(() => {
     const search = typeof window === "undefined" ? "" : window.location.search;
@@ -1074,6 +1093,9 @@ function Explorer({ initialView = "grid" }) {
   };
 
   const openAtlas = (conceptId = appMode === "explore" ? "explore" : queryConcept) => {
+    setSetupOpen(false);
+    setModeDialogOpen(false);
+    setTutorialOpen(false);
     setAtlasConceptId(conceptId);
     setComparisonId(getConceptComparisons(conceptId)[0]?.id || "");
     setAtlasOpen(true);
@@ -1125,6 +1147,7 @@ function Explorer({ initialView = "grid" }) {
   };
 
   const handleCellClick = (rowIndex, colIndex) => {
+    completeGuideStepForCell(rowIndex, colIndex);
     setTrainIdx(rowIndex);
     setEvalIdx(colIndex);
     if (appMode === "compute") {
@@ -1135,11 +1158,13 @@ function Explorer({ initialView = "grid" }) {
   };
 
   const handleRowHeaderClick = (rowIndex) => {
+    completeGuideStepForAxis("row", rowIndex);
     setTrainIdx(rowIndex);
     if (appMode === "explore") toggleCells(cellsForRow(subsets, rowIndex, visibleColIndices));
   };
 
   const handleColumnHeaderClick = (colIndex) => {
+    completeGuideStepForAxis("col", colIndex);
     setEvalIdx(colIndex);
     if (appMode === "explore") toggleCells(cellsForColumn(subsets, colIndex));
   };
@@ -1239,6 +1264,12 @@ function Explorer({ initialView = "grid" }) {
     setTrainIdx(1);
     setEvalIdx(1);
     setActiveGuideId(null);
+    setGuideStepIndex(0);
+    setGuideNarration("");
+    setGuidePreviewId("evalConfidence");
+    setModeDialogOpen(false);
+    setSetupOpen(false);
+    setTutorialOpen(false);
     setAtlasOpen(false);
     setAtlasConceptId("explore");
     setComparisonId("shapley-influence");
@@ -1260,6 +1291,84 @@ function Explorer({ initialView = "grid" }) {
       setPoisonActive(true);
       setGridView("operator");
     }
+  };
+
+  const openSetupDialog = () => {
+    setModeDialogOpen(false);
+    setTutorialOpen(false);
+    setAtlasOpen(false);
+    setSetupOpen(true);
+  };
+
+  const openModeDialog = () => {
+    setSetupOpen(false);
+    setTutorialOpen(false);
+    setAtlasOpen(false);
+    setModeDialogOpen(true);
+  };
+
+  const openGuideDialog = () => {
+    setSetupOpen(false);
+    setModeDialogOpen(false);
+    setAtlasOpen(false);
+    setGuidePreviewId(activeGuideId || "evalConfidence");
+    setTutorialOpen(true);
+  };
+
+  const initializeGame = (preset) => {
+    setMetric("jaccard");
+    setPresetChoice("current");
+    setK(2);
+    setBetaAlpha(2);
+    setBetaBeta(2);
+    setEpsilon(1);
+    setAuditTolerance(0.15);
+    setPoisonActive(false);
+    setGridView("real");
+    setShowNums(true);
+    setShowConfidence(true);
+    setShowSingletonEvalCols(false);
+    setControlsOpen(false);
+    setSelectedCellIds([makeCellId(1, 1)]);
+    setActiveGuideId(null);
+    setGuideStepIndex(0);
+    setGuideNarration("");
+    setSetupOpen(false);
+    setModeDialogOpen(false);
+    setTutorialOpen(false);
+    setAtlasOpen(false);
+    urlSyncEnabledRef.current = true;
+
+    if (preset === "graph") {
+      setView("graph");
+      setCount(4);
+      setConceptMode("loo");
+      setFocusSet(["B"]);
+      setPendingSelection({ row: ["A", "B", "C", "D"], col: ["A", "B", "C", "D"] });
+      return;
+    }
+
+    if (preset === "compute") {
+      setView("grid");
+      setCount(4);
+      setConceptMode("shapley");
+      setFocusSet(["A"]);
+      setPendingSelection({ row: ["A", "B", "C", "D"], col: ["A", "B", "C", "D"] });
+      return;
+    }
+
+    setView("grid");
+    setCount(3);
+    setConceptMode("explore");
+    setFocusSet(["A"]);
+    setPendingSelection({ row: ["A"], col: ["A"] });
+  };
+
+  const chooseInteractionMode = (mode) => {
+    const nextMode = mode === "compute" ? queryConcept : mode;
+    setConceptMode(nextMode === "compute" ? "loo" : nextMode);
+    if (nextMode !== "explore") setControlsOpen(true);
+    setModeDialogOpen(false);
   };
 
   const baseTutorials = createTutorialPresets({
@@ -1307,8 +1416,19 @@ function Explorer({ initialView = "grid" }) {
 
   const runTutorial = (tutorial) => {
     setActiveGuideId(tutorial.id);
+    setGuideStepIndex(0);
+    setGuideNarration("");
     tutorial.setup();
+    setControlsOpen(false);
+    setSetupOpen(false);
+    setModeDialogOpen(false);
     setTutorialOpen(false);
+  };
+
+  const exitGuide = () => {
+    setActiveGuideId(null);
+    setGuideStepIndex(0);
+    setGuideNarration("");
   };
 
   const shareLabel = shareStatus === "copied" ? "Copied" : shareStatus === "failed" ? "Copy failed" : "Share";
@@ -1328,6 +1448,41 @@ function Explorer({ initialView = "grid" }) {
     ? `${count} datasets; ${graphLensMeta[lens].title}; train ${label(trainSet)} / eval ${label(evalSet)}`
     : `${count} datasets; ${appMode === "explore" ? "explore" : activePlan?.shortLabel || "compute"}; train ${label(trainSet)} / eval ${label(evalSet)}`;
   const activeGuide = tutorials.find((tutorial) => tutorial.id === activeGuideId);
+  const guidePreview = tutorials.find((tutorial) => tutorial.id === guidePreviewId) || activeGuide || tutorials[0];
+  const recommendedGuideKeys = new Set(["evalConfidence", activeGuideId, appMode === "explore" ? tutorials[0]?.id : queryConcept]);
+  const recommendedGuides = tutorials.filter((tutorial) => recommendedGuideKeys.has(tutorial.id) || recommendedGuideKeys.has(tutorial.mode));
+  const visibleGuides = (recommendedGuides.length >= 3 ? recommendedGuides : tutorials).slice(0, 4);
+  const guidedSteps = useMemo(
+    () =>
+      buildGuidedSteps({
+        guide: activeGuide,
+        base,
+        subsets,
+        matrix,
+        activePlan,
+        safeTrainIdx,
+        safeEvalIdx,
+        evaluationInterval,
+      }),
+    [activeGuide, base, subsets, matrix, activePlan, safeTrainIdx, safeEvalIdx, evaluationInterval],
+  );
+  const safeGuideStepIndex = guidedSteps.length ? Math.min(guideStepIndex, guidedSteps.length - 1) : 0;
+  const activeGuideStep = guidedSteps[safeGuideStepIndex] || null;
+  const guideTargetCellSet = useMemo(
+    () => new Set(cellsToIds(validGuideCells(activeGuideStep?.targetCells || [], subsets))),
+    [activeGuideStep, subsets],
+  );
+  const guideTargetRows = useMemo(
+    () => new Set(validGuideCells(activeGuideStep?.targetCells || [], subsets).map((cell) => cell.rowIndex)),
+    [activeGuideStep, subsets],
+  );
+  const guideTargetCols = useMemo(
+    () => new Set(validGuideCells(activeGuideStep?.targetCells || [], subsets).map((cell) => cell.colIndex)),
+    [activeGuideStep, subsets],
+  );
+  const guideModeActive = Boolean(activeGuide && activeGuideStep);
+  const guideProgressLabel = guidedSteps.length ? `${safeGuideStepIndex + 1}/${guidedSteps.length}` : "0/0";
+  const overlayOpen = setupOpen || modeDialogOpen || tutorialOpen || atlasOpen;
   const selectedFactLimit = selectedFacts.slice(0, 4);
   const intervalLabel = evaluationInterval.available
     ? `${formatValue(evaluationInterval.lower)} - ${formatValue(evaluationInterval.upper)}`
@@ -1347,11 +1502,62 @@ function Explorer({ initialView = "grid" }) {
   const previewSet = subsets[previewNodeIndex] || [];
   const previewValue = lensUsesEvalAxis ? (matrix[safeTrainIdx]?.[previewNodeIndex] ?? 0) : (matrix[previewNodeIndex]?.[safeEvalIdx] ?? 0);
 
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    const previousOverflow = document.body.style.overflow;
+    if (overlayOpen) document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [overlayOpen]);
+
+  useEffect(() => {
+    if (!guidedSteps.length || guideStepIndex < guidedSteps.length) return;
+    setGuideStepIndex(Math.max(0, guidedSteps.length - 1));
+  }, [guidedSteps.length, guideStepIndex]);
+
+  function advanceGuideStep(direction) {
+    if (!guidedSteps.length) return;
+    const nextIndex = Math.max(0, Math.min(guidedSteps.length - 1, safeGuideStepIndex + direction));
+    if (direction > 0 && activeGuideStep?.result) setGuideNarration(activeGuideStep.result);
+    if (direction < 0) setGuideNarration("");
+    setGuideStepIndex(nextIndex);
+  }
+
+  function completeGuideStepForCell(rowIndex, colIndex) {
+    if (!guideModeActive || !activeGuideStep?.targetCells?.length) return;
+    const clickedCell = { rowIndex, colIndex };
+    const hit = activeGuideStep.targetCells.some((cell) => sameCell(cell, clickedCell));
+    if (!hit) return;
+    const narration =
+      activeGuideStep.result ||
+      buildCellNarration({
+        rowIndex,
+        colIndex,
+        previousRowIndex: safeTrainIdx,
+        previousColIndex: safeEvalIdx,
+        matrix,
+        subsets,
+      });
+    setGuideNarration(narration);
+    setGuideStepIndex((previous) => Math.min(previous + 1, Math.max(0, guidedSteps.length - 1)));
+  }
+
+  function completeGuideStepForAxis(kind, index) {
+    if (!guideModeActive || activeGuideStep?.targetCells?.length) return;
+    const matchesAxis = kind === "row" ? guideTargetRows.has(index) : guideTargetCols.has(index);
+    if (!matchesAxis) return;
+    setGuideNarration(activeGuideStep.result || activeGuideStep.why || "");
+    setGuideStepIndex((previous) => Math.min(previous + 1, Math.max(0, guidedSteps.length - 1)));
+  }
+
   return (
     <div
       class="workspace-shell graph-workspace counterfactual-play"
       data-testid="explorer-workspace"
       data-ready={hydrated ? "true" : "false"}
+      data-overlay-open={overlayOpen ? "true" : "false"}
+      data-guided-mode={guideModeActive ? "true" : "false"}
     >
       <style>{playSurfaceStyles}</style>
 
@@ -1379,28 +1585,13 @@ function Explorer({ initialView = "grid" }) {
               Graph
             </button>
           </div>
-          <div class="segmented compact" role="group" aria-label="Grid explorer mode">
-            <button
-              type="button"
-              data-testid="explore-mode-button"
-              aria-pressed={appMode === "explore"}
-              onClick={() => setAppMode("explore")}
-            >
-              Explore
-            </button>
-            <button
-              type="button"
-              data-testid="compute-mode-button"
-              aria-pressed={appMode === "compute"}
-              onClick={() => setAppMode("compute")}
-            >
-              Compute
-            </button>
-          </div>
-          <button class="command-btn" type="button" onClick={resetGame}>
-            Reset
+          <button class="command-btn mode-command" type="button" data-testid="mode-dialog-button" onClick={openModeDialog}>
+            Mode: {stateModeLabel}
           </button>
-          <button class="command-btn" type="button" onClick={() => setTutorialOpen(true)}>
+          <button class="command-btn" type="button" data-testid="game-setup-button" onClick={openSetupDialog}>
+            New game
+          </button>
+          <button class="command-btn" type="button" data-testid="guides-open-button" onClick={openGuideDialog}>
             Guides
           </button>
           <button class="command-btn" type="button" data-testid="atlas-open-button" onClick={() => openAtlas()}>
@@ -1455,7 +1646,38 @@ function Explorer({ initialView = "grid" }) {
           </div>
         </div>
 
-        <div class="tactical-actions board-actions" aria-label="Board actions">
+        {guideModeActive ? (
+          <section class="guided-shell" data-testid="guided-mode-shell" aria-label="Guided mode">
+            <div class="guided-overview">
+              <span class="hud-kicker">Guided mode</span>
+              <h3>{activeGuide.title}</h3>
+              <p>{activeGuideStep.objective}</p>
+            </div>
+            <div class="guided-step">
+              <span>{guideProgressLabel}</span>
+              <strong>{activeGuideStep.title}</strong>
+              <p>{activeGuideStep.action}</p>
+              <em>{activeGuideStep.why}</em>
+            </div>
+            <div class="guided-result" data-testid="guide-result">
+              <span>What changed</span>
+              <strong>{guideNarration || "Make the highlighted move to update the readout."}</strong>
+            </div>
+            <div class="guided-controls">
+              <button type="button" data-testid="guide-back-button" disabled={safeGuideStepIndex === 0} onClick={() => advanceGuideStep(-1)}>
+                Back
+              </button>
+              <button type="button" data-testid="guide-next-button" disabled={safeGuideStepIndex >= guidedSteps.length - 1} onClick={() => advanceGuideStep(1)}>
+                Next
+              </button>
+              <button type="button" data-testid="guide-exit-button" onClick={exitGuide}>
+                Exit guide
+              </button>
+            </div>
+          </section>
+        ) : null}
+
+        <div class="tactical-actions board-actions" aria-label="Board actions" hidden={guideModeActive}>
           <button
             type="button"
             aria-label="Select current cell"
@@ -1483,6 +1705,7 @@ function Explorer({ initialView = "grid" }) {
         <details
           class="controls-drawer"
           data-testid="move-controls"
+          hidden={guideModeActive}
           open={controlsOpen}
           onToggle={(event) => setControlsOpen(event.currentTarget.open)}
         >
@@ -1842,7 +2065,7 @@ function Explorer({ initialView = "grid" }) {
           ) : null}
         </details>
 
-        <details class="options-drawer json-drawer" id="grid-inspect" data-testid="settings-json">
+        <details class="options-drawer json-drawer" id="grid-inspect" data-testid="settings-json" hidden={guideModeActive}>
           <summary>
             <span>Inspect state</span>
             <strong>Selection and query JSON</strong>
@@ -1873,7 +2096,7 @@ function Explorer({ initialView = "grid" }) {
           </pre>
         </details>
 
-        <details class="options-drawer intel-drawer" data-testid="intel-drawer">
+        <details class="options-drawer intel-drawer" data-testid="intel-drawer" hidden={guideModeActive}>
           <summary>
             <span>Intel</span>
             <strong>
@@ -1885,22 +2108,6 @@ function Explorer({ initialView = "grid" }) {
             </strong>
           </summary>
           <div class="intel-stack">
-            {activeGuide ? (
-              <section class="side-panel guide-panel">
-                <div class="panel-head">
-                  <div>
-                    <span class="hud-kicker">Active guide</span>
-                    <h3>{activeGuide.title}</h3>
-                  </div>
-                  <button type="button" onClick={() => setActiveGuideId(null)}>
-                    Clear
-                  </button>
-                </div>
-                <p class="panel-copy">{activeGuide.goal}</p>
-                <div class="takeaway">{activeGuide.how}</div>
-              </section>
-            ) : null}
-
             {view === "grid" ? (
               <section class="side-panel value-panel" data-testid="value-dock">
                 <div class="panel-head">
@@ -2197,7 +2404,7 @@ function Explorer({ initialView = "grid" }) {
 
           {view === "grid" ? (
             <div class="grid-wrap stage-grid" ref={gridWrapRef} data-testid="explorer-grid">
-              <div class="grid-matrix">
+              <div class={`grid-matrix ${guideModeActive ? "is-guided" : ""} ${guideTargetCellSet.size ? "has-guide-target" : ""}`}>
                 <div class="grid-axis-row">
                   <div class="rl axis-corner">
                     <span class="axis-index">train</span>
@@ -2209,7 +2416,7 @@ function Explorer({ initialView = "grid" }) {
                     return (
                       <button
                         key={`col-${colIndex}`}
-                        class={`cl ${active ? "axis-active" : ""}`}
+                        class={`cl ${active ? "axis-active" : ""} ${guideTargetCols.has(colIndex) ? "axis-guide-target" : ""}`}
                         type="button"
                         aria-pressed={active}
                         aria-label={`Select evaluation slice ${label(colSet)}`}
@@ -2229,7 +2436,7 @@ function Explorer({ initialView = "grid" }) {
                 {subsets.map((rowSet, rowIndex) => (
                   <div class="grid-matrix-row" key={`row-${rowIndex}`}>
                     <button
-                      class={`rl ${rowIndex === safeTrainIdx ? "axis-active" : ""}`}
+                      class={`rl ${rowIndex === safeTrainIdx ? "axis-active" : ""} ${guideTargetRows.has(rowIndex) ? "axis-guide-target" : ""}`}
                       type="button"
                       aria-pressed={rowIndex === safeTrainIdx}
                       aria-label={`Select training world ${label(rowSet)}`}
@@ -2268,6 +2475,7 @@ function Explorer({ initialView = "grid" }) {
                         if (isSelected) classes.push("cell-selected-set");
                         if (isRequired) classes.push("cell-plan");
                         if (isStepCell) classes.push("cell-step");
+                        if (guideTargetCellSet.has(id)) classes.push("cell-guide-target");
                         if (isTrack) classes.push("cell-track");
                         return (
                           <button
@@ -2284,7 +2492,7 @@ function Explorer({ initialView = "grid" }) {
                             onMouseLeave={() => setHoverTarget(null)}
                             onFocus={() => setHoverTarget({ rowIndex, colIndex })}
                             onBlur={() => setHoverTarget(null)}
-                            style={{ background: palette(normalized) }}
+                            style={{ "--cell-color": palette(normalized) }}
                           >
                             {isAnchor ? <span class="marker-ring target"></span> : null}
                             {isSelected && !isAnchor ? <span class="marker-ring compare"></span> : null}
@@ -2457,31 +2665,174 @@ function Explorer({ initialView = "grid" }) {
 
       </div>
 
+      {setupOpen ? (
+        <div class="tutorial-modal" role="dialog" aria-modal="true" aria-label="Initialize game state" data-testid="game-setup-modal">
+          <div class="tutorial-card setup-card">
+            <div class="panel-head">
+              <div>
+                <span class="hud-kicker">New game</span>
+                <h3>Choose a starting position.</h3>
+              </div>
+              <button type="button" data-testid="setup-keep-current" onClick={() => setSetupOpen(false)}>
+                Keep current
+              </button>
+            </div>
+            <div class="modal-body setup-body">
+              <section class="explain-panel">
+                <strong>What you are setting up</strong>
+                <p>
+                  Each square is a counterfactual world: a training set on one axis, an evaluation set on the other, and a score for how that pairing behaves.
+                  Pick a start if you want the board to feel like a game state instead of a pile of controls.
+                </p>
+              </section>
+              <div class="starter-grid">
+                <button type="button" data-testid="setup-starter-grid" onClick={() => initializeGame("starter")}>
+                  <span>Starter board</span>
+                  <strong>Explore one train/eval square</strong>
+                  <em>Best first move. Three datasets, Jaccard score, A vs A selected.</em>
+                </button>
+                <button type="button" data-testid="setup-compute-grid" onClick={() => initializeGame("compute")}>
+                  <span>Value quest</span>
+                  <strong>Compute a formal data value</strong>
+                  <em>Starts on Shapley value with four datasets and the full board available.</em>
+                </button>
+                <button type="button" data-testid="setup-graph-route" onClick={() => initializeGame("graph")}>
+                  <span>Graph route</span>
+                  <strong>Navigate subset worlds as a map</strong>
+                  <em>Starts on the lattice view, where moves add or remove training data.</em>
+                </button>
+              </div>
+              <div class="modal-actions">
+                <button type="button" onClick={resetGame}>
+                  Reset defaults
+                </button>
+                <button type="button" onClick={() => setSetupOpen(false)}>
+                  Continue current run
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {modeDialogOpen ? (
+        <div class="tutorial-modal" role="dialog" aria-modal="true" aria-label="Change interaction mode" data-testid="mode-dialog">
+          <div class="tutorial-card mode-card">
+            <div class="panel-head">
+              <div>
+                <span class="hud-kicker">Interaction mode</span>
+                <h3>Decide what clicks mean.</h3>
+              </div>
+              <button type="button" onClick={() => setModeDialogOpen(false)}>
+                Close
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="mode-choice-grid">
+                <button
+                  type="button"
+                  data-testid="explore-mode-button"
+                  aria-pressed={appMode === "explore"}
+                  onClick={() => chooseInteractionMode("explore")}
+                >
+                  <span>Explore</span>
+                  <strong>Collect evidence on the board</strong>
+                  <em>Clicks add cells, rows, or columns to the active set so you can see what can be computed.</em>
+                </button>
+                <button
+                  type="button"
+                  data-testid="compute-mode-button"
+                  aria-pressed={appMode === "compute"}
+                  onClick={() => chooseInteractionMode("compute")}
+                >
+                  <span>Compute</span>
+                  <strong>Run a named counterfactual query</strong>
+                  <em>Clicks move the anchor cell while the selected query explains which cells matter.</em>
+                </button>
+              </div>
+              <section class="mode-detail-panel">
+                <div>
+                  <span class="hud-kicker">Current query</span>
+                  <h3>{appMode === "explore" ? "Free exploration" : activePlan?.label}</h3>
+                  <p>{appMode === "explore" ? "You are building an active set. Switch to a query when you want the board to answer a specific question." : activePlan?.description}</p>
+                </div>
+                {view === "grid" ? (
+                  <div class="mode-query-list">
+                    {gridConcepts.slice(0, 8).map((concept) => (
+                      <button
+                        key={concept.id}
+                        type="button"
+                        aria-pressed={appMode === "compute" && queryConcept === concept.id}
+                        onClick={() => chooseInteractionMode(concept.id)}
+                      >
+                        {concept.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div class="mode-query-list">
+                    {Object.entries(graphLensMeta).map(([id, meta]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        aria-pressed={lens === id}
+                        onClick={() => {
+                          changeLens(id);
+                          setModeDialogOpen(false);
+                          setControlsOpen(true);
+                        }}
+                      >
+                        {meta.title}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {tutorialOpen ? (
-        <div class="tutorial-modal" role="dialog" aria-modal="true" aria-label="Guided tutorials">
-          <div class="tutorial-card">
+        <div class="tutorial-modal" role="dialog" aria-modal="true" aria-label="Guided tutorials" data-testid="guide-modal">
+          <div class="tutorial-card guide-card">
             <div class="panel-head">
               <div>
                 <span class="hud-kicker">Guides</span>
-                <h3>Start from a prepared move.</h3>
+                <h3>Pick one route, then play it.</h3>
               </div>
               <button type="button" onClick={() => setTutorialOpen(false)}>
                 Close
               </button>
             </div>
-            <div class="guide-grid">
-              {tutorials.map((tutorial) => (
-                <button
-                  key={tutorial.id}
-                  type="button"
-                  class={activeGuideId === tutorial.id ? "active" : ""}
-                  onClick={() => runTutorial(tutorial)}
-                >
-                  <strong>{tutorial.title}</strong>
-                  <span>{tutorial.summary}</span>
-                  <em>{tutorial.concept}</em>
+            <div class="modal-body guide-dialog-layout">
+              <section class="guide-feature">
+                <div>
+                  <span class="hud-kicker">{guidePreview?.concept}</span>
+                  <h3>{guidePreview?.title}</h3>
+                  <p>{guidePreview?.summary}</p>
+                </div>
+                <div class="takeaway">{guidePreview?.goal}</div>
+                <p>{guidePreview?.how}</p>
+                <button type="button" data-testid="run-guide-button" disabled={!guidePreview} onClick={() => guidePreview && runTutorial(guidePreview)}>
+                  Start guide
                 </button>
-              ))}
+              </section>
+              <nav class="guide-list" aria-label="Recommended guides">
+                {visibleGuides.map((tutorial) => (
+                  <button
+                    key={tutorial.id}
+                    type="button"
+                    data-testid="guide-option"
+                    class={guidePreview?.id === tutorial.id ? "active" : ""}
+                    aria-pressed={guidePreview?.id === tutorial.id}
+                    onClick={() => setGuidePreviewId(tutorial.id)}
+                  >
+                    <strong>{tutorial.title}</strong>
+                    <span>{tutorial.concept}</span>
+                  </button>
+                ))}
+              </nav>
             </div>
           </div>
         </div>
@@ -2592,1308 +2943,5 @@ function Explorer({ initialView = "grid" }) {
     </div>
   );
 }
-
-const playSurfaceStyles = `
-  .counterfactual-play {
-    --play-bg: #edf1ee;
-    --play-surface: rgba(250, 252, 248, 0.97);
-    --play-surface-2: rgba(232, 241, 237, 0.92);
-    --play-command: rgba(17, 28, 32, 0.96);
-    --play-command-2: rgba(26, 42, 47, 0.94);
-    --play-command-line: rgba(187, 207, 200, 0.22);
-    --play-line: rgba(36, 63, 72, 0.16);
-    --play-line-strong: rgba(36, 63, 72, 0.32);
-    --play-ink: #14242d;
-    --play-muted: #617077;
-    --play-command-ink: #f5faf5;
-    --play-command-muted: #aebdb6;
-    --play-accent: #0d7772;
-    --play-blue: #315d9b;
-    --play-gold: #b9842e;
-    --play-warn: #aa573f;
-    width: min(100%, calc(100vw - 2.25rem));
-    max-width: 1380px;
-    margin: 0 auto;
-    display: grid;
-    gap: 0.8rem;
-    color: var(--play-ink);
-    font-family: var(--font-ui);
-    isolation: isolate;
-  }
-
-  .counterfactual-play :where(button, select, summary, a) {
-    font: inherit;
-  }
-
-  .counterfactual-play :where(button, select) {
-    min-height: 2rem;
-    border: 1px solid var(--play-line);
-    border-radius: 5px;
-    background: #fbfcf8;
-    color: var(--play-ink);
-  }
-
-  .counterfactual-play button {
-    cursor: pointer;
-    padding: 0.42rem 0.62rem;
-    font-weight: 650;
-  }
-
-  .counterfactual-play button:hover,
-  .counterfactual-play button:focus-visible,
-  .counterfactual-play a:focus-visible,
-  .counterfactual-play select:focus-visible,
-  .counterfactual-play summary:focus-visible {
-    outline: 2px solid rgba(13, 119, 114, 0.34);
-    outline-offset: 2px;
-  }
-
-  .counterfactual-play button[aria-pressed="true"],
-  .counterfactual-play .guide-grid button.active {
-    border-color: rgba(13, 119, 114, 0.54);
-    background: rgba(13, 119, 114, 0.13);
-    color: #124a47;
-  }
-
-  .counterfactual-play button:disabled {
-    cursor: not-allowed;
-    opacity: 0.48;
-  }
-
-  .board-card,
-  .side-panel {
-    border: 1px solid var(--play-line);
-    border-radius: 8px;
-    background: var(--play-surface);
-    box-shadow: 0 16px 34px rgba(39, 54, 46, 0.08);
-  }
-
-  .play-hud {
-    order: 2;
-    position: sticky;
-    bottom: 0.7rem;
-    z-index: 20;
-    display: grid;
-    grid-template-columns: minmax(8.5rem, 11rem) minmax(0, 1fr) minmax(17rem, 23rem);
-    gap: 0.52rem;
-    align-items: stretch;
-    padding: 0.68rem;
-    border: 1px solid var(--play-command-line);
-    border-radius: 8px;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 34%),
-      linear-gradient(90deg, rgba(13, 119, 114, 0.16), rgba(185, 132, 46, 0.12)),
-      var(--play-command);
-    color: var(--play-command-ink);
-    box-shadow:
-      0 20px 48px rgba(17, 28, 32, 0.28),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-
-  .play-hud :where(button, select) {
-    border-color: var(--play-command-line);
-    background: rgba(248, 253, 248, 0.08);
-    color: var(--play-command-ink);
-  }
-
-  .play-hud :where(button, select):hover {
-    background: rgba(248, 253, 248, 0.13);
-  }
-
-  .play-hud button[aria-pressed="true"] {
-    border-color: rgba(69, 195, 184, 0.58);
-    background: rgba(29, 145, 137, 0.25);
-    color: #f7fffb;
-  }
-
-  .play-hud .command-btn.link {
-    color: var(--play-command-ink);
-  }
-
-  .play-hud .control-label,
-  .play-hud .hud-kicker {
-    color: #8bd6cd;
-  }
-
-  .graph-toolbar-sentinel {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-  }
-
-  .hud-row,
-  .panel-head,
-  .board-toolbar {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.75rem;
-  }
-
-  .hud-row {
-    grid-column: 1;
-    grid-row: 1;
-    min-width: 0;
-    align-items: center;
-    padding: 0.42rem 0;
-    border-bottom: 0;
-  }
-
-  .hud-title-block,
-  .panel-head > div,
-  .board-toolbar > div:first-child {
-    display: grid;
-    gap: 0.12rem;
-    min-width: 0;
-  }
-
-  .hud-kicker,
-  .control-label {
-    color: var(--play-accent);
-    font-size: 0.72rem;
-    font-weight: 750;
-    letter-spacing: 0;
-  }
-
-  .hud-title-block h2,
-  .board-toolbar h3,
-  .side-panel h3 {
-    margin: 0;
-    font-size: 1rem;
-    line-height: 1.2;
-    letter-spacing: 0;
-  }
-
-  .play-hud .hud-title-block h2 {
-    color: var(--play-command-ink);
-    font-size: 0.98rem;
-  }
-
-  .hud-actions,
-  .board-actions,
-  .segmented,
-  .token-row,
-  .bucket-row,
-  .preset-row,
-  .quick-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.35rem;
-  }
-
-  .play-hud .hud-actions {
-    grid-column: 2 / -1;
-    grid-row: 1;
-    align-self: center;
-  }
-
-  .segmented button,
-  .token-row button,
-  .bucket-row button,
-  .preset-row button,
-  .quick-actions button,
-  .board-actions button,
-  .command-btn {
-    min-height: 1.75rem;
-    padding: 0.28rem 0.45rem;
-    font-size: 0.78rem;
-  }
-
-  .command-btn.link {
-    display: inline-flex;
-    align-items: center;
-    text-decoration: none;
-  }
-
-  .ci-toggle[aria-pressed="true"] {
-    border-color: rgba(13, 119, 114, 0.55);
-    background: rgba(13, 119, 114, 0.14);
-  }
-
-  .play-hud .ci-toggle[aria-pressed="true"] {
-    border-color: rgba(185, 132, 46, 0.64);
-    background: rgba(185, 132, 46, 0.2);
-  }
-
-  .tactical-actions {
-    grid-column: 3;
-    grid-row: 3;
-    justify-content: flex-end;
-    align-self: stretch;
-    padding: 0.3rem;
-    border: 1px solid rgba(187, 207, 200, 0.14);
-    border-radius: 6px;
-    background: rgba(7, 13, 16, 0.22);
-  }
-
-  .state-console {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 0.35rem;
-  }
-
-  .state-item {
-    min-width: 0;
-    display: grid;
-    gap: 0.06rem;
-    padding: 0.36rem 0.45rem;
-    border: 1px solid rgba(187, 207, 200, 0.14);
-    border-radius: 6px;
-    background: rgba(7, 13, 16, 0.22);
-  }
-
-  .state-item span {
-    color: var(--play-command-muted);
-    font-size: 0.68rem;
-  }
-
-  .state-item strong {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 0.84rem;
-    color: var(--play-command-ink);
-  }
-
-  .state-item strong[title] {
-    white-space: normal;
-    line-height: 1.12;
-  }
-
-  .control-shelf {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
-    gap: 0.45rem;
-    align-items: end;
-  }
-
-  .control-cell {
-    display: grid;
-    gap: 0.25rem;
-    min-width: 0;
-  }
-
-  .query-control-group {
-    display: contents;
-  }
-
-  .graph-lens-cell {
-    grid-column: span 2;
-  }
-
-  .metric-buttons {
-    grid-column: span 2;
-  }
-
-  .graph-jump-cell {
-    grid-column: span 3;
-  }
-
-  .lens-tuning-cell {
-    grid-column: span 2;
-  }
-
-  .control-cell select,
-  .drawer-grid select {
-    width: 100%;
-    padding: 0.42rem 0.5rem;
-  }
-
-  .preset-row {
-    flex-wrap: nowrap;
-  }
-
-  .preset-row select {
-    flex: 1 1 7rem;
-    min-width: 0;
-    width: auto;
-  }
-
-  .stepper {
-    display: grid;
-    grid-template-columns: 2rem minmax(5.5rem, 1fr) 2rem;
-    gap: 0.25rem;
-    align-items: center;
-  }
-
-  .stepper span {
-    display: inline-flex;
-    justify-content: center;
-    min-height: 2rem;
-    align-items: center;
-    border: 1px solid var(--play-line);
-    border-radius: 5px;
-    background: #fbfcf8;
-    font-size: 0.78rem;
-    font-weight: 700;
-  }
-
-  .play-hud .stepper span {
-    border-color: var(--play-command-line);
-    background: rgba(248, 253, 248, 0.08);
-    color: var(--play-command-ink);
-  }
-
-  .counterfactual-play .controls-drawer,
-  .counterfactual-play .options-drawer {
-    padding: 0;
-    border: 1px solid rgba(187, 207, 200, 0.14);
-    border-radius: 6px;
-    background: rgba(7, 13, 16, 0.22);
-    min-width: 0;
-  }
-
-  .counterfactual-play .controls-drawer {
-    grid-column: 1;
-    grid-row: 3;
-  }
-
-  .counterfactual-play .json-drawer {
-    grid-column: 2;
-    grid-row: 3;
-    align-self: stretch;
-  }
-
-  .counterfactual-play .intel-drawer {
-    grid-column: 1 / -1;
-    grid-row: 4;
-  }
-
-  .counterfactual-play .controls-drawer[open] {
-    grid-column: 1 / -1;
-    grid-row: 5;
-  }
-
-  .counterfactual-play .controls-drawer summary,
-  .counterfactual-play .options-drawer summary,
-  .mini-drawer summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    cursor: pointer;
-    min-height: 2.1rem;
-    padding: 0.3rem 0.52rem;
-    list-style: none;
-    color: var(--play-command-ink);
-  }
-
-  .counterfactual-play .controls-drawer summary strong,
-  .counterfactual-play .options-drawer summary strong {
-    color: var(--play-command-muted);
-    font-size: 0.78rem;
-    font-weight: 650;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .counterfactual-play .controls-drawer:not([open]) summary strong {
-    display: none;
-  }
-
-  .counterfactual-play .intel-drawer:not([open]) summary strong {
-    display: inline;
-  }
-
-  .counterfactual-play .controls-drawer summary::-webkit-details-marker,
-  .counterfactual-play .options-drawer summary::-webkit-details-marker,
-  .mini-drawer summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .counterfactual-play .controls-drawer[open] summary,
-  .counterfactual-play .options-drawer[open] summary {
-    border-bottom: 1px solid rgba(187, 207, 200, 0.12);
-  }
-
-  .counterfactual-play .controls-drawer .control-shelf {
-    padding: 0.58rem;
-  }
-
-  .drawer-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-    gap: 0.55rem;
-    padding: 0.58rem;
-    border-top: 1px solid rgba(187, 207, 200, 0.12);
-  }
-
-  .play-hud .drawer-grid,
-  .play-hud .control-shelf {
-    color: var(--play-command-ink);
-  }
-
-  .play-hud .drawer-note {
-    color: var(--play-command-muted);
-  }
-
-  .drawer-grid label,
-  .lens-inline-controls,
-  .lens-inline-controls label,
-  .range-stack,
-  .range-stack label {
-    display: grid;
-    gap: 0.25rem;
-  }
-
-  .lens-inline-controls {
-    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
-    align-items: end;
-    padding: 0.5rem;
-    border: 1px solid rgba(38, 70, 83, 0.1);
-    border-radius: 6px;
-    background: rgba(239, 245, 241, 0.58);
-  }
-
-  .checkbox-line {
-    display: flex !important;
-    align-items: center;
-    gap: 0.45rem;
-  }
-
-  .drawer-note,
-  .panel-copy,
-  .fact span,
-  .plan-list span,
-  .concept-map p,
-  .graph-command-readout span {
-    margin: 0;
-    color: var(--play-muted);
-    line-height: 1.45;
-    font-size: 0.84rem;
-  }
-
-  .play-layout {
-    order: 1;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    align-items: start;
-  }
-
-  .board-card {
-    min-width: 0;
-    display: grid;
-    gap: 0.62rem;
-    padding: 0.78rem;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.18)),
-      var(--play-surface);
-    box-shadow:
-      0 18px 42px rgba(35, 51, 43, 0.1),
-      inset 0 1px 0 rgba(255, 255, 255, 0.78);
-  }
-
-  .board-toolbar {
-    align-items: center;
-    padding: 0 0.1rem 0.5rem;
-    border-bottom: 1px solid rgba(36, 63, 72, 0.1);
-  }
-
-  .grid-wrap {
-    height: min(66vh, 720px);
-    min-height: 430px;
-    overflow: auto;
-    border-radius: 7px;
-    border: 1px solid rgba(36, 63, 72, 0.13);
-    background:
-      linear-gradient(90deg, rgba(49, 93, 155, 0.045) 1px, transparent 1px),
-      linear-gradient(180deg, rgba(13, 119, 114, 0.045) 1px, transparent 1px),
-      #e7eee7;
-    background-size: 28px 28px;
-  }
-
-  .grid-matrix {
-    display: inline-grid;
-    gap: 2px;
-    padding: 0.72rem;
-  }
-
-  .grid-axis-row,
-  .grid-matrix-row,
-  .rr {
-    display: flex;
-    gap: 2px;
-  }
-
-  .rl,
-  .cl,
-  .cell {
-    flex: 0 0 auto;
-    border-radius: 4px;
-  }
-
-  .rl {
-    width: 5.4rem;
-    height: 2.5rem;
-    display: grid;
-    align-items: center;
-    justify-items: center;
-    background: rgba(252, 253, 248, 0.92);
-    color: var(--play-ink);
-  }
-
-  .cl,
-  .cell {
-    width: 3.2rem;
-    height: 2.5rem;
-  }
-
-  .axis-index {
-    color: var(--play-muted);
-    font-size: 0.62rem;
-    line-height: 1;
-  }
-
-  .axis-set {
-    font-size: 0.72rem;
-    font-weight: 760;
-    line-height: 1;
-  }
-
-  .corner-label {
-    color: var(--play-muted);
-    font-size: 0.68rem;
-    font-weight: 700;
-  }
-
-  .axis-active {
-    border-color: rgba(13, 119, 114, 0.5);
-    box-shadow:
-      inset 0 0 0 1px rgba(13, 119, 114, 0.28),
-      0 0 0 2px rgba(13, 119, 114, 0.08);
-  }
-
-  .cell {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    padding: 0;
-  }
-
-  .cell-track {
-    filter: brightness(1.05) saturate(1.08);
-  }
-
-  .cell-ci {
-    position: absolute;
-    left: var(--ci-left);
-    bottom: 4px;
-    width: var(--ci-width);
-    height: 3px;
-    z-index: 1;
-    border-radius: 999px;
-    background: rgba(255, 250, 242, 0.86);
-    box-shadow: 0 0 0 1px rgba(16, 39, 61, 0.24);
-    pointer-events: none;
-  }
-
-  .cell .num {
-    position: relative;
-    z-index: 2;
-    font-size: 0.68rem;
-    font-weight: 750;
-  }
-
-  .marker-ring {
-    position: absolute;
-    inset: 4px;
-    border-radius: 4px;
-    border: 2px solid #10273d;
-    pointer-events: none;
-  }
-
-  .marker-ring.compare {
-    border-color: #b47a32;
-  }
-
-  .marker-ring.plan {
-    inset: 7px;
-    border-color: #fffaf2;
-    box-shadow: 0 0 0 2px rgba(16, 39, 61, 0.35);
-  }
-
-  .cell-plan {
-    outline: 2px solid rgba(180, 122, 50, 0.72);
-    outline-offset: -4px;
-  }
-
-  .cell-step {
-    outline-color: rgba(47, 111, 115, 0.9);
-  }
-
-  .graph-surface {
-    display: grid;
-    gap: 0.55rem;
-  }
-
-  .graph-command-readout {
-    display: grid;
-    gap: 0.1rem;
-    padding: 0.55rem;
-    border-radius: 6px;
-    border: 1px solid rgba(36, 63, 72, 0.1);
-    background: rgba(232, 241, 237, 0.72);
-  }
-
-  .graph-scroll {
-    height: min(66vh, 720px);
-    min-height: 430px;
-    overflow: auto;
-    border-radius: 7px;
-    border: 1px solid rgba(36, 63, 72, 0.13);
-    background:
-      radial-gradient(circle at 50% 2rem, rgba(49, 93, 155, 0.08), transparent 17rem),
-      linear-gradient(90deg, rgba(49, 93, 155, 0.045) 1px, transparent 1px),
-      linear-gradient(180deg, rgba(13, 119, 114, 0.04) 1px, transparent 1px),
-      #eaf1ee;
-    background-size: auto, 32px 32px, 32px 32px, auto;
-  }
-
-  .graph-lattice {
-    display: block;
-    min-width: 100%;
-    min-height: 100%;
-  }
-
-  .graph-edge line {
-    stroke: rgba(38, 70, 83, 0.18);
-    stroke-width: 2;
-  }
-
-  .graph-edge text {
-    fill: var(--play-gold);
-    font-size: 0.72rem;
-    font-weight: 800;
-  }
-
-  .graph-edge.is-highlighted line {
-    stroke: var(--play-gold);
-    stroke-width: 4;
-  }
-
-  .graph-edge.is-square line {
-    stroke: var(--play-accent);
-  }
-
-  .graph-edge.is-envelope line {
-    stroke: #17323a;
-    stroke-dasharray: 6 5;
-  }
-
-  .graph-node {
-    cursor: pointer;
-  }
-
-  .graph-node-halo {
-    fill: transparent;
-    stroke: transparent;
-  }
-
-  .graph-node-plate {
-    stroke: rgba(16, 39, 61, 0.18);
-    stroke-width: 1;
-  }
-
-  .graph-node-frame {
-    fill: transparent;
-    stroke: rgba(255, 255, 255, 0.42);
-  }
-
-  .graph-node-ci-track {
-    fill: rgba(16, 39, 61, 0.24);
-  }
-
-  .graph-node-ci {
-    fill: #fffaf2;
-    stroke: rgba(16, 39, 61, 0.34);
-    stroke-width: 1;
-  }
-
-  .graph-node-ci-tick {
-    fill: #fffaf2;
-    stroke: rgba(16, 39, 61, 0.38);
-    stroke-width: 1;
-  }
-
-  .graph-node text {
-    fill: #10273d;
-    font-size: 0.76rem;
-    font-weight: 800;
-    pointer-events: none;
-  }
-
-  .graph-lattice.is-dense .graph-node text {
-    font-size: 0.68rem;
-  }
-
-  .graph-node.is-selected .graph-node-halo {
-    fill: rgba(16, 39, 61, 0.08);
-    stroke: #10273d;
-    stroke-width: 2;
-  }
-
-  .graph-node.is-highlighted .graph-node-frame {
-    stroke: #fffaf2;
-    stroke-width: 2;
-  }
-
-  .graph-node.is-square .graph-node-halo {
-    stroke: rgba(47, 111, 115, 0.85);
-    stroke-width: 2;
-  }
-
-  .graph-node.is-envelope .graph-node-halo {
-    fill: rgba(47, 111, 115, 0.1);
-    stroke: rgba(23, 50, 58, 0.82);
-    stroke-dasharray: 5 4;
-    stroke-width: 2;
-  }
-
-  .graph-node.is-poisoned .graph-node-plate {
-    stroke: #8b3d2e;
-    stroke-width: 2;
-  }
-
-  .graph-node-eval {
-    fill: #10273d;
-  }
-
-  .graph-node-poison circle {
-    fill: #8b3d2e;
-  }
-
-  .graph-node-poison text {
-    fill: #fffaf2;
-    font-size: 0.58rem;
-    font-weight: 900;
-  }
-
-  .intel-stack {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-    gap: 0.58rem;
-    max-height: clamp(12rem, 34vh, 24rem);
-    overflow: auto;
-    padding: 0.58rem;
-    border-top: 1px solid rgba(187, 207, 200, 0.12);
-  }
-
-  .side-panel {
-    min-width: 0;
-    padding: 0.72rem;
-    display: grid;
-    gap: 0.58rem;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.16)),
-      rgba(249, 251, 247, 0.94);
-  }
-
-  .answer-pill {
-    display: inline-flex;
-    align-items: center;
-    min-height: 1.9rem;
-    padding: 0.25rem 0.48rem;
-    border-radius: 5px;
-    border: 1px solid rgba(180, 122, 50, 0.32);
-    background: rgba(180, 122, 50, 0.12);
-    color: #6f4b20;
-    font-size: 0.76rem;
-    font-weight: 750;
-    white-space: nowrap;
-  }
-
-  .fact-list,
-  .plan-list,
-  .walkthrough-steps,
-  .concept-map,
-  .guide-grid {
-    display: grid;
-    gap: 0.45rem;
-  }
-
-  .fact,
-  .plan-list button,
-  .walkthrough-steps button,
-  .concept-map div,
-  .guide-grid button {
-    display: grid;
-    gap: 0.14rem;
-    text-align: left;
-    padding: 0.5rem;
-    border-radius: 6px;
-    border: 1px solid rgba(38, 70, 83, 0.12);
-    background: rgba(255, 253, 248, 0.75);
-  }
-
-  .concept-map-panel .concept-map {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.35rem;
-  }
-
-  .concept-map-panel .concept-map div {
-    padding: 0.42rem;
-  }
-
-  .concept-map-panel .concept-map span {
-    color: var(--play-accent);
-    font-size: 0.76rem;
-    font-weight: 750;
-  }
-
-  .concept-map-panel .concept-map p {
-    font-size: 0.76rem;
-    line-height: 1.34;
-  }
-
-  .takeaway,
-  .formula {
-    padding: 0.55rem;
-    border-radius: 6px;
-    background: rgba(47, 111, 115, 0.1);
-    color: #173f43;
-    font-size: 0.86rem;
-    line-height: 1.45;
-  }
-
-  .walkthrough-steps button {
-    grid-template-columns: 1.35rem minmax(0, 1fr);
-  }
-
-  .walkthrough-steps button span {
-    grid-row: span 2;
-    width: 1.25rem;
-    height: 1.25rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    background: rgba(47, 111, 115, 0.12);
-  }
-
-  .walkthrough-steps button em,
-  .guide-grid button em {
-    color: var(--play-muted);
-    font-style: normal;
-    font-size: 0.78rem;
-    line-height: 1.35;
-  }
-
-  .mini-drawer {
-    padding: 0;
-  }
-
-  .mini-drawer[open] summary {
-    border-bottom: 1px solid rgba(38, 70, 83, 0.1);
-  }
-
-  .mini-drawer > :not(summary) {
-    margin: 0.55rem;
-  }
-
-  .neighbor-columns {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.55rem;
-  }
-
-  .neighbor-columns ul {
-    list-style: none;
-    margin: 0.35rem 0 0;
-    padding: 0;
-    display: grid;
-    gap: 0.3rem;
-  }
-
-  .neighbor-columns button {
-    width: 100%;
-    text-align: left;
-  }
-
-  .mini-drawer table {
-    width: calc(100% - 1.1rem);
-    border-collapse: collapse;
-    font-size: 0.8rem;
-  }
-
-  .mini-drawer th,
-  .mini-drawer td {
-    padding: 0.35rem;
-    border-bottom: 1px solid rgba(38, 70, 83, 0.1);
-    text-align: left;
-  }
-
-  .json-drawer pre {
-    margin: 0;
-    padding: 0.75rem;
-    max-height: 18rem;
-    overflow: auto;
-    border-top: 1px solid rgba(187, 207, 200, 0.12);
-    color: var(--play-command-ink);
-    font-size: 0.78rem;
-  }
-
-  .tutorial-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-    display: grid;
-    place-items: center;
-    padding: 1rem;
-    background: rgba(16, 39, 61, 0.36);
-  }
-
-  .tutorial-card {
-    width: min(56rem, 100%);
-    max-height: min(42rem, calc(100vh - 2rem));
-    overflow: auto;
-    display: grid;
-    gap: 0.75rem;
-    padding: 0.9rem;
-    border-radius: 8px;
-    border: 1px solid rgba(38, 70, 83, 0.18);
-    background: #fffdf8;
-  }
-
-  .guide-grid {
-    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-  }
-
-  .atlas-card {
-    width: min(64rem, 100%);
-  }
-
-  .atlas-layout {
-    display: grid;
-    grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr);
-    gap: 0.75rem;
-    min-height: 0;
-  }
-
-  .atlas-nav {
-    max-height: min(32rem, calc(100vh - 9rem));
-    overflow: auto;
-    display: grid;
-    gap: 0.35rem;
-    padding-right: 0.2rem;
-  }
-
-  .atlas-nav button {
-    display: grid;
-    gap: 0.08rem;
-    min-height: auto;
-    padding: 0.48rem;
-    text-align: left;
-  }
-
-  .atlas-nav button[aria-pressed="true"] {
-    border-color: rgba(47, 111, 115, 0.45);
-    background: rgba(47, 111, 115, 0.12);
-  }
-
-  .atlas-nav span,
-  .atlas-badges span {
-    color: var(--play-accent);
-    font-size: 0.68rem;
-    font-weight: 800;
-    text-transform: uppercase;
-  }
-
-  .atlas-nav strong {
-    font-size: 0.84rem;
-  }
-
-  .atlas-detail {
-    min-width: 0;
-    max-height: min(32rem, calc(100vh - 9rem));
-    overflow: auto;
-    display: grid;
-    align-content: start;
-    gap: 0.65rem;
-    padding: 0.75rem;
-    border-radius: 6px;
-    border: 1px solid rgba(38, 70, 83, 0.12);
-    background: rgba(239, 245, 241, 0.58);
-  }
-
-  .atlas-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-  }
-
-  .atlas-badges span {
-    padding: 0.18rem 0.38rem;
-    border-radius: 4px;
-    background: rgba(47, 111, 115, 0.1);
-  }
-
-  .atlas-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.55rem;
-  }
-
-  .atlas-grid div {
-    min-width: 0;
-    padding: 0.55rem;
-    border-radius: 6px;
-    background: rgba(255, 253, 248, 0.76);
-    border: 1px solid rgba(38, 70, 83, 0.1);
-  }
-
-  .atlas-grid p,
-  .atlas-grid ul {
-    margin: 0.28rem 0 0;
-    color: var(--play-muted);
-    font-size: 0.82rem;
-    line-height: 1.38;
-  }
-
-  .atlas-grid ul {
-    padding-left: 1rem;
-  }
-
-  .comparison-strip {
-    display: grid;
-    gap: 0.5rem;
-  }
-
-  .comparison-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-
-  .comparison-head span {
-    color: var(--play-muted);
-    font-size: 0.76rem;
-    font-weight: 750;
-  }
-
-  .comparison-grid {
-    display: grid;
-    gap: 0.5rem;
-  }
-
-  .comparison-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-  }
-
-  .comparison-tabs button {
-    flex: 1 1 10rem;
-    min-height: 1.85rem;
-    padding: 0.28rem 0.42rem;
-    font-size: 0.76rem;
-    font-weight: 780;
-  }
-
-  .comparison-tabs button[aria-pressed="true"] {
-    border-color: rgba(47, 111, 115, 0.45);
-    background: rgba(47, 111, 115, 0.12);
-  }
-
-  .comparison-card {
-    min-width: 0;
-    display: grid;
-    gap: 0.36rem;
-    padding: 0.58rem;
-    border-radius: 6px;
-    border: 1px solid rgba(180, 122, 50, 0.22);
-    background: rgba(255, 250, 242, 0.88);
-  }
-
-  .comparison-card[hidden] {
-    display: none;
-  }
-
-  .comparison-title {
-    display: grid;
-    gap: 0.08rem;
-  }
-
-  .comparison-title span,
-  .comparison-card small {
-    color: var(--play-muted);
-    font-size: 0.75rem;
-    line-height: 1.3;
-  }
-
-  .comparison-card p {
-    margin: 0;
-    color: var(--play-ink);
-    font-size: 0.8rem;
-    line-height: 1.34;
-  }
-
-  .comparison-bridge {
-    padding: 0.42rem;
-    border-radius: 5px;
-    background: rgba(47, 111, 115, 0.1);
-    color: #173f43;
-    font-size: 0.78rem;
-    line-height: 1.34;
-  }
-
-  @media (max-width: 1100px) {
-    .play-hud {
-      grid-template-columns: minmax(8rem, 10rem) minmax(0, 1fr);
-    }
-
-    .play-hud .hud-actions {
-      grid-column: 2;
-      grid-row: 1;
-    }
-
-    .state-console {
-      grid-column: 1 / -1;
-      grid-row: 2;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .counterfactual-play .controls-drawer {
-      grid-column: 1;
-      grid-row: 3;
-    }
-
-    .counterfactual-play .json-drawer {
-      grid-column: 2;
-      grid-row: 3;
-    }
-
-    .tactical-actions {
-      grid-column: 1 / -1;
-      grid-row: 4;
-      justify-content: flex-start;
-    }
-
-    .counterfactual-play .intel-drawer {
-      grid-column: 1 / -1;
-      grid-row: 5;
-    }
-
-    .counterfactual-play .controls-drawer[open] {
-      grid-row: 6;
-    }
-
-    .control-shelf {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .graph-lens-cell,
-    .metric-buttons,
-    .graph-jump-cell,
-    .lens-tuning-cell {
-      grid-column: span 3;
-    }
-
-    .play-layout {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 720px) {
-    .counterfactual-play {
-      width: min(100%, calc(100vw - 1rem));
-    }
-
-    .play-hud {
-      bottom: 0.4rem;
-      grid-template-columns: 1fr;
-    }
-
-    .play-hud .hud-actions,
-    .state-console,
-    .counterfactual-play .controls-drawer,
-    .counterfactual-play .json-drawer,
-    .counterfactual-play .intel-drawer,
-    .tactical-actions,
-    .counterfactual-play .controls-drawer[open] {
-      grid-column: 1;
-      grid-row: auto;
-    }
-
-    .hud-row,
-    .panel-head,
-    .board-toolbar {
-      display: grid;
-    }
-
-    .state-console,
-    .control-shelf {
-      grid-template-columns: 1fr 1fr;
-    }
-
-    .graph-lens-cell,
-    .metric-buttons,
-    .graph-jump-cell,
-    .lens-tuning-cell,
-    .token-control {
-      grid-column: 1 / -1;
-    }
-
-    .grid-wrap,
-    .graph-scroll {
-      height: min(58vh, 560px);
-      min-height: 320px;
-    }
-
-    .neighbor-columns {
-      grid-template-columns: 1fr;
-    }
-
-    .concept-map-panel .concept-map {
-      grid-template-columns: 1fr;
-    }
-
-    .atlas-layout,
-    .atlas-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .atlas-nav {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      max-height: 9.5rem;
-      padding-right: 0;
-    }
-
-    .atlas-nav button {
-      padding: 0.42rem;
-    }
-
-    .atlas-detail {
-      padding: 0.65rem;
-    }
-
-    .comparison-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .comparison-tabs button {
-      flex-basis: 8rem;
-      font-size: 0.72rem;
-      line-height: 1.2;
-    }
-
-    .cl,
-    .cell {
-      width: 2.8rem;
-    }
-
-    .rl {
-      width: 4.8rem;
-    }
-  }
-`;
 
 export default Explorer;

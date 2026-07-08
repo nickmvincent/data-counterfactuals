@@ -1,0 +1,229 @@
+---
+import Layout from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import { learningParts as parts, paperTrail, readingPath } from "../lib/learning-content.js";
+---
+
+<Layout
+  title="Study Further"
+  description="Interactive and text materials for understanding data counterfactuals, with pointers to related papers."
+>
+  <style>
+    .learn-page {
+      display: grid;
+      gap: 2.6rem;
+    }
+
+    .learn-header {
+      max-width: var(--measure);
+      margin-bottom: 0;
+    }
+
+    .learn-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+      gap: clamp(1.4rem, 4vw, 3rem);
+      align-items: start;
+    }
+
+    .learn-main,
+    .learn-aside {
+      display: grid;
+      gap: 2rem;
+      min-width: 0;
+    }
+
+    .learn-part {
+      display: grid;
+      gap: 0.85rem;
+      padding-top: 1.1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .learn-part-header {
+      max-width: var(--measure);
+    }
+
+    .learn-part-label,
+    .learn-item-type,
+    .learn-aside h2 {
+      font-family: var(--font-ui);
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 650;
+      letter-spacing: 0;
+    }
+
+    .learn-part-label {
+      margin: 0 0 0.35rem;
+    }
+
+    .learn-part h2 {
+      margin: 0 0 0.45rem;
+      font-family: var(--font-display);
+      font-size: clamp(1.65rem, 2.2vw, 2.15rem);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .learn-part p,
+    .learn-aside p,
+    .learn-aside li {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.72;
+    }
+
+    .learn-item-list,
+    .paper-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .learn-item-list li,
+    .paper-list li {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .learn-item,
+    .paper-link {
+      display: grid;
+      gap: 0.32rem;
+      padding: 0.95rem 0;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .learn-item-title,
+    .paper-link strong {
+      margin: 0;
+      color: var(--fg);
+      font-family: var(--font-display);
+      font-size: clamp(1.25rem, 1.7vw, 1.6rem);
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .learn-item p,
+    .paper-link span {
+      margin: 0;
+      color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 0.92rem;
+      line-height: 1.62;
+    }
+
+    .learn-item:hover .learn-item-title,
+    .learn-item:focus-visible .learn-item-title,
+    .paper-link:hover strong,
+    .paper-link:focus-visible strong {
+      color: var(--ring-thick);
+    }
+
+    .learn-item:focus-visible,
+    .paper-link:focus-visible {
+      outline: var(--focus-outline);
+      outline-offset: 4px;
+    }
+
+    .learn-aside {
+      position: sticky;
+      top: 5.8rem;
+    }
+
+    .learn-aside-section {
+      display: grid;
+      gap: 0.75rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .learn-aside h2 {
+      margin: 0;
+      color: var(--fg);
+      font-size: 0.9rem;
+    }
+
+    .learn-path {
+      margin: 0;
+      padding-left: 1.25rem;
+    }
+
+    .learn-path li {
+      margin-bottom: 0.55rem;
+    }
+
+    @media (max-width: 920px) {
+      .learn-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .learn-aside {
+        position: static;
+      }
+    }
+  </style>
+
+  <Nav />
+
+  <main class="page learn-page" id="main-content" tabindex="-1">
+    <header class="page-header learn-header">
+      <h1 class="page-title">Study Further</h1>
+      <p class="page-lede">
+        Interactive and text materials to understand data counterfactuals further, with pointers to
+        papers for the parts that connect to existing machine-learning research.
+      </p>
+    </header>
+
+    <div class="learn-layout">
+      <div class="learn-main">
+        {parts.map((part) => (
+          <section class="learn-part" aria-labelledby={`${part.label.toLowerCase().replace(" ", "-")}-title`}>
+            <div class="learn-part-header">
+              <p class="learn-part-label">{part.label}</p>
+              <h2 id={`${part.label.toLowerCase().replace(" ", "-")}-title`}>{part.title}</h2>
+              <p>{part.body}</p>
+            </div>
+
+            <ul class="learn-item-list">
+              {part.items.map((item) => (
+                <li>
+                  <a class="learn-item" href={item.href}>
+                    <span class="learn-item-type">{item.type}</span>
+                    <h3 class="learn-item-title">{item.title}</h3>
+                    <p>{item.body}</p>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+
+      <aside class="learn-aside" aria-label="Reading guidance">
+        <section class="learn-aside-section">
+          <h2>Suggested path</h2>
+          <ol class="learn-path">
+            {readingPath.map((step) => <li>{step}</li>)}
+          </ol>
+        </section>
+
+        <section class="learn-aside-section">
+          <h2>Paper trail</h2>
+          <ul class="paper-list">
+            {paperTrail.map((paper) => (
+              <li>
+                <a class="paper-link" href={paper.href}>
+                  <strong>{paper.title}</strong>
+                  <span>{paper.body}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </aside>
+    </div>
+  </main>
+</Layout>

@@ -1,12 +1,183 @@
 ---
-import MemoPage from "../components/MemoPage.astro";
-import { getPublicMemoBySlug, LAUNCH_MEMO_SLUG } from "../lib/memos";
-
-const homeMemo = await getPublicMemoBySlug(LAUNCH_MEMO_SLUG);
-
-if (!homeMemo) {
-  throw new Error(`Missing homepage memo '${LAUNCH_MEMO_SLUG}'.`);
-}
+import Layout from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import CounterfactualBoard from "../components/CounterfactualBoard.astro";
+import { homeNextLinks, homeSignalColumns, homeSignalRows } from "../lib/learning-content.js";
 ---
 
-<MemoPage memo={homeMemo} isHome />
+<Layout
+  title="Data Counterfactuals"
+  description="How AI models change if upstream data changes."
+>
+  <style>
+    .home-page {
+      display: grid;
+      gap: 2.8rem;
+    }
+
+    .home-header {
+      max-width: 52rem;
+      margin-bottom: 0;
+    }
+
+    .home-title {
+      max-width: 12ch;
+    }
+
+    .home-choice-list,
+    .home-next-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .home-choice-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.5rem;
+      border-top: 0;
+    }
+
+    .home-choice {
+      display: block;
+      min-height: 100%;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .home-choice h2,
+    .home-next-list strong {
+      margin: 0;
+      color: var(--fg);
+      font-family: var(--font-display);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .home-choice h2 {
+      max-width: 13ch;
+      font-size: clamp(1.7rem, 2.8vw, 2.45rem);
+    }
+
+    .home-choice p,
+    .home-next-list span {
+      display: block;
+      margin-top: 0.6rem;
+      color: var(--muted);
+      line-height: 1.72;
+    }
+
+    .home-choice span {
+      display: inline-block;
+      margin-top: 0.8rem;
+      color: var(--ring-thick);
+      font-family: var(--font-ui);
+      font-weight: 650;
+    }
+
+    .home-choice:hover h2,
+    .home-choice:focus-visible h2,
+    .home-next-list a:hover strong,
+    .home-next-list a:focus-visible strong {
+      color: var(--ring-thick);
+    }
+
+    .home-choice:focus-visible,
+    .home-next-list a:focus-visible {
+      outline: var(--focus-outline);
+      outline-offset: 4px;
+    }
+
+    .home-next-list li {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .home-next-list a {
+      display: grid;
+      gap: 0.2rem;
+      padding: 1rem 0;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .home-next-list strong {
+      font-size: 1.2rem;
+    }
+
+    .home-next-list span {
+      margin-top: 0;
+      font-family: var(--font-ui);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 820px) {
+      .home-choice-list {
+        grid-template-columns: 1fr;
+        gap: 1.1rem;
+      }
+    }
+  </style>
+
+  <Nav />
+
+  <main class="page home-page" id="main-content" tabindex="-1">
+    <header class="page-header home-header">
+      <h1 class="page-title home-title">Data Counterfactuals</h1>
+      <p class="page-lede">
+        How do AI models change if upstream data changes?
+      </p>
+    </header>
+
+    <section aria-label="Choose a path">
+      <ul class="home-choice-list">
+        <li>
+          <a class="home-choice" href="/story" data-testid="home-path-story">
+            <h2>Quick primer</h2>
+            <p>
+              An introduction to the data counterfactuals idea.
+            </p>
+            <span>Start the story</span>
+          </a>
+        </li>
+        <li>
+          <a class="home-choice" href="/learn" data-testid="home-path-learn">
+            <h2>Study further</h2>
+            <p>
+              Interactive and text materials to understand these ideas further; lots of pointers to
+              papers.
+            </p>
+            <span>Enter the lab</span>
+          </a>
+        </li>
+      </ul>
+    </section>
+
+    <CounterfactualBoard
+      ariaLabel="Example counterfactual board"
+      rows={homeSignalRows}
+      columns={homeSignalColumns}
+      minWidth="34rem"
+      labelWidth="7rem"
+      columnMin="4.3rem"
+      caption="A central metaphor here is the grid. Rows are possible training worlds, columns are possible evaluation worlds, and each cell records one model score. Moving from one row or column to another asks what changed when upstream data changed."
+    />
+
+    <section aria-labelledby="home-next-title">
+      <h2 class="section-title" id="home-next-title">More starting points</h2>
+      <ul class="home-next-list">
+        {homeNextLinks.map((link) => (
+          <li>
+            <a href={link.href}>
+              <strong>{link.title}</strong>
+              <span>{link.body}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  </main>
+</Layout>

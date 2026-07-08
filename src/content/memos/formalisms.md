@@ -182,6 +182,45 @@ $$
 
 The point of this notation is mostly defensive. It prevents a column-side or trust-side value from being smuggled back in as if it were just another training-data attribution score.
 
+## 2.75 Human-feedback value in post-training
+
+Reinforcement learning-based post-training adds a different pathway for data value. The data object may not be pretraining content at all. It may be a demonstration, preference comparison, critique, rubric, red-team transcript, refusal example, user rating, or deployment report. In a simplified RLHF-style pipeline, we might write:
+
+$$
+\begin{aligned}
+M_0 &= \text{base model} \\
+H &= \text{human feedback data} \\
+R_H &= \operatorname{RewardModel}(M_0, H) \\
+\pi_H &= \operatorname{RLUpdate}(M_0, R_H)
+\end{aligned}
+$$
+
+The natural counterfactual is then not merely a row move in the pretraining dataset:
+
+$$
+\Delta_H =
+\operatorname{Compare}\bigl(U(\pi_{H'}, E), U(\pi_H, E)\bigr)
+$$
+
+where $H'$ might remove, reweight, reserve, corrupt, or govern access to a source of human feedback. In papers such as [Christiano et al.](https://arxiv.org/abs/1706.03741), [Stiennon et al.](https://arxiv.org/abs/2009.01325), and [Ouyang et al.](https://arxiv.org/abs/2203.02155), human preference data help define or train the reward signal used for later policy optimization. For the data-counterfactual frame, the important point is that the value can flow through at least four objects:
+
+- the supervised or demonstration policy
+- the reward model or preference model
+- the RL-updated policy
+- the evaluation, red-team, or governance process that decides whether the update should count
+
+That makes the role-specific score even more important:
+
+$$
+S_H(h) =
+\lambda_{\mathrm{steer}} S_{\mathrm{steer}}(h)
++ \lambda_{\mathrm{eval}} S_{\mathrm{eval}}(h)
++ \lambda_{\mathrm{safety}} S_{\mathrm{safety}}(h)
++ \lambda_{\mathrm{govern}} S_{\mathrm{govern}}(h)
+$$
+
+The same feedback item can be valuable because it improves helpfulness, because it reveals a safety failure, because it gives an evaluator a cleaner holdout, or because the group that can supply it has leverage over future access. So post-training human-feedback value is still a data counterfactual, but its comparison object is a staged pipeline rather than one static training row.
+
 ## 3. Reweighting and fairness-by-data repair
 
 Some fairness interventions are best understood not as changing the model class but as changing how much different examples count. Kamiran and Calders's reweighing method is a canonical preprocessing example ([paper](https://link.springer.com/article/10.1007/s10115-011-0463-8)).

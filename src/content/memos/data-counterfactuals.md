@@ -53,6 +53,14 @@ Here $G$ stands for governance or trust state: a given data world might differ i
 
 {{< memo-example move-types >}}
 
+## Post-training human feedback counterfactuals
+
+There is another important pathway that does not fit perfectly inside the simple pretraining grid. In reinforcement learning-based post-training, human data can appear as demonstrations, preference rankings, critiques, rubrics, red-team traces, deployment feedback, or other signals that shape a reward model and a later policy update. In work such as [learning from human preferences](https://arxiv.org/abs/1706.03741), [summarization from human feedback](https://arxiv.org/abs/2009.01325), and [InstructGPT](https://arxiv.org/abs/2203.02155), the data object is not only "content the base model learned from." It is also a steering signal about which behavior should be reinforced.
+
+That makes post-training data value partly sequential. A counterfactual might ask what happens if a community's preference data are removed from reward-model training, if red-team traces are reserved for evaluation instead of optimization, if a particular rubric is reweighted, or if deployment feedback is withheld until licensing or governance terms change. The same human data can have training value, evaluation value, safety value, and bargaining value depending on where it enters the pipeline.
+
+The site now has a [human feedback value explorer](/post-training) for this flow. I think of it as a companion to the grid: the grid is still the cleanest toy picture for subset and evaluation worlds, while the post-training view is better for seeing how human data move through reward modeling, RL policy updates, auditing, and future access conditions.
+
 ## Why data counterfactuals are relevant to data leverage
 
 This frame helps us connect topics that might seem distinct, for instance connecting [influence estimation](https://proceedings.mlr.press/v70/koh17a.html) and [Shapley values](https://proceedings.mlr.press/v97/ghorbani19c.html) with [data strikes](https://doi.org/10.1145/3308558.3313742) and data contribution campaigns. In ML, we often want to ask questions about removing a point, reweighting a group, fitting a scaling curve, etc. with the purpose of understanding our data and model. But counterfactuals can also be induced by strategic actors. Strikes, boycotts, contribution campaigns, and bargaining efforts all try to impact AI through data.

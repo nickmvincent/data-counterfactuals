@@ -1,9 +1,21 @@
 import { test, expect } from "@playwright/test";
 
+async function closeSetupIfPresent(page) {
+  const setup = page.getByTestId("game-setup-modal");
+  try {
+    await setup.waitFor({ state: "visible", timeout: 800 });
+    await setup.getByTestId("setup-keep-current").click();
+    await expect(setup).toHaveCount(0);
+  } catch {
+    // Shared-state links skip the starter modal.
+  }
+}
+
 async function openGraph(page) {
   await page.goto("/graph");
   await expect(page.getByTestId("graph-explorer-toolbar")).toBeVisible();
   await expect(page.locator('.graph-workspace[data-ready="true"]')).toBeVisible();
+  await closeSetupIfPresent(page);
   await expect(page.getByTestId("explorer-graph")).toBeVisible();
   await page.getByTestId("move-controls").getByText("Move controls").click();
   await expect(page.getByTestId("move-controls")).toHaveAttribute("open", "");

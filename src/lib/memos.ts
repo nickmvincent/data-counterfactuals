@@ -4,7 +4,7 @@ import { stripMemoEmbeds } from "./memo-embeds";
 export const GLOSSARY_MEMO_SLUG = "glossary";
 export const LAUNCH_MEMO_SLUG = "data-counterfactuals";
 export const DIRECT_MEMO_ROUTES = {
-  [LAUNCH_MEMO_SLUG]: "/",
+  [LAUNCH_MEMO_SLUG]: "/memo/data-counterfactuals",
   [GLOSSARY_MEMO_SLUG]: "/glossary",
 } as const;
 

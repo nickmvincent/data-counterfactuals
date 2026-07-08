@@ -1,20 +1,12 @@
 ---
-const target = "/";
+import MemoPage from "../../components/MemoPage.astro";
+import { LAUNCH_MEMO_SLUG, getPublicMemoBySlug } from "../../lib/memos";
+
+const memo = await getPublicMemoBySlug(LAUNCH_MEMO_SLUG);
+
+if (!memo) {
+  throw new Error(`Missing launch memo '${LAUNCH_MEMO_SLUG}'.`);
+}
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="robots" content="noindex" />
-    <meta http-equiv="refresh" content={`0; url=${target}`} />
-    <link rel="canonical" href="https://datacounterfactuals.org/" />
-    <title>Redirecting to Data Counterfactuals</title>
-    <script is:inline>
-      window.location.replace("/");
-    </script>
-  </head>
-  <body>
-    <p><a href="/">Continue to the Data Counterfactuals launch memo.</a></p>
-  </body>
-</html>
+<MemoPage memo={memo} />

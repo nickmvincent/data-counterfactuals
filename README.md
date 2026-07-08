@@ -72,6 +72,9 @@ npm run dev
 ## Build
 
 ```bash
+npm run lint
+npm test
+npm run check
 npm run build
 npm run preview
 ```
