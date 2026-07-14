@@ -1,20 +1,24 @@
 import { test, expect } from "@playwright/test";
 
-test("homepage presents the story and learning-lab paths", async ({ page }) => {
+test("homepage presents audience-first paths and an evidence-qualified comparison", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "Data Counterfactuals" })).toBeVisible();
-  await expect(page.getByText("How do AI models change if upstream data changes?")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Two ways in" })).toHaveCount(0);
-  await expect(page.getByTestId("home-path-story")).toContainText("Quick primer");
-  await expect(page.getByTestId("home-path-story")).toContainText("An introduction to the data counterfactuals idea");
-  await expect(page.getByTestId("home-path-learn")).toContainText("Study further");
-  await expect(page.getByTestId("home-path-learn")).toContainText("Interactive and text materials");
-  await expect(page.getByTestId("home-path-story")).toHaveAttribute("href", "/story");
-  await expect(page.getByTestId("home-path-learn")).toHaveAttribute("href", "/learn");
-  await expect(page.getByText("A central metaphor here is the grid.")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "More starting points" })).toBeVisible();
-  await expect(page.locator("main")).not.toContainText("Human feedback value");
+  await expect(page.getByRole("heading", { name: "Change the data. What changes downstream?" })).toBeVisible();
+  await expect(page.getByText("Compare nearby training, evaluation, and governance worlds")).toBeVisible();
+  await expect(page.locator('a.home-audience-path[href="/learn"]')).toContainText("Learn the comparison");
+  await expect(page.locator('a.home-audience-path[href="/research"]')).toContainText("Inspect the connections");
+  await expect(page.getByRole("heading", { name: "Compare two worlds, carefully." })).toBeVisible();
+  await expect(page.getByText("Illustrative contrast: −0.09")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ask what is actually changing." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The training outcome may change." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The comparison exposes the differences." })).toBeVisible();
+  await expect(page.locator('a.home-path[href="/frame"]')).toContainText("Frame a study");
+  await expect(page.locator('a.home-path[href="/labs"]')).toContainText("Work before abstracting");
+  await expect(page.locator('a.home-path[href="/teach"]')).toContainText("Teach the contrast");
+  await expect(page.getByRole("heading", { name: "Leave with something usable." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start with the primary sources." })).toBeVisible();
+  await expect(page.locator(".home-hero-copy > .action-row a")).toHaveCount(1);
+  await expect(page.locator('.home-hero-copy > .action-row a[href="/frame"]')).toHaveText("Frame a study");
 
   const metrics = await page.locator("body").evaluate(() => {
     return {

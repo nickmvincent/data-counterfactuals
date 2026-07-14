@@ -4,6 +4,7 @@ import Layout from "../layouts/Base.astro";
 import Nav from "./Nav.astro";
 import { countWords, estimateReadMinutes, numberedMemoTitle } from "../lib/memos";
 import MemoArticle from "./MemoArticle.astro";
+import CourseNav from "./CourseNav.astro";
 
 interface Props {
   memo: CollectionEntry<"memos">;
@@ -65,5 +66,6 @@ const layoutTitle = isHome ? "Data Counterfactuals" : memo.data.title;
     <article class="prose memo-article">
       <MemoArticle memo={memo} />
     </article>
+    {memo.slug === "evaluation-counterfactuals" && <CourseNav currentId="04" />}
   </main>
 </Layout>

@@ -1,7 +1,9 @@
 import { test, expect } from "@playwright/test";
 
-test("grid and graph keep the same game state through view switches", async ({ page }) => {
-  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4321" });
+test("grid and graph keep the same game state through view switches", async ({ page, baseURL }) => {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: new URL(baseURL).origin,
+  });
   await page.goto("/grid?count=3&metric=inter&mode=eval&train=ABC&eval=C&focus=B&k=1");
   await expect(page.locator('.workspace-shell[data-ready="true"]')).toBeVisible();
   await expect(page.getByTestId("mode-dialog-button")).toContainText("Eval");

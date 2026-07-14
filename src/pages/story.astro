@@ -2,6 +2,7 @@
 import Layout from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
 import CounterfactualBoard from "../components/CounterfactualBoard.astro";
+import CourseNav from "../components/CourseNav.astro";
 import {
   pipelineSteps,
   primerBoardBaselines,
@@ -10,6 +11,9 @@ import {
   primerBoardRows,
   primerScenes,
 } from "../lib/learning-content.js";
+import { resolveSources } from "../lib/research-content.js";
+
+const pipelineSources = resolveSources(["stiennon2020", "ouyang2022", "casper2023"]);
 ---
 
 <Layout
@@ -90,6 +94,22 @@ import {
       line-height: 1.85;
     }
 
+    .primer-sources {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem 0.75rem;
+      margin: 0.7rem 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .primer-sources a {
+      color: var(--fg);
+      font-family: var(--font-ui);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
     .pipeline-strip {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -113,12 +133,64 @@ import {
       text-align: center;
     }
 
+    .primer-completion {
+      display: grid;
+      grid-template-columns: minmax(16rem, 0.55fr) minmax(0, 1.45fr);
+      gap: clamp(1.3rem, 4vw, 3rem);
+      padding-top: 1.3rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .primer-completion h2 {
+      max-width: 13ch;
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: clamp(1.65rem, 2.3vw, 2.25rem);
+      line-height: 1.06;
+    }
+
+    .primer-completion dl {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin: 0;
+      border-top: 1px solid var(--border);
+      border-left: 1px solid var(--border);
+    }
+
+    .primer-completion dl > div {
+      min-height: 7.5rem;
+      padding: 0.9rem;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .primer-completion dt {
+      color: var(--muted);
+      font: 700 0.78rem/1.4 var(--font-ui);
+    }
+
+    .primer-completion dd {
+      margin: 0.45rem 0 0;
+      color: var(--fg);
+      line-height: 1.6;
+    }
+
     @media (max-width: 880px) {
       .primer-section {
         grid-template-columns: 1fr;
       }
 
+      .primer-completion {
+        grid-template-columns: 1fr;
+      }
+
       .pipeline-strip {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .primer-completion dl {
         grid-template-columns: 1fr;
       }
     }
@@ -134,8 +206,8 @@ import {
         data, and ask how the model, the measurement, or the governance story changes.
       </p>
       <div class="action-row">
-        <a class="btn" href="/grid">Open the grid</a>
-        <a class="btn ghost" href="/learn">Study further</a>
+        <a class="btn" href="/learn">Follow the learning path</a>
+        <a class="btn ghost" href="/examples">See a worked case</a>
       </div>
     </header>
 
@@ -145,6 +217,11 @@ import {
           <p class="primer-kicker">{scene.kicker}</p>
           <h2>{scene.title}</h2>
           <p>{scene.body}</p>
+          <ul class="primer-sources" aria-label={`Sources for ${scene.kicker}`}>
+            {resolveSources(scene.sourceIds).map((source) => (
+              <li><a href={source.href} target="_blank" rel="noreferrer noopener" title={source.title}>{source.short} ↗</a></li>
+            ))}
+          </ul>
         </div>
 
         <CounterfactualBoard
@@ -155,6 +232,9 @@ import {
           highlights={primerBoardHighlights}
           baselines={primerBoardBaselines}
           caption={scene.caption}
+          minWidth="100%"
+          labelWidth="5.8rem"
+          columnMin="3.35rem"
         />
       </section>
     ))}
@@ -170,6 +250,23 @@ import {
       <div class="pipeline-strip" aria-label="Simplified post-training pipeline">
         {pipelineSteps.map((step) => <span>{step}</span>)}
       </div>
+      <ul class="primer-sources" aria-label="Sources for the post-training pipeline">
+        {pipelineSources.map((source) => (
+          <li><a href={source.href} target="_blank" rel="noreferrer noopener" title={source.title}>{source.short} ↗</a></li>
+        ))}
+      </ul>
     </section>
+
+    <section class="primer-completion" aria-labelledby="primer-completion-title">
+      <h2 id="primer-completion-title">Write the comparison before moving on.</h2>
+      <dl>
+        <div><dt>Reference world</dt><dd>Name the baseline dataset, model, and evaluation target.</dd></div>
+        <div><dt>Intervention</dt><dd>State the one data fact, role, or access condition that changes.</dd></div>
+        <div><dt>Held fixed</dt><dd>List the protocol, randomness plan, metric, and target that remain comparable.</dd></div>
+        <div><dt>Unsupported conclusion</dt><dd>Name one tempting claim the contrast cannot establish.</dd></div>
+      </dl>
+    </section>
+
+    <CourseNav currentId="01" />
   </main>
 </Layout>

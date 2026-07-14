@@ -135,15 +135,19 @@ import { postTrainingReferences, postTrainingValueModes } from "../lib/learning-
         The existing grid asks what happens when training or evaluation subsets change. Post-training
         data value often moves through a sequence instead: demonstrations, preference comparisons,
         reward modeling, policy optimization, red-team loops, deployment feedback, and future access.
+        Primary examples of preference data feeding a reward model and later policy optimization include
+        <a href="https://proceedings.neurips.cc/paper/2020/hash/1f89885d556929e98d3ef9b86448f951-Abstract.html">Stiennon et al. (2020)</a>
+        and <a href="https://arxiv.org/abs/2203.02155">Ouyang et al. (2022)</a>.
       </p>
       <p>
         There are useful methods for narrower parts of this problem: supervised-data valuation,
         LLM data attribution, preference learning, and emerging work on sequential or
-        structure-aware valuation. But this site treats the cross-stage version as unsolved. We do
-        not know of a generally accepted, well-calibrated method for putting these values on a
+        structure-aware valuation. But this site treats the cross-stage version as an open problem.
+        Our review did not identify a generally accepted, well-calibrated method for putting these values on a
         fully exchangeable scale across pretraining data, supervised fine-tuning data, preference
         data, reward-model data, evaluation traces, and later deployment feedback. Even within
-        post-training, multiple steps can interact in ways that make simple attribution hard.
+        post-training, multiple steps can interact in ways that make simple attribution hard. See
+        <a href="https://arxiv.org/abs/2307.15217">Casper et al. (2023)</a> for a survey of open problems and limitations in RLHF more broadly.
       </p>
     </div>
 

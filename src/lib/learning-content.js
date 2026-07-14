@@ -126,20 +126,23 @@ export const primerScenes = [
     title: "Begin with the model you actually trained.",
     body: "A model comes from a data world: some sources were included, some were missing, and some were used only for testing. The first cell is the ordinary case. Train on the data you have, measure on the evaluation slice you care about, and write down what happened.",
     caption: "The current row is the world we usually start from.",
+    sourceIds: ["koh2017", "mitchell2019"],
   },
   {
     variant: "row",
     kicker: "Row move",
-    title: "Then ask what changes if training data change.",
-    body: "Remove one source, add another, reweight a group, or imagine a coordinated withdrawal. The model is retrained in a nearby world, while the evaluation question stays fixed. This is the basic training-data counterfactual.",
+    title: "Then ask what may change when training data change.",
+    body: "Remove one source, add another, reweight a group, or imagine a coordinated withdrawal. Retrain under a specified protocol, keep the evaluation target fixed, and compare outcomes across repeated runs when training is stochastic.",
     caption: "A row move compares two training worlds against the same evaluation column.",
+    sourceIds: ["koh2017", "ghorbani2019"],
   },
   {
     variant: "column",
     kicker: "Column move",
-    title: "Sometimes the model changes less than the measurement.",
-    body: "A held-out benchmark, red-team set, or new evaluation slice can reveal a failure that the original score hid. In that case the data are valuable because they change what we can truthfully claim about the model.",
-    caption: "A column move keeps the model fixed and changes the evidence used to judge it.",
+    title: "Keep the model fixed. Change the evidence or target.",
+    body: "Additional observations can sharpen an estimate, a new slice can change the target being measured, and an independent holdout can change a decision. Those are related comparisons, but they are not one estimand.",
+    caption: "A column move keeps the model fixed and specifies whether the sample, target, or decision is changing.",
+    sourceIds: ["mitchell2019", "liang2023"],
   },
   {
     variant: "rights",
@@ -147,10 +150,86 @@ export const primerScenes = [
     title: "The same data can be trainable, evaluable, reserved, licensed, or withheld.",
     body: "Data do not enter AI systems as neutral tokens. Provenance, permission, contamination controls, independence, and bargaining power decide which worlds are available and which comparisons should be trusted.",
     caption: "A governance move changes which rows and columns are available on acceptable terms.",
+    sourceIds: ["gebru2021", "vincent2021"],
   },
 ];
 
 export const pipelineSteps = ["demonstrations", "preferences", "reward model", "policy update", "evaluation"];
+
+export const courseModules = [
+  {
+    id: "01",
+    title: "Nearby data worlds",
+    body: "Name the intervention, reference world, outcome, held-fixed conditions, and claim boundary.",
+    href: "/story",
+    cta: "Take the five-minute primer",
+    status: "Primer",
+    time: "5 minutes",
+    objective: "Distinguish the reference world from the changed world.",
+    deliverable: "A four-line comparison statement.",
+    exercise: "Write the reference world, intervention, held-fixed conditions, and one unsupported conclusion.",
+  },
+  {
+    id: "02",
+    title: "Training-data effects",
+    body: "Compare controlled retraining, leave-one-out changes, and influence-style approximations.",
+    href: "/examples#source-removal",
+    cta: "Work the source-removal case",
+    status: "Worked case",
+    time: "12 minutes",
+    objective: "Separate an observed retraining contrast from an influence approximation.",
+    deliverable: "A measurement plan that accounts for training randomness.",
+    exercise: "Choose the repeated runs, fixed evaluation target, and uncertainty summary for a source-removal study.",
+  },
+  {
+    id: "03",
+    title: "Aggregation and value",
+    body: "Move from one marginal comparison to Shapley allocation, semivalues, and subset-response surfaces.",
+    href: "/methods#semivalues",
+    cta: "Compare valuation methods",
+    status: "Method map",
+    time: "15 minutes",
+    objective: "Explain how a characteristic function and weighting rule turn marginal comparisons into an allocation.",
+    deliverable: "A player, characteristic function, and allocation-rule definition.",
+    exercise: "Define the players and coalition worth before interpreting any Shapley-style number.",
+  },
+  {
+    id: "04",
+    title: "Evaluation and evidence",
+    body: "Separate additional evidence, target changes, and information that changes a decision.",
+    href: "/memo/evaluation-counterfactuals",
+    cta: "Read about column moves",
+    status: "Essay",
+    time: "12 minutes",
+    objective: "Distinguish estimator precision, target shift, and decision value.",
+    deliverable: "A named evaluation comparison with a defensible conclusion.",
+    exercise: "Classify one proposed evaluation change as more evidence, a new target, or decision information.",
+  },
+  {
+    id: "05",
+    title: "Privacy, deletion, and attack",
+    body: "See why differential privacy, membership inference, unlearning, and poisoning require different formal objects.",
+    href: "/examples#privacy-neighbor",
+    cta: "Compare the boundary cases",
+    status: "Worked cases",
+    time: "15 minutes",
+    objective: "Match each claim to its mechanism, observer, reference, or threat model.",
+    deliverable: "A claim-to-evidence checklist for one privacy or deletion question.",
+    exercise: "State why a visible score gap cannot certify differential privacy or universal erasure.",
+  },
+  {
+    id: "06",
+    title: "Access, institutions, and power",
+    body: "Translate technical dependence through substitution, coordination, strategic response, and surplus distribution.",
+    href: "/examples#collective-withholding",
+    cta: "Work the collective-action case",
+    status: "Worked case",
+    time: "15 minutes",
+    objective: "Explain why technical dependence is only the first step in a leverage analysis.",
+    deliverable: "A five-stage strategic-leverage argument with one failure condition per stage.",
+    exercise: "Trace a withholding proposal from measured dependence to outside options, participation, response, and surplus.",
+  },
+];
 
 export const learningParts = [
   {
@@ -170,13 +249,31 @@ export const learningParts = [
         type: "Memo",
         body: "The written argument for why data counterfactuals connect valuation, evaluation, data leverage, privacy, and related work.",
       },
+      {
+        href: "/examples",
+        title: "Worked examples",
+        type: "Cases",
+        body: "Six concrete cases with a comparison, evidence plan, source trail, and claim boundary.",
+      },
     ],
   },
   {
     label: "Part 2",
-    title: "Explorers",
-    body: "Use these when you want to manipulate the toy worlds directly instead of only reading about them.",
+    title: "Work a question",
+    body: "Turn a live question into a comparison and method shortlist before manipulating the toy worlds.",
     items: [
+      {
+        href: "/frame",
+        title: "Question framer",
+        type: "Interactive",
+        body: "Create a working brief that names the intervention, reference world, methods, evidence checks, and caveats.",
+      },
+      {
+        href: "/methods",
+        title: "Method comparison",
+        type: "Reference",
+        body: "Compare what each method family answers, requires, and does not establish.",
+      },
       {
         href: "/grid",
         title: "Grid explorer",
@@ -188,12 +285,6 @@ export const learningParts = [
         title: "Graph explorer",
         type: "Interactive",
         body: "The same subset worlds as paths, edges, strike trajectories, and valuation sweeps.",
-      },
-      {
-        href: "/api-explorer",
-        title: "API explorer",
-        type: "Tool",
-        body: "A compact interface for asking the grid and graph questions as structured requests.",
       },
     ],
   },
@@ -222,18 +313,19 @@ export const learningParts = [
       },
       {
         href: "/collections",
-        title: "Related work",
-        type: "Shelf",
-        body: "A broader collection of papers, projects, and neighboring concepts.",
+        title: "Papers",
+        type: "Searchable shelf",
+        body: "A curated, searchable collection of primary sources and neighboring literatures with BibTeX export.",
       },
     ],
   },
 ];
 
 export const readingPath = [
-  "If you have five minutes: read the quick primer, then open the grid.",
-  "If you are teaching this: pair the launch memo with the grid and graph explorers.",
-  "If you are doing research: read the formalisms note, then use the related-work shelf to branch outward.",
+  "If you have five minutes: read the quick primer, then inspect one worked example.",
+  "If you have a live question: make a study brief, then compare the suggested method family with a primary source.",
+  "If you are teaching this: use the teaching page’s short or classroom-length activity.",
+  "If you are doing research: read the formalisms note, then search the paper collection to branch outward.",
   "If your question is about RLHF or human feedback: treat the post-training page as a stub, not a settled measurement recipe.",
 ];
 
@@ -244,7 +336,7 @@ export const paperTrail = [
     body: "A classic counterfactual question about what happens when a training point is removed or perturbed.",
   },
   {
-    href: "https://arxiv.org/abs/1904.02868",
+    href: "https://proceedings.mlr.press/v97/ghorbani19c.html",
     title: "Data Shapley",
     body: "A canonical valuation method based on averaging marginal contributions across many subsets.",
   },
@@ -268,7 +360,7 @@ export const postTrainingReferences = [
   },
   {
     href: "https://arxiv.org/abs/2009.01325",
-    title: "Learning to summarize from human feedback",
+    title: "Learning to summarize with human feedback",
     body: "A language-task example where preference data train a reward model used for policy optimization.",
   },
   {
@@ -287,7 +379,7 @@ export const postTrainingReferences = [
     body: "A recent survey that frames RLHF around noisy, subjective feedback, reward modeling, policy optimization, and open challenges.",
   },
   {
-    href: "https://arxiv.org/abs/1904.02868",
+    href: "https://proceedings.mlr.press/v97/ghorbani19c.html",
     title: "Data Shapley: Equitable Valuation of Data for Machine Learning",
     body: "A canonical data-valuation frame for supervised learning, useful here as a contrast with staged post-training pipelines.",
   },

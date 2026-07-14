@@ -17,7 +17,7 @@ This is intentionally loose. The goal is to make the site usable as open course 
 
 ## Week 2. From influence to contribution accounting
 
-- Jia et al. (2019), [Efficient Task-Specific Data Valuation for Nearest Neighbor Algorithms](https://www.research-collection.ethz.ch/handle/20.500.11850/395887)
+- Jia et al. (2019), [Efficient Task-Specific Data Valuation for Nearest Neighbor Algorithms](https://arxiv.org/abs/1908.08619)
 - Ghorbani and Zou (2019), [Data Shapley: Equitable Valuation of Data for Machine Learning](https://proceedings.mlr.press/v97/ghorbani19c.html)
 - Site activity: compare Shapley, Banzhaf, and Beta Shapley on the same evaluation column.
 

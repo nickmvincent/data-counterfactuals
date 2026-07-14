@@ -67,6 +67,7 @@ const collectionsWithPapers = await Promise.all(
   collections.map(async (collection) => ({
     ...collection,
     displayTitle: stripCollectionPrefix(collection.title),
+    bodyHtml: collection.body ? renderMarkdown(collection.body) : "",
     papers: await loadPapersForCollection(collection),
   }))
 );
@@ -91,7 +92,10 @@ const groupedCollections = [
   },
 ].filter((group) => group.collections.length);
 
-const totalPapers = collectionsWithPapers.reduce((sum, collection) => sum + collection.papers.length, 0);
+const uniquePaperKeys = new Set(
+  collectionsWithPapers.flatMap((collection) => collection.papers.map((paper) => paper.citation_key))
+);
+const totalPapers = uniquePaperKeys.size;
 const page = await getRequiredPageEntry("collections");
 const introHtml = page.body ? renderMarkdown(page.body) : "";
 const generatedAt = collectionsSnapshot.generatedAt ? new Date(collectionsSnapshot.generatedAt) : null;
@@ -100,6 +104,19 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
 });
+const thinCollections = collectionsWithPapers
+  .filter((collection) => collection.papers.length <= 3)
+  .map((collection) => `${collection.displayTitle} (${collection.papers.length})`);
+const coverageCandidates = [
+  { title: "Deep Bayesian Active Learning with Image Data", href: "https://proceedings.mlr.press/v70/gal17a.html" },
+  { title: "Data Statements for Natural Language Processing", href: "https://aclanthology.org/Q18-1041/" },
+  { title: "FitNets", href: "https://arxiv.org/abs/1412.6550" },
+  { title: "Equality of Opportunity in Supervised Learning", href: "https://proceedings.neurips.cc/paper/2016/hash/9d2682367c3935defcb1f9e247a97c0d-Abstract.html" },
+  { title: "The Secret Sharer", href: "https://www.usenix.org/conference/usenixsecurity19/presentation/carlini" },
+  { title: "Poison Frogs!", href: "https://proceedings.neurips.cc/paper/2018/hash/22722a343513ed45f14905eb07621686-Abstract.html" },
+  { title: "A Closer Look at Memorization in Deep Networks", href: "https://proceedings.mlr.press/v70/arpit17a.html" },
+  { title: "Deduplicating Training Data Makes Language Models Better", href: "https://aclanthology.org/2022.acl-long.577/" },
+];
 ---
 
 <Layout
@@ -108,9 +125,9 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 >
   <style>
     .collections-page {
-      max-width: 68rem;
+      max-width: 74rem;
       display: grid;
-      gap: 1rem;
+      gap: 1.35rem;
     }
     .collections-hero {
       display: grid;
@@ -195,6 +212,119 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
       display: grid;
       gap: 1.35rem;
     }
+    .paper-browser {
+      position: sticky;
+      top: 5.2rem;
+      z-index: 8;
+      display: grid;
+      gap: 0.75rem;
+      padding: 0.95rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: rgba(247, 241, 232, 0.96);
+      backdrop-filter: blur(12px);
+    }
+    .coverage-note {
+      padding: 0.85rem 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.65;
+    }
+    .coverage-note summary {
+      width: fit-content;
+      color: var(--fg);
+      font: 700 0.82rem/1.45 var(--font-ui);
+      cursor: pointer;
+    }
+    .coverage-note p {
+      max-width: 58rem;
+      margin: 0.65rem 0 0;
+    }
+    .coverage-candidates {
+      max-width: 60rem;
+      margin: 0.55rem 0 0;
+      padding-left: 1.1rem;
+      columns: 2;
+      column-gap: 2rem;
+    }
+    .coverage-candidates li {
+      break-inside: avoid;
+      margin: 0.3rem 0;
+    }
+    .paper-browser-controls {
+      display: grid;
+      grid-template-columns: minmax(15rem, 1fr) minmax(12rem, 0.5fr) auto;
+      gap: 0.7rem;
+      align-items: end;
+    }
+    .paper-browser-field {
+      display: grid;
+      gap: 0.35rem;
+      color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 0.77rem;
+      font-weight: 700;
+    }
+    .paper-browser-field input[type="search"],
+    .paper-browser-field select {
+      width: 100%;
+      min-height: 2.8rem;
+      padding: 0.65rem 0.72rem;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      background: var(--surface-strong);
+      color: var(--fg);
+      font: 500 0.9rem/1.3 var(--font-ui);
+    }
+    .paper-browser-field input:focus-visible,
+    .paper-browser-field select:focus-visible,
+    .paper-browser-check:has(input:focus-visible) {
+      outline: var(--focus-outline);
+      outline-offset: 3px;
+    }
+    .paper-browser-check {
+      min-height: 2.8rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--fg);
+      font: 650 0.82rem/1.3 var(--font-ui);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .paper-browser-check input {
+      accent-color: var(--ring-thin);
+    }
+    .paper-browser-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem 1rem;
+      color: var(--muted);
+      font: 500 0.79rem/1.5 var(--font-ui);
+    }
+    .paper-browser-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .paper-browser-actions a,
+    .paper-browser-actions button {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--fg);
+      font: 650 0.79rem/1.5 var(--font-ui);
+      text-decoration: underline;
+      text-underline-offset: 0.16em;
+      cursor: pointer;
+    }
     .collection-group {
       display: grid;
       gap: 0.9rem;
@@ -253,6 +383,15 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
       line-height: 1.06;
       letter-spacing: 0;
     }
+    .collection-description {
+      max-width: 52rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.65;
+    }
+    .collection-description :global(p) {
+      margin: 0;
+    }
     .paper-list {
       list-style: none;
       padding: 0;
@@ -291,6 +430,25 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
       font-size: 0.9rem;
       line-height: 1.58;
     }
+    .paper-abstract {
+      max-width: 54rem;
+      margin-top: 0.45rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.65;
+    }
+    .paper-abstract summary {
+      width: fit-content;
+      color: var(--fg);
+      font: 650 0.78rem/1.45 var(--font-ui);
+      cursor: pointer;
+    }
+    .paper-abstract p {
+      margin: 0.45rem 0 0;
+    }
+    [hidden] {
+      display: none !important;
+    }
     @media (max-width: 640px) {
       .collections-intro,
       .collection-jump-groups {
@@ -305,6 +463,18 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
       .collection-jumps a {
         padding: 0;
       }
+      .paper-browser {
+        position: static;
+      }
+      .paper-browser-controls {
+        grid-template-columns: 1fr;
+      }
+      .paper-browser-check {
+        width: fit-content;
+      }
+      .coverage-candidates {
+        columns: 1;
+      }
     }
   </style>
 
@@ -317,7 +487,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
         {page.data.lede && <p class="page-lede">{page.data.lede}</p>}
         <div class="page-meta">
           <span class="pill">{collectionsWithPapers.length} areas</span>
-          <span class="pill">{totalPapers} papers</span>
+          <span class="pill">{totalPapers} unique papers</span>
           {generatedAt && <span class="pill">Updated {dateFormatter.format(generatedAt)}</span>}
         </div>
       </div>
@@ -341,23 +511,70 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
       </div>
     </header>
 
+    <details class="coverage-note">
+      <summary>Coverage note and possible omissions</summary>
+      <p>
+        This is a curated map, not a systematic review. The thinnest areas are {thinCollections.join(", ")}.
+        Larger areas such as semivalues, influence, and data minimization may benefit more from synthesis or
+        sub-grouping than from additional undifferentiated entries.
+      </p>
+      <p>High-priority candidates for the next review include:</p>
+      <ul class="coverage-candidates">
+        {coverageCandidates.map((candidate) => (
+          <li><a href={candidate.href} target="_blank" rel="noreferrer noopener">{candidate.title}</a></li>
+        ))}
+      </ul>
+    </details>
+
+    <section class="paper-browser" aria-label="Search and filter papers">
+      <div class="paper-browser-controls">
+        <label class="paper-browser-field">
+          <span>Search titles, authors, venues, and areas</span>
+          <input type="search" data-paper-search placeholder="Try “privacy”, “Shapley”, or an author" autocomplete="off" />
+        </label>
+        <label class="paper-browser-field">
+          <span>Area</span>
+          <select data-paper-area>
+            <option value="all">All areas</option>
+            {collectionsWithPapers.map((collection) => (
+              <option value={collection.slug}>{collection.displayTitle}</option>
+            ))}
+          </select>
+        </label>
+        <label class="paper-browser-check">
+          <input type="checkbox" data-paper-priority />
+          <span>Start-here papers only</span>
+        </label>
+      </div>
+      <div class="paper-browser-meta">
+        <span data-paper-results>{totalPapers} unique papers; papers listed in multiple areas may appear more than once below.</span>
+        <span class="paper-browser-actions">
+          <button type="button" data-paper-reset>Reset filters</button>
+          <a href="/related-work-bibliography" download>Download BibTeX</a>
+        </span>
+      </div>
+    </section>
+
     {groupedCollections.length ? (
-      <div class="collection-groups">
+      <div class="collection-groups" data-paper-browser>
         {groupedCollections.map((group) => (
-          <section class="collection-group" aria-labelledby={`group-${group.id}`}>
+          <section class="collection-group" aria-labelledby={`group-${group.id}`} data-paper-group>
             <div class="collection-group-head">
               <h2 class="collection-group-title" id={`group-${group.id}`}>{group.title}</h2>
             </div>
 
             <div class="collection-stack">
               {group.collections.map((collection) => (
-                <section class="collection-section" id={collection.slug}>
+                <section class="collection-section" id={collection.slug} data-paper-collection={collection.slug}>
                   <div class="collection-heading">
                     <div>
                       <h3 class="collection-title">{collection.displayTitle}</h3>
                     </div>
                     <span class="collection-count">{collection.papers.length} papers</span>
                   </div>
+                  {collection.bodyHtml && (
+                    <div class="collection-description" set:html={collection.bodyHtml}></div>
+                  )}
                   {collection.papers.length ? (
                     <ul class="paper-list">
                       {collection.papers.map((paper) => {
@@ -371,9 +588,21 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
                         const meta = [paper.authors?.length ? paper.authors.join(", ") : null, venueAndYear]
                           .filter(Boolean)
                           .join(" / ");
+                        const searchText = [
+                          paper.title,
+                          paper.authors?.join(" "),
+                          venueAndYear,
+                          collection.displayTitle,
+                          paper.abstract,
+                        ].filter(Boolean).join(" ").toLowerCase();
 
                         return (
-                          <li class="paper-item">
+                          <li
+                            class="paper-item"
+                            data-paper-item
+                            data-paper-search-text={searchText}
+                            data-paper-priority={isPriority ? "true" : "false"}
+                          >
                             <div class="paper-title-row">
                               {paper.url ? (
                                 <a href={paper.url} target="_blank" rel="noreferrer noopener" class="paper-title">
@@ -385,6 +614,12 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
                               {isPriority && <span class="paper-priority">{priorityLabel}</span>}
                             </div>
                             {meta && <div class="paper-meta">{meta}</div>}
+                            {paper.abstract && (
+                              <details class="paper-abstract">
+                                <summary>Abstract</summary>
+                                <p>{paper.abstract}</p>
+                              </details>
+                            )}
                           </li>
                         );
                       })}
@@ -402,4 +637,71 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
       <div class="empty-state">No related-area collections are available in the current Semble cache yet.</div>
     )}
   </main>
+
+  <script>
+    const browserRoot = document.querySelector("[data-paper-browser]");
+    const searchInput = document.querySelector("[data-paper-search]");
+    const areaSelect = document.querySelector("[data-paper-area]");
+    const priorityInput = document.querySelector("[data-paper-priority]");
+    const resetButton = document.querySelector("[data-paper-reset]");
+    const resultsLabel = document.querySelector("[data-paper-results]");
+
+    if (
+      browserRoot instanceof HTMLElement
+      && searchInput instanceof HTMLInputElement
+      && areaSelect instanceof HTMLSelectElement
+      && priorityInput instanceof HTMLInputElement
+      && resetButton instanceof HTMLButtonElement
+      && resultsLabel instanceof HTMLElement
+    ) {
+      const collections = Array.from(browserRoot.querySelectorAll("[data-paper-collection]"));
+      const groups = Array.from(browserRoot.querySelectorAll("[data-paper-group]"));
+
+      const update = () => {
+        const query = searchInput.value.trim().toLowerCase();
+        const area = areaSelect.value;
+        const priorityOnly = priorityInput.checked;
+        let visibleEntries = 0;
+
+        collections.forEach((collection) => {
+          if (!(collection instanceof HTMLElement)) return;
+          const areaMatches = area === "all" || collection.dataset.paperCollection === area;
+          let collectionMatches = 0;
+
+          collection.querySelectorAll("[data-paper-item]").forEach((item) => {
+            if (!(item instanceof HTMLElement)) return;
+            const textMatches = !query || (item.dataset.paperSearchText || "").includes(query);
+            const priorityMatches = !priorityOnly || item.dataset.paperPriority === "true";
+            const isVisible = areaMatches && textMatches && priorityMatches;
+            item.hidden = !isVisible;
+            if (isVisible) {
+              collectionMatches += 1;
+              visibleEntries += 1;
+            }
+          });
+
+          collection.hidden = collectionMatches === 0;
+        });
+
+        groups.forEach((group) => {
+          if (!(group instanceof HTMLElement)) return;
+          group.hidden = !group.querySelector("[data-paper-collection]:not([hidden])");
+        });
+
+        resultsLabel.textContent = `${visibleEntries} matching paper ${visibleEntries === 1 ? "entry" : "entries"}${area === "all" ? "; cross-listed papers can appear more than once" : ""}.`;
+      };
+
+      searchInput.addEventListener("input", update);
+      areaSelect.addEventListener("change", update);
+      priorityInput.addEventListener("change", update);
+      resetButton.addEventListener("click", () => {
+        searchInput.value = "";
+        areaSelect.value = "all";
+        priorityInput.checked = false;
+        update();
+        searchInput.focus();
+      });
+      update();
+    }
+  </script>
 </Layout>

@@ -1,0 +1,99 @@
+---
+import Layout from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import FrameQuestion from "../components/FrameQuestion.jsx";
+---
+
+<Layout
+  title="Frame a Question"
+  description="Turn a data change into a precise comparison, method shortlist, evidence plan, and claim boundary."
+>
+  <style>
+    .frame-page {
+      display: grid;
+      gap: 2.8rem;
+      padding-top: clamp(2rem, 4vw, 3.8rem);
+    }
+
+    .frame-header {
+      display: grid;
+      grid-template-columns: minmax(0, 0.82fr) minmax(18rem, 0.48fr);
+      gap: clamp(1.5rem, 5vw, 5rem);
+      align-items: end;
+      margin: 0;
+    }
+
+    .frame-title-wrap {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .frame-title {
+      max-width: 12ch;
+      font-size: clamp(2.7rem, 5.6vw, 4.9rem);
+      letter-spacing: -0.025em;
+    }
+
+    .frame-intro-note {
+      margin: 0;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--font-ui);
+      font-size: 0.88rem;
+      line-height: 1.7;
+    }
+
+    .frame-disclaimer {
+      display: grid;
+      grid-template-columns: 10rem minmax(0, 1fr);
+      gap: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.94rem;
+      line-height: 1.65;
+    }
+
+    .frame-disclaimer strong {
+      font-family: var(--font-ui);
+      font-size: 0.82rem;
+    }
+
+    @media (max-width: 800px) {
+      .frame-header,
+      .frame-disclaimer {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <Nav />
+
+  <main class="page frame-page" id="main-content" tabindex="-1">
+    <header class="page-header frame-header">
+      <div class="frame-title-wrap">
+        <h1 class="page-title frame-title">Frame a data counterfactual.</h1>
+        <p class="page-lede">
+          Specify what changes, what stays fixed, what outcome matters, and which methods could
+          support the comparison. The result is a working brief—not an automatic research design.
+        </p>
+      </div>
+      <p class="frame-intro-note">
+        Start with the data’s role. A training intervention, evaluation intervention, access change,
+        and feedback-pipeline change can look similar in a diagram while requiring different evidence.
+      </p>
+    </header>
+
+    <FrameQuestion client:load />
+
+    <aside class="frame-disclaimer" aria-label="Interpretation note">
+      <strong>Interpretation note</strong>
+      <span>
+        The generated notation is deliberately compact. It does not encode every model, optimizer,
+        sampling process, threat model, legal right, or institutional constraint. Use it to expose
+        missing assumptions before choosing a full method.
+      </span>
+    </aside>
+  </main>
+</Layout>

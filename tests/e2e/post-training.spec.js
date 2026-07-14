@@ -5,7 +5,7 @@ test("post-training explorer renders and updates the counterfactual readout", as
 
   await expect(page.getByRole("heading", { name: "Human Feedback Value" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Status: stub and mockup." })).toBeVisible();
-  await expect(page.getByText("this site treats the cross-stage version as unsolved")).toBeVisible();
+  await expect(page.getByText("this site treats the cross-stage version as an open problem")).toBeVisible();
   await expect(page.getByText("The worked example below uses made-up numbers.")).toBeVisible();
   await expect(page.getByTestId("post-training-explorer")).toBeVisible();
   await expect(page.getByTestId("post-training-explorer")).toHaveAttribute("data-ready", "true");

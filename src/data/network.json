@@ -15,9 +15,9 @@
   "discussions": [
     {
       "provider": "github",
-      "url": "https://github.com/nickmvincent/data-counterfactuals/discussions",
-      "label": "GitHub Discussions",
-      "description": "Threaded conversations with markdown support, reactions, and notifications."
+      "url": "https://github.com/nickmvincent/data-counterfactuals/issues",
+      "label": "GitHub issues",
+      "description": "Report a problem, suggest a source, or propose a site improvement."
     },
     {
       "provider": "whitewind",

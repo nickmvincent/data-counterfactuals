@@ -1,0 +1,85 @@
+---
+import Layout from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import CourseNav from "../components/CourseNav.astro";
+import { methodFamilies, resolveSources } from "../lib/research-content.js";
+---
+
+<Layout
+  title="Methods"
+  description="A claim-aware comparison of methods for studying changes across data worlds."
+>
+  <style>
+    .methods-page { display:grid; gap:3rem; padding-top:clamp(2rem,4vw,3.8rem); }
+    .methods-header { display:grid; grid-template-columns:minmax(0,.82fr) minmax(18rem,.38fr); gap:clamp(1.5rem,5vw,5rem); align-items:end; margin:0; }
+    .methods-title { font-size:clamp(2.7rem,5.4vw,4.9rem); letter-spacing:-.025em; }
+    .methods-note { margin:0; padding-top:1rem; border-top:1px solid var(--border); color:var(--muted); font:.9rem/1.7 var(--font-ui); }
+    .method-list { display:grid; border-top:1px solid var(--border-strong); }
+    .method-row { scroll-margin-top:6rem; display:grid; grid-template-columns:minmax(14rem,.58fr) minmax(0,1.42fr); gap:clamp(1.4rem,4vw,4rem); padding:clamp(1.3rem,3vw,2.2rem) 0; border-bottom:1px solid var(--border); }
+    .method-name { margin:0; font-family:var(--font-display); font-size:clamp(1.65rem,2.8vw,2.35rem); line-height:1.04; }
+    .method-body { display:grid; gap:.85rem; }
+    .method-facts { display:grid; margin:0; }
+    .method-facts > div { display:grid; grid-template-columns:8.5rem minmax(0,1fr); gap:1rem; padding:.65rem 0; border-top:1px solid var(--border); }
+    .method-facts dt { color:var(--muted); font:700 .78rem/1.5 var(--font-ui); }
+    .method-facts dd { margin:0; color:var(--muted); line-height:1.65; }
+    .method-sources { display:flex; flex-wrap:wrap; gap:.35rem .8rem; margin:0; padding:0; list-style:none; }
+    .method-sources a { color:var(--fg); font:600 .8rem/1.5 var(--font-ui); }
+    .methods-footer { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:1rem; align-items:center; padding-top:1rem; border-top:1px solid var(--border); }
+    .methods-footer p { max-width:42rem; margin:0; color:var(--muted); line-height:1.7; }
+    @media (max-width:800px) { .methods-header, .method-row, .methods-footer { grid-template-columns:1fr; } }
+    @media (max-width:520px) { .method-facts > div { grid-template-columns:1fr; gap:.2rem; } }
+  </style>
+
+  <Nav />
+  <main class="page methods-page" id="main-content" tabindex="-1">
+    <header class="page-header methods-header">
+      <div>
+        <h1 class="page-title methods-title">Choose a method by the claim.</h1>
+        <p class="page-lede">
+          These families share counterfactual structure, but they do not estimate the same object.
+          Start with what you need to conclude, then inspect the assumptions and reference standard.
+        </p>
+      </div>
+      <p class="methods-note">
+        “Data value” is not one universal quantity. Its meaning depends on the utility, model,
+        evaluation target, coalition or intervention distribution, and institutional use. The
+        <a href="/research">research map</a> lines up those differences across fields.
+      </p>
+    </header>
+
+    <div class="method-list">
+      {methodFamilies.map((method) => {
+        const methodSources = resolveSources(method.sourceIds);
+        return (
+          <article class="method-row" id={method.id}>
+            <h2 class="method-name">{method.name}</h2>
+            <div class="method-body">
+              <dl class="method-facts">
+                <div><dt>Answers</dt><dd>{method.answers}</dd></div>
+                <div><dt>Requires</dt><dd>{method.requires}</dd></div>
+                <div><dt>Does not</dt><dd>{method.doesNot}</dd></div>
+              </dl>
+              <ul class="method-sources" aria-label={`Starting sources for ${method.name}`}>
+                {methodSources.map((source) => (
+                  <li><a href={source.href} target="_blank" rel="noreferrer noopener" title={source.title}>{source.short} ↗</a></li>
+                ))}
+              </ul>
+              {method.id === "semivalues" && <CourseNav currentId="03" compact />}
+            </div>
+          </article>
+        );
+      })}
+    </div>
+
+    <footer class="methods-footer">
+      <p>
+        The paper collection extends these starting points. It is curated as a map of neighboring
+        literatures, not presented as a systematic review or an exhaustive bibliography.
+      </p>
+      <div class="action-row">
+        <a class="btn" href="/collections">Search the papers</a>
+        <a class="btn ghost" href="/frame">Frame a question</a>
+      </div>
+    </footer>
+  </main>
+</Layout>
