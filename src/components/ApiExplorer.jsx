@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
 import {
   apiExplorerExamples,
   apiExplorerFieldGroups,
@@ -29,10 +29,6 @@ function prettyJson(value) {
 
 function buildSummary(response) {
   if (!response) return [];
-  const interval = response.evaluation?.interval;
-  const intervalSummary = interval?.available
-    ? [{ label: "Eval CI", value: `${interval.lower.toFixed(4)} - ${interval.upper.toFixed(4)}` }]
-    : [];
 
   if (response.response === "matrix") {
     return [
@@ -41,7 +37,6 @@ function buildSummary(response) {
       { label: "Legend", value: response.subsetLegend?.length ? response.subsetLegend.map((entry) => entry.token).join(", ") : "Toy letters" },
       { label: "Selection", value: `${response.selection.train} -> ${response.selection.eval}` },
       { label: "Headline", value: `${response.answer.label}: ${response.answer.value.toFixed(4)}` },
-      ...intervalSummary,
     ];
   }
 
@@ -52,7 +47,6 @@ function buildSummary(response) {
       { label: "Train", value: response.selection.train },
       { label: "Eval", value: response.selection.eval },
       { label: "Value", value: response.value.toFixed(4) },
-      ...intervalSummary,
     ];
   }
 
@@ -62,7 +56,6 @@ function buildSummary(response) {
     { label: "Train", value: response.selection.train },
     { label: "Eval", value: response.selection.eval },
     { label: response.answer.label, value: response.answer.value.toFixed(4) },
-    ...intervalSummary,
   ];
 }
 
@@ -75,7 +68,6 @@ function buildShareUrl(requestText) {
 
 export default function ApiExplorer() {
   const defaultRequestText = useMemo(() => prettyJson(apiExplorerExamples.gridMatrix), []);
-  const requestRef = useRef(null);
   const [requestText, setRequestText] = useState(defaultRequestText);
   const [responseObject, setResponseObject] = useState(null);
   const [responseText, setResponseText] = useState("");
@@ -173,7 +165,7 @@ export default function ApiExplorer() {
               </p>
             </div>
             <div class="api-action-row">
-              <button class="api-btn" type="button" data-testid="api-run" onClick={() => runRequest(requestRef.current?.value ?? requestText)}>
+              <button class="api-btn" type="button" data-testid="api-run" onClick={() => runRequest()}>
                 Run request
               </button>
               <button
@@ -200,7 +192,6 @@ export default function ApiExplorer() {
           <label class="api-editor-label">
             <span class="sr-only">API request JSON</span>
             <textarea
-              ref={requestRef}
               class="api-editor"
               data-testid="api-request"
               spellCheck={false}
@@ -209,7 +200,7 @@ export default function ApiExplorer() {
               onKeyDown={(event) => {
                 if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
                   event.preventDefault();
-                  runRequest(event.currentTarget.value);
+                  runRequest();
                 }
               }}
             />

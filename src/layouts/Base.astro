@@ -403,21 +403,6 @@ const footerNavSections = getSiteNavSections(githubUrl);
     background: transparent;
     color: var(--muted);
   }
-  .nav-link-action {
-    padding: 0.58rem 0.86rem;
-    border: 1px solid rgba(177, 79, 31, 0.34);
-    border-radius: var(--radius-md);
-    background: rgba(177, 79, 31, 0.08);
-    color: var(--ring-thick);
-    font-weight: 650;
-    white-space: nowrap;
-  }
-  .nav-link-action:hover,
-  .nav-link-action[aria-current="page"] {
-    border-color: rgba(177, 79, 31, 0.5);
-    background: rgba(177, 79, 31, 0.12);
-    color: var(--ring-thick);
-  }
   .nav-mobile {
     display: none;
     width: auto;
@@ -464,9 +449,6 @@ const footerNavSections = getSiteNavSections(githubUrl);
     width: min(24rem, calc(100vw - 1.25rem));
     display: grid;
     gap: 0.8rem;
-    max-height: calc(100dvh - 6rem);
-    overflow-y: auto;
-    overscroll-behavior: contain;
     padding: 0.95rem;
     border-radius: var(--radius-lg);
     border: 1px solid rgba(92, 72, 52, 0.12);
@@ -524,42 +506,6 @@ const footerNavSections = getSiteNavSections(githubUrl);
     font-weight: 600;
     letter-spacing: 0;
     text-transform: none;
-  }
-  .nav-mobile-submenu {
-    display: grid;
-    gap: 0.45rem;
-    padding-top: 0.55rem;
-    border-top: 1px solid var(--border);
-  }
-  .nav-mobile-submenu > summary {
-    list-style: none;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.8rem;
-    padding: 0.45rem 0.25rem;
-    color: var(--fg);
-    font-family: var(--font-ui);
-    font-size: 0.88rem;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  .nav-mobile-submenu > summary::-webkit-details-marker {
-    display: none;
-  }
-  .nav-mobile-submenu > summary::after {
-    content: "+";
-    color: var(--muted);
-  }
-  .nav-mobile-submenu[open] > summary::after {
-    content: "−";
-  }
-  .nav-mobile-submenu[data-active="true"] > summary {
-    color: var(--ring-thick);
-  }
-  .nav-mobile-submenu > summary:focus-visible {
-    outline: var(--focus-outline);
-    outline-offset: 3px;
   }
 
   .page {
@@ -1010,7 +956,7 @@ const footerNavSections = getSiteNavSections(githubUrl);
     }
   }
 
-  @media (max-width: 940px) {
+  @media (max-width: 780px) {
     .nav-inner {
       width: min(100% - 1.25rem, 1240px);
       padding: 0.72rem 0;

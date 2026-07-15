@@ -13,7 +13,7 @@ This is a short memo meant to explain the [datacounterfactuals.org](https://data
 - make data counterfactual measurements easier to understand
 - illustrate connections between technical and social data-centric work
 
-There are many reasons we might want to understand how a specific piece of data impacts an AI system. Perhaps we want to inspect particularly valuable training data, reason about data dividends or other ways of paying people based on the impact of their data (though this is a tricky endeavor), check data for errors, or decide what should be reserved for evaluation. Or perhaps a group of people wants to withhold data for bargaining or protest. This project argues that counterfactual comparisons can help organize these questions while still leaving the technical, economic, legal, and institutional parts of each question distinct.
+There are many reasons we might want to understand how a specific piece of data impacts an AI system. Perhaps we want to inspect particularly valuable training data, reason about data dividends or other ways of paying people based on the impact of their data (though this is a tricky endeavor!), check data for errors, or decide what should be reserved for evaluation. Or perhaps a group of people want to withhold data for bargaining or protest. Counterfactual questions about how data might change are foundational to many pressing issues about the impact of AI on power concentration, knowledge work, information flow, and more, and so understanding various questions in terms of data counterfactuals is both practically and academically useful.
 
 ## What is a data counterfactual?
 
@@ -21,11 +21,11 @@ A **data counterfactual** is a scenario in which the data upstream of an AI syst
 
 Consider this thought experiment: imagine we are going to train a machine learning model on a dataset with four distinct units. Perhaps this is a "toy" scenario with four data points, or perhaps this is a big dataset with four distinctly bundled subsets. Now, let's imagine a grid where every possible combination of training objects appears as a row, every possible evaluation set appears as a column, and each cell records the performance for a given train/eval pairing. For our very small example with just four data objects, we can call them A, B, C, and D.
 
-With this grid in mind, we can explore the most basic useful data counterfactual, [leave-one-out](https://proceedings.mlr.press/v70/koh17a.html). By comparing a row that includes one point with a matched row in which that point is missing, we can estimate how much that intervention changed a chosen outcome under the study's training and evaluation setup. A causal interpretation requires the training procedure, randomness, model choice, and evaluation plan to be controlled or modeled. From there the same comparison logic can be extended to groups, weights, synthetic replacements, corruptions, or coordinated withdrawal.
+With this grid in mind, we can explore the most basic useful data counterfactual, [leave-one-out](https://arxiv.org/abs/1703.04730). By comparing a row that includes one point with the nearby row in which that point is missing, we can understand the impact (in a causal sense) of adding or removing that point. By computing the difference between these two cells, we can learn how much a given data point helped or hurt our model. From there the same logic can be extended to groups of points, weighting data points, replacing data with other synthetic data, corrupting certain examples, or coordinated withdrawal.
 
 {{< memo-example leave-one-out-toy >}}
 
-Very simply, we can imagine training an LLM with fiction books, science articles, and social media posts. If we train a matched second LLM without the science articles and compare prespecified outcomes, we are exploring a "no science articles" data counterfactual. Recent work on language-model data mixing explicitly studies development settings in which domains are added, removed, partitioned, or revised; for one primary example, see [Chen et al.'s Olmix framework](https://arxiv.org/abs/2602.12237).
+Very simply, we can imagine training an LLM with a bunch of fiction books, science articles, and social media posts. If we train a second LLM without the science articles and compare the performance, we are exploring the "no science articles" data counterfactual. Researchers have indeed performed such experiments, for instance at non-profit institutions like [AI2](https://arxiv.org/abs/2602.12237) and for-profit companies like [Meta](https://www.businessinsider.com/meta-ai-llama-models-training-data-ablation-2025-4).
 
 ## Training, evaluation, and trust counterfactuals
 
@@ -35,7 +35,7 @@ $$
 f(D_T, D_E) \rightarrow f(D_T \setminus z, D_E)
 $$
 
-Here the evaluation target stays fixed while the training world changes; the trained outcome may change under the specified protocol. But we can also consider **column moves** within the grid:
+Here the evaluation target stays fixed while the training world changes. But we can also consider **column moves** within the grid:
 
 $$
 f(D_T, D_E) \rightarrow f(D_T, D_E \cup z)
@@ -53,25 +53,17 @@ Here $G$ stands for governance or trust state: a given data world might differ i
 
 {{< memo-example move-types >}}
 
-## Post-training human feedback counterfactuals
-
-There is another important pathway that does not fit perfectly inside the simple pretraining grid. In reinforcement learning-based post-training, human data can appear as demonstrations, preference rankings, critiques, rubrics, red-team traces, deployment feedback, or other signals that shape a reward model and a later policy update. In work such as [learning from human preferences](https://arxiv.org/abs/1706.03741), [summarization from human feedback](https://arxiv.org/abs/2009.01325), and [InstructGPT](https://arxiv.org/abs/2203.02155), the data object is not only "content the base model learned from." It is also a steering signal about which behavior should be reinforced.
-
-That makes post-training data value partly sequential. A counterfactual might ask what happens if a community's preference data are removed from reward-model training, if red-team traces are reserved for evaluation instead of optimization, if a particular rubric is reweighted, or if deployment feedback is withheld until licensing or governance terms change. The same human data can have training value, evaluation value, safety value, and bargaining value depending on where it enters the pipeline.
-
-The site now has a [human feedback value explorer](/post-training) for this flow. I think of it as a companion to the grid: the grid is still the cleanest toy picture for subset and evaluation worlds, while the post-training view is better for seeing how human data move through reward modeling, RL policy updates, auditing, and future access conditions.
-
 ## Why data counterfactuals are relevant to data leverage
 
 This frame helps us connect topics that might seem distinct, for instance connecting [influence estimation](https://proceedings.mlr.press/v70/koh17a.html) and [Shapley values](https://proceedings.mlr.press/v97/ghorbani19c.html) with [data strikes](https://doi.org/10.1145/3308558.3313742) and data contribution campaigns. In ML, we often want to ask questions about removing a point, reweighting a group, fitting a scaling curve, etc. with the purpose of understanding our data and model. But counterfactuals can also be induced by strategic actors. Strikes, boycotts, contribution campaigns, and bargaining efforts all try to impact AI through data.
 
-When people can withhold, redirect, or condition the supply of data, counterfactual measurements can inform analyses of [data leverage](https://www.microsoft.com/en-us/research/publication/data-leverage-a-framework-for-empowering-the-public-in-its-relationship-with-technology-companies/) and [algorithmic collective action](https://proceedings.mlr.press/v202/hardt23a.html). The inference has several links: measure technical dependence; establish feasible control; identify the operator's substitutes and outside options; model participation, coordination, and strategic response; then trace who receives any resulting surplus. Failure at any link can prevent a performance effect from becoming durable bargaining power. Some of the same ablation or contribution experiments used to understand a model can supply the first link. Provenance, [licensing](https://datalicenses.org/), contribution governance, and evaluation-use rights help determine which training rows and evaluation columns are legally, socially, or politically available.
+When people can withhold, redirect, or condition the supply of data, data counterfactual measurement directly maps to [governance power](https://www.microsoft.com/en-us/research/publication/data-leverage-a-framework-for-empowering-the-public-in-its-relationship-with-technology-companies/)! In other words, the kind of experiments we'd want to run if we're just an ML researcher trying to make our model better (via data selection or other data-centric approaches) are the same experiments we'd want to run if we're trying to organize data-related collective action, design data dividend schemes, or set up an efficient data market. If we had a shared bank of results from such an experiment, those results would be useful to actors with a wide variety of interests and goals! Furthermore, this frame also makes it very clear where questions about provenance, [licensing](https://datalicenses.org/), contribution governance, and evaluation use rights directly determine which training rows and evaluation columns are legally, socially, or politically available in the first place.
 
 ## Why data counterfactuals are relevant to core AI
 
 This frame is also deeply relevant to what many people would recognize as "core AI" questions. If we want to know how models improve with more data, which data are worth keeping, which examples are redundant, what happens when we swap in synthetic data, why a model fails on one slice but not another, which holdout points would change a model-selection decision, or how to remove the effect of a problematic subset, we are asking questions about what changes when the data world changes.
 
-Data scaling, ablations, selection, influence estimation, [distillation](https://openreview.net/forum?id=Sy4lojC9tm), synthetic data substitution, privacy, poisoning, and unlearning are not the same task. They use different observers, guarantees, threat models, intervention families, and reference worlds. The grid is useful because each has a relationship to comparisons across data worlds, but the full method usually requires structure that the grid does not encode.
+Data scaling, ablations, selection, influence estimation, [distillation](https://openreview.net/forum?id=Sy4lojC9tm), synthetic data substitution, privacy interventions, poisoning, and unlearning are not all the same task. But they do all involve moving between nearby training worlds and measuring how model behavior shifts as we move. The grid can help us to notice that many central ML questions are already, in a practical sense, data counterfactual questions.
 
 ## The grid view
 
@@ -102,13 +94,13 @@ Variations of the term appear across the related data valuation and data attribu
 
 So in short -- it is a term that has been used, but it currently isn't the case that every work or technique that explores "data counterfactual scenarios" always bills itself as a "data counterfactual" paper.
 
-A quick piece of context: Data Counterfactuals is part of a broader effort to externalize memos, reading maps, and working models relevant to data and AI policy. Other projects include a list of data licensing and preference-signaling mechanisms ([datalicenses.org](https://datalicenses.org/)), napkin math about training data ([exploringai.org](https://exploringai.org/)), and [datalevers.org](https://www.datalevers.org/). This site focuses on connections among data valuation, bargaining, evaluation, privacy, and neighboring computing research areas.
+A quick piece of context: the Data Counterfactuals site is part of a broader effort to create informative websites that externalize memos, spreadsheets, and insights that are relevant to various data and AI policy initiatives and discussions. Other projects include a list of data licensing and preference signaling mechanisms ([datalicenses.org](https://datalicenses.org/)), napkin math about training data ([exploringai.org](https://exploringai.org/)), and a few more in the works (including a rework of [datalevers.org](https://www.datalevers.org/)). Of all these sites, Data Counterfactuals is, at present, a bit less broadly interesting than the others; the focus here is on trying to convince people who already might have an interest in data valuation, bargaining, data-centric approaches to privacy, and neighboring topics about undervalued connections between different computing research areas. A long-term goal is to make this site broadly accessible, but in short: if it doesn't seem too interesting yet, consider checking out the other sites listed above.
 
 ## Some limitations of the grid view
 
 Of course, with this site we are not trying to claim these projects are all formally identical. There are many details that make the tasks and concepts different in important ways. It is important to understand the distinction between techniques that only explore counterfactuals over data that already exist, approaches that try to change the data available to an AI operator, and approaches that try to change the world itself.
 
-In some cases, one carefully designed bank of subset experiments can support more than one analysis. Matched marginal comparisons across the required coalitions can be aggregated into Shapley-style values, while experiments across subset sizes can support subset-size response curves. Those outputs are not automatically full scaling laws, market values, or collective-action results: each interpretation still needs its own sampling design, utility definition, uncertainty analysis, and institutional assumptions.
+In some cases, the grid helps us directly connect two concepts or literatures. For instance, running a large number of data strike experiments will give us a bunch of output data that can directly enable us to also compute certain scaling laws or Shapley values. That is, if we actually "fill out" the grid for a model, we can produce both valuation and collective action related results without running any more experiments!
 
 Some related concepts require a more complex model than the simple "grid" presented in our explorer here. See more in the site's [papers collection](/collections).
 
@@ -142,14 +134,14 @@ I think the data counterfactual frame is useful partly because it helps make the
 
 ## Clarifying the "more out there" connections
 
-A data ablation and a simulated data strike can instantiate the same technical subset-removal comparison. They are not the same social object: a real strike also depends on participation, coordination, rights, substitution, and institutional response. Some of the other connections in this memo need similar qualification.
+I think that arguing that a data ablation experiment and data strike experiment are related is pretty uncontroversial. For this particular comparison, we can get pretty formal in showing that these are the same thing. However, some of the other connections I've "promised" may not feel so obvious.
 
-One connection is to [differential privacy](https://doi.org/10.1007/11787006_1). Roughly, differential privacy bounds how distinguishable a randomized mechanism's outputs can be across adjacent datasets; it is not a guarantee about one sampled task-performance gap. [Machine unlearning](https://proceedings.mlr.press/v119/guo20c.html) also uses a removal reference world, but methods differ in whether they seek exact, certified, or empirical approximation to retraining without the removed data.
+One exciting connection is to differential privacy. In a very rough sense, differential privacy asks for a guarantee that the world with one person's data and the world without that person's data do not come apart too much. That is not the same thing as standard data valuation or attribution, but it is still very naturally understood as a constraint over nearby data counterfactuals. Machine unlearning has a similarly clear connection: the task is to move from a world where some data were included to a nearby world where they were not, without retraining from scratch if possible.
 
 Other connections are maybe more familiar, but still useful to line up in one place. Data scaling asks what happens as we add more data. Data ablations ask what happens when we remove a subset. Selection and curation ask which rows are worth visiting in the first place. And a participant in a data market, someone arguing for data dividends, or someone involved in bargaining over data access is also asking a counterfactual question: what happens if this data are contributed, withheld, redirected, or licensed under different terms?
 
 ## Why build this site?
 
-Mostly, I wanted a place where I could put the argument once and then build around it. The site now adds a [question-framing tool](https://datacounterfactuals.org/frame), [worked examples](https://datacounterfactuals.org/examples), a [toy explorer](https://datacounterfactuals.org/grid), a searchable [papers page](https://datacounterfactuals.org/collections), a [loose syllabus](https://datacounterfactuals.org/memo/loose-syllabus), and a more technical companion note on [formalisms](https://datacounterfactuals.org/memo/formalisms).
+Mostly, I wanted a place where I could put the argument once and then build around it. If you are reading this on Substack, the site adds a [toy explorer](https://datacounterfactuals.org/grid), a [collections page](https://datacounterfactuals.org/collections), a [loose syllabus](https://datacounterfactuals.org/memo/loose-syllabus), and a more technical companion note on [formalisms](https://datacounterfactuals.org/memo/formalisms).
 
 Feedback and contribution welcome!

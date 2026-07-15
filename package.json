@@ -15,7 +15,6 @@
     "deploy": "node scripts/cf-deploy.mjs",
     "preview": "astro preview",
     "check": "astro check",
-    "lint": "node scripts/hygiene-check.mjs",
     "semble:status": "node scripts/semble-status.mjs",
     "semble:manage": "node scripts/semble-client.mjs",
     "semble:tui": "node tools/semble-tui/index.mjs",

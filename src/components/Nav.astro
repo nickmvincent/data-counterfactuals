@@ -1,19 +1,15 @@
 ---
 import networkData from "../data/network.json";
-import {
-  experimentalSiteLinks,
-  frameSiteLink,
-  primarySiteLinks,
-  secondarySiteLinks,
-} from "../lib/site-nav";
+import { getSiteNavSections } from "../lib/site-nav";
 
 const { pathname } = Astro.url;
 
 const githubUrl = networkData.links?.github;
-const moreLinks = [
-  ...secondarySiteLinks,
-  ...(githubUrl ? [{ href: githubUrl, label: "GitHub", external: true }] : []),
-];
+const navSections = getSiteNavSections(githubUrl);
+const [primarySection, wipSection, projectSection] = navSections;
+const primaryLinks = primarySection?.links ?? [];
+const wipLinks = wipSection?.links ?? [];
+const projectLinks = projectSection?.links ?? [];
 
 function isActive(href: string): boolean {
   if (/^(https?:)?\/\//.test(href) || href.endsWith(".html")) return pathname === href;
@@ -21,7 +17,7 @@ function isActive(href: string): boolean {
   return pathname.startsWith(href);
 }
 
-function isSectionActive(links: typeof primarySiteLinks): boolean {
+function isSectionActive(links: typeof primaryLinks): boolean {
   return links.some((link) => !link.external && isActive(link.href));
 }
 ---
@@ -35,7 +31,7 @@ function isSectionActive(links: typeof primarySiteLinks): boolean {
 
     <div class="nav-cluster nav-cluster-desktop">
       <div class="nav-links">
-        {primarySiteLinks.map((link) => (
+        {primaryLinks.map((link) => (
           <a
             class="nav-link"
             href={link.href}
@@ -46,17 +42,17 @@ function isSectionActive(links: typeof primarySiteLinks): boolean {
           </a>
         ))}
 
-        {moreLinks.length > 0 && (
-          <details class="nav-dropdown" data-active={isSectionActive(moreLinks) ? "true" : undefined}>
+        {wipLinks.length > 0 && (
+          <details class="nav-dropdown" data-active={isSectionActive(wipLinks) ? "true" : undefined}>
             <summary
               class="nav-link nav-dropdown-toggle"
-              title="Primer, examples, glossary, essays, and project links"
+              title="Graph, API, and 3D viewer"
             >
-              More
+              Explorables
             </summary>
 
             <div class="nav-dropdown-panel">
-              {moreLinks.map((link) => (
+              {wipLinks.map((link) => (
                 <a
                   class="nav-dropdown-link"
                   href={link.href}
@@ -77,67 +73,41 @@ function isSectionActive(links: typeof primarySiteLinks): boolean {
         )}
       </div>
 
-      <a
-        class="nav-link nav-link-action"
-        href={frameSiteLink.href}
-        title={frameSiteLink.title}
-        aria-current={isActive(frameSiteLink.href) ? "page" : undefined}
-      >
-        {frameSiteLink.label}
-      </a>
+      {projectLinks.map((link) => (
+        <a
+          class="nav-link nav-link-aux"
+          href={link.href}
+          target={link.external ? "_blank" : undefined}
+          rel={link.external ? "noreferrer noopener" : undefined}
+        >
+          {link.label}
+        </a>
+      ))}
     </div>
 
     <details class="nav-mobile">
       <summary class="nav-mobile-toggle">Menu</summary>
       <div class="nav-mobile-panel">
-        <div class="nav-mobile-section">
-          <span class="nav-mobile-section-label">Main paths</span>
-          {[...primarySiteLinks, frameSiteLink].map((link) => (
-            <a
-              class="nav-mobile-link"
-              href={link.href}
-              aria-current={isActive(link.href) ? "page" : undefined}
-            >
-              <span>{link.label}</span>
-            </a>
-          ))}
-        </div>
-
-        <details class="nav-mobile-submenu" data-active={isSectionActive(secondarySiteLinks) ? "true" : undefined}>
-          <summary>Primer and reference</summary>
+        {navSections.map((section) => (
           <div class="nav-mobile-section">
-            {secondarySiteLinks.map((link) => (
+            <span class="nav-mobile-section-label">{section.label}</span>
+            {section.links.map((link) => (
               <a
                 class="nav-mobile-link"
                 href={link.href}
-                aria-current={isActive(link.href) ? "page" : undefined}
+                target={link.external ? "_blank" : undefined}
+                rel={link.external ? "noreferrer noopener" : undefined}
+                aria-current={!link.external && isActive(link.href) ? "page" : undefined}
               >
-                <span>{link.label}</span>
+                <span>
+                  <span>{link.label}</span>
+                  {link.title && <span class="nav-mobile-link-note">{link.title}</span>}
+                </span>
+                {link.external && <span aria-hidden="true">↗</span>}
               </a>
             ))}
           </div>
-        </details>
-
-        <details class="nav-mobile-submenu" data-active={isSectionActive(experimentalSiteLinks) ? "true" : undefined}>
-          <summary>Experimental tools</summary>
-          <div class="nav-mobile-section">
-            {experimentalSiteLinks.map((link) => (
-              <a
-                class="nav-mobile-link"
-                href={link.href}
-                aria-current={isActive(link.href) ? "page" : undefined}
-              >
-                <span>{link.label}</span>
-              </a>
-            ))}
-          </div>
-        </details>
-
-        {githubUrl && (
-          <a class="nav-mobile-link" href={githubUrl} target="_blank" rel="noreferrer noopener">
-            <span>GitHub</span><span aria-hidden="true">↗</span>
-          </a>
-        )}
+        ))}
       </div>
     </details>
   </div>

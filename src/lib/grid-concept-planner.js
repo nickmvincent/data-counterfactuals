@@ -1,5 +1,4 @@
 import {
-  computeColumnSensitivity,
   computeEvalAdditionStats,
   computeRowRemovalStats,
   computeScalingStats,
@@ -7,14 +6,81 @@ import {
   findSubsetIndex,
   labelSubset,
 } from "./counterfactual-math.js";
-import { playableConceptSpecs } from "./concept-lens-specs.js";
 
-export const gridConcepts = playableConceptSpecs.map(({ id, label, shortLabel, description }) => ({
-  id,
-  label,
-  shortLabel,
-  description,
-}));
+export const gridConcepts = [
+  {
+    id: "loo",
+    label: "Leave-one-out",
+    shortLabel: "LOO",
+    description: "Compare one selected train/eval world to the train world with one focus item removed.",
+  },
+  {
+    id: "eval",
+    label: "Eval value",
+    shortLabel: "Eval",
+    description: "Hold training fixed and compare the current eval world to one with a focus item added.",
+  },
+  {
+    id: "group",
+    label: "Group leave-one-out",
+    shortLabel: "Group LOO",
+    description: "Remove a focus coalition from the selected training world as one block.",
+  },
+  {
+    id: "interaction",
+    label: "Pair interaction",
+    shortLabel: "Interaction",
+    description: "Measure whether two focus items are more or less valuable together than separately.",
+  },
+  {
+    id: "shapley",
+    label: "Shapley value",
+    shortLabel: "Shapley",
+    description: "Average a focus item's marginal contribution across every partial training world.",
+  },
+  {
+    id: "banzhaf",
+    label: "Banzhaf value",
+    shortLabel: "Banzhaf",
+    description: "Use the Shapley pair universe, but weight every coalition equally.",
+  },
+  {
+    id: "beta",
+    label: "Beta Shapley",
+    shortLabel: "Beta",
+    description: "Use the same pair universe with beta-binomial coalition-size weights.",
+  },
+  {
+    id: "scaling",
+    label: "Scaling law",
+    shortLabel: "Scaling",
+    description: "Average all training worlds of the same size against the active eval world.",
+  },
+  {
+    id: "eval-scaling",
+    label: "Eval scaling",
+    shortLabel: "Eval scaling",
+    description: "Average all eval worlds of the same size against the active training world.",
+  },
+  {
+    id: "diagonal-scaling",
+    label: "Diagonal scaling",
+    shortLabel: "Diagonal",
+    description: "Average worlds where the training and evaluation subsets grow together.",
+  },
+  {
+    id: "budget",
+    label: "Budgeted subset scan",
+    shortLabel: "Budget scan",
+    description: "Find the highest-scoring training world of a fixed size against the active eval world.",
+  },
+  {
+    id: "unlearning",
+    label: "Unlearning audit",
+    shortLabel: "Unlearning",
+    description: "Compare the selected world to the exact retrain world without the focus item.",
+  },
+];
 
 export const gridConceptIds = gridConcepts.map((concept) => concept.id);
 
@@ -203,11 +269,6 @@ export function buildConceptPlan({
   k = 2,
   betaAlpha = 2,
   betaBeta = 2,
-  epsilon = 1,
-  auditTolerance = 0.15,
-  cleanMatrix = matrix,
-  operatorMatrix = matrix,
-  poisonActive = false,
 }) {
   const concept = gridConcepts.find((entry) => entry.id === conceptId) || gridConcepts[0];
   const trainSet = subsets[rowIndex] || [];
@@ -241,60 +302,9 @@ export function buildConceptPlan({
       formula,
       explanation:
         concept.id === "unlearning"
-          ? `The audit compares the current world to the exact retrain world without ${focus}; tolerance is ${formatValue(auditTolerance)}.`
+          ? `The audit compares the current world to the exact retrain world without ${focus}.`
           : `Leave-one-out removes ${focus} from the training world and keeps eval fixed.`,
       unavailableReason: hasComparison ? "" : `${focus} is not present in train ${labelSubset(trainSet)}.`,
-    });
-  }
-
-  if (concept.id === "dp") {
-    const stats = computeRowRemovalStats({
-      matrix,
-      subsets,
-      rowIndex,
-      colIndex,
-      tokensToRemove: focus ? [focus] : [],
-    });
-    const hasComparison = stats.compareRowIndex >= 0 && stats.compareRowIndex !== rowIndex;
-    const sensitivity = computeColumnSensitivity({
-      matrix,
-      rowIndex,
-      compareRowIndex: stats.compareRowIndex,
-    });
-    const scale = epsilon > 0 ? sensitivity / epsilon : 0;
-    const rowPairCells = hasComparison
-      ? subsets.flatMap((_, index) => [
-          { rowIndex, colIndex: index },
-          { rowIndex: stats.compareRowIndex, colIndex: index },
-        ])
-      : [anchor];
-
-    return buildPlan({
-      ...concept,
-      requiredCells: rowPairCells,
-      selectedCellIds,
-      subsets,
-      value: scale,
-      formula: `max_E |f(${labelSubset(trainSet)}, E) - f(${labelSubset(stats.compareSet)}, E)| / epsilon = ${formatValue(scale)}`,
-      explanation: `Differential privacy is shown here as a sensitivity lens over neighboring data worlds, not as a formal mechanism proof.`,
-      unavailableReason: hasComparison ? "" : `${focus} is not present in train ${labelSubset(trainSet)}.`,
-      steps: [
-        {
-          title: `Pick neighboring rows around ${focus}`,
-          body: `Compare train ${labelSubset(trainSet)} to ${labelSubset(stats.compareSet)} across evaluation worlds.`,
-          cells: rowPairCells,
-        },
-        {
-          title: "Find the largest output movement",
-          body: `The row sensitivity is ${formatValue(sensitivity)}.`,
-          cells: rowPairCells,
-        },
-        {
-          title: `Divide by epsilon ${formatValue(epsilon)}`,
-          body: `The toy Laplace-scale proxy is ${formatValue(scale)}.`,
-          cells: rowPairCells,
-        },
-      ],
     });
   }
 
@@ -554,47 +564,6 @@ export function buildConceptPlan({
           title: `Read the top row ${labelSubset(bestSet)}`,
           body: `The highest observed score in this budget bucket is ${formatValue(value)}.`,
           cells: bestCell.cell ? [bestCell.cell] : requiredCells,
-        },
-      ],
-    });
-  }
-
-  if (concept.id === "poison") {
-    const cleanValue = cleanMatrix[rowIndex]?.[colIndex] ?? matrix[rowIndex]?.[colIndex] ?? 0;
-    const operatorValue = operatorMatrix[rowIndex]?.[colIndex] ?? cleanValue;
-    const value = operatorValue - cleanValue;
-    const activeTargets = group.filter((token) => trainSet.includes(token));
-    const hasActiveTarget = activeTargets.length > 0;
-
-    return buildPlan({
-      ...concept,
-      requiredCells: [anchor],
-      selectedCellIds,
-      subsets,
-      value,
-      formula: `f_operator(${labelSubset(trainSet)}, ${labelSubset(evalSet)}) - f_clean(${labelSubset(trainSet)}, ${labelSubset(evalSet)}) = ${formatValue(value)}`,
-      explanation: `Data poisoning is represented as an operator-side edit to rows containing ${labelSubset(group)}; the grid shows the clean-vs-attacked counterfactual gap.`,
-      unavailableReason:
-        poisonActive && hasActiveTarget
-          ? ""
-          : poisonActive
-            ? `Train ${labelSubset(trainSet)} does not contain the poisoned focus ${labelSubset(group)}.`
-            : "Turn on the poison edit to compare clean and operator views.",
-      steps: [
-        {
-          title: `Target ${labelSubset(group)}`,
-          body: "The toy attack changes rows whose training world contains the target data.",
-          cells: [anchor],
-        },
-        {
-          title: "Compare clean and operator scores",
-          body: `Clean is ${formatValue(cleanValue)}; operator view is ${formatValue(operatorValue)}.`,
-          cells: [anchor],
-        },
-        {
-          title: "Read the attack delta",
-          body: `The counterfactual gap is ${formatValue(value)}.`,
-          cells: [anchor],
         },
       ],
     });

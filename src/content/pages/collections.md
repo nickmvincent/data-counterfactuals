@@ -1,10 +1,10 @@
 ---
-title: Papers
-description: A searchable, curated map of primary sources and neighboring literatures related to data counterfactuals.
-lede: Search a hand-curated map of primary sources across data valuation, attribution, evaluation, privacy, unlearning, collective action, and neighboring areas.
+title: Related work
+description: Adjacent research areas and starting papers, curated in Semble and synced into the site.
+lede: A lightweight map of neighboring literatures, with each area curated as a Semble collection and synced into the site at build time.
 ---
 
 
-This page is generated from curated Semble collections. Each area corresponds to a collection where papers are added, removed, prioritized, and reorganized as the reading map changes.
+This page is generated from a set of curated Semble collections. Each related area here corresponds to a collection where I add, remove, and reorganize papers as the reading map changes.
 
-When the site builds, Astro turns the latest available public collection data into the grouped shelves below. This is not a systematic review or a claim of exhaustive coverage. Each area is intended as a traceable starting shelf, and papers can appear in more than one area when their contribution crosses categories.
+When the site builds, Astro pulls the latest public Semble data and turns those collections into the grouped shelves you see on this page. The result is still intentionally non-exhaustive: each area is meant as a hand-curated starting shelf rather than a comprehensive bibliography.

@@ -1,27 +1,10 @@
 import { test, expect } from "@playwright/test";
 
-async function closeSetupIfPresent(page) {
-  const setup = page.getByTestId("game-setup-modal");
-  try {
-    await setup.waitFor({ state: "visible", timeout: 800 });
-    await setup.getByTestId("setup-keep-current").click();
-    await expect(setup).toHaveCount(0);
-  } catch {
-    // Shared-state links skip the starter modal.
-  }
-}
-
 async function openGraph(page) {
   await page.goto("/graph");
   await expect(page.getByTestId("graph-explorer-toolbar")).toBeVisible();
   await expect(page.locator('.graph-workspace[data-ready="true"]')).toBeVisible();
-  await closeSetupIfPresent(page);
   await expect(page.getByTestId("explorer-graph")).toBeVisible();
-  await page.getByTestId("move-controls").getByText("Move controls").click();
-  await expect(page.getByTestId("move-controls")).toHaveAttribute("open", "");
-  await page.getByTestId("intel-drawer").getByText("Intel").click();
-  await expect(page.getByTestId("intel-drawer")).toHaveAttribute("open", "");
-  await page.evaluate(() => window.scrollTo(0, 0));
 }
 
 test("graph explorer buttons drive core train/eval navigation", async ({ page }) => {
@@ -33,12 +16,9 @@ test("graph explorer buttons drive core train/eval navigation", async ({ page })
   const scoreValue = page.getByTestId("graph-selected-score");
   const quickActions = page.getByTestId("graph-quick-actions");
 
-  await expect(page.locator(".graph-node-ci").first()).toBeVisible();
   await expect(countValue).toHaveText("4 datasets");
   await page.getByTestId("graph-count-increase").click();
   await expect(countValue).toHaveText("5 datasets");
-  await expect(page.getByTestId("explorer-graph")).toHaveClass(/is-dense/);
-  await expect(page.locator(".graph-node-ci-tick").first()).toBeVisible();
   await page.getByTestId("graph-count-decrease").click();
   await expect(countValue).toHaveText("4 datasets");
 
@@ -61,13 +41,12 @@ test("graph explorer buttons drive core train/eval navigation", async ({ page })
   await quickActions.getByRole("button", { name: "Use full train" }).click();
   await expect(trainValue).toHaveText("ABCD");
 
-  await page.locator("#graph-inspect summary").click();
   await page.getByTestId("graph-removal-neighbors").getByRole("button", { name: /-B -> ACD/i }).click();
   await expect(trainValue).toHaveText("ACD");
   await page.getByTestId("graph-addition-neighbors").getByRole("button", { name: /\+B -> ABCD/i }).click();
   await expect(trainValue).toHaveText("ABCD");
 
-  await page.locator('[aria-label^="Select training world ABC,"]').click();
+  await page.locator('[aria-label="Select training world ABC"]').click();
   await expect(trainValue).toHaveText("ABC");
   await quickActions.getByRole("button", { name: "Use eval as train" }).click();
   await expect(trainValue).toHaveText("ABCD");
@@ -86,7 +65,7 @@ test("graph explorer lens buttons update the derived controls", async ({ page })
   await page.getByTestId("graph-quick-actions").getByRole("button", { name: "Use full train" }).click();
   await expect(trainValue).toHaveText("ABCD");
 
-  await page.getByRole("button", { name: "Strike" }).click();
+  await page.getByRole("button", { name: "Data strike path" }).click();
   await expect(panel).toContainText("Strike delta");
   await page.getByTestId("graph-focus-tokens").getByRole("button", { name: "C", exact: true }).click();
   await expect(panel).toContainText("reaches AD");
@@ -94,28 +73,11 @@ test("graph explorer lens buttons update the derived controls", async ({ page })
   await expect(trainValue).toHaveText("AD");
 
   await page.getByTestId("graph-quick-actions").getByRole("button", { name: "Use full train" }).click();
-  await page.getByRole("button", { name: "Shapley" }).click();
+  await page.getByRole("button", { name: "Shapley sweep" }).click();
   await expect(panel).toContainText("Shapley phi");
 
-  await page.getByRole("button", { name: "Scaling", exact: true }).click();
+  await page.getByRole("button", { name: "Scaling layer" }).click();
   await expect(panel).toContainText("Average at k=2");
   await page.getByRole("button", { name: "k=1" }).click();
   await expect(panel).toContainText("Average at k=1");
-
-  await page.getByRole("button", { name: "Interaction" }).click();
-  await expect(panel).toContainText("Interaction");
-  await expect(panel).toContainText("four-corner");
-
-  await page.getByRole("button", { name: "Eval scaling" }).click();
-  await expect(panel).toContainText("Eval avg k=1");
-  await page.locator('[aria-label^="Select evaluation world AB,"]').click();
-  await expect(page.getByTestId("graph-selected-eval")).toHaveText("AB");
-
-  await page.getByRole("button", { name: "DP envelope" }).click();
-  await expect(panel).toContainText("Scale");
-  await expect(panel).toContainText("epsilon");
-
-  await page.getByRole("button", { name: "Poison" }).click();
-  await expect(panel).toContainText("Attack delta");
-  await expect(panel).toContainText("Operator");
 });

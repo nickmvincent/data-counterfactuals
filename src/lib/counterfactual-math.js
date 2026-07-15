@@ -203,67 +203,6 @@ export function normalizeValue(value, min, max, fallback = 0.5) {
   return (value - min) / (max - min);
 }
 
-function confidenceZScore(confidenceLevel = 0.95) {
-  const level = Number(confidenceLevel);
-  if (!Number.isFinite(level)) return 1.96;
-  if (level <= 0.81) return 1.2816;
-  if (level <= 0.91) return 1.6449;
-  if (level <= 0.96) return 1.96;
-  if (level <= 0.981) return 2.3263;
-  return 2.5758;
-}
-
-export function computeEvaluationConfidenceInterval({
-  estimate,
-  unitCount,
-  confidenceLevel = 0.95,
-  valueScale = 1,
-  method = "wilson",
-} = {}) {
-  const n = Math.floor(Number(unitCount));
-  const scale = Number.isFinite(Number(valueScale)) && Number(valueScale) > 0 ? Number(valueScale) : 1;
-  const normalizedEstimate = clamp01((Number(estimate) || 0) / scale);
-
-  if (!Number.isFinite(n) || n <= 0) {
-    return {
-      available: false,
-      method,
-      confidenceLevel,
-      unitCount: 0,
-      estimate: Number(estimate) || 0,
-      lower: null,
-      upper: null,
-      margin: null,
-      rateEstimate: normalizedEstimate,
-      rateLower: null,
-      rateUpper: null,
-    };
-  }
-
-  const z = confidenceZScore(confidenceLevel);
-  const z2 = z ** 2;
-  const denominator = 1 + z2 / n;
-  const center = (normalizedEstimate + z2 / (2 * n)) / denominator;
-  const halfWidth =
-    (z * Math.sqrt((normalizedEstimate * (1 - normalizedEstimate) + z2 / (4 * n)) / n)) / denominator;
-  const rateLower = clamp01(center - halfWidth);
-  const rateUpper = clamp01(center + halfWidth);
-
-  return {
-    available: true,
-    method,
-    confidenceLevel,
-    unitCount: n,
-    estimate: normalizedEstimate * scale,
-    lower: rateLower * scale,
-    upper: rateUpper * scale,
-    margin: Math.max(normalizedEstimate * scale - rateLower * scale, rateUpper * scale - normalizedEstimate * scale),
-    rateEstimate: normalizedEstimate,
-    rateLower,
-    rateUpper,
-  };
-}
-
 function buildGridFromScoreFn(items, scoreFn) {
   const subsets = allSubsets(items);
   const matrix = [];
@@ -688,27 +627,6 @@ export function createTutorialPresets(actions) {
       },
     },
     {
-      id: "interactionBC",
-      mode: "interaction",
-      title: "B and C together",
-      summary: "Read a pair interaction square.",
-      goal: "We want to tell whether B and C are worth more together than their separate marginal effects.",
-      how: "We train on ABC, keep eval A fixed, and compare ABC, AB, AC, and A as the interaction square.",
-      concept: "Pair interaction",
-      setup: () => {
-        setCount(3);
-        setMetric("jaccard");
-        setFocusSet(["B", "C"].sort());
-        setK(2);
-        setShowNums(true);
-        setShowSingletonEvalCols?.(false);
-        setMode("interaction");
-        setPoisonActive?.(false);
-        setGridView?.("real");
-        setPendingSelection({ row: ["A", "B", "C"], col: ["A"] });
-      },
-    },
-    {
       id: "shapleyB",
       mode: "shapley",
       title: "Shapley around B",
@@ -790,69 +708,6 @@ export function createTutorialPresets(actions) {
         setPoisonActive?.(false);
         setGridView?.("real");
         setPendingSelection({ row: ["A", "B", "C", "D"], col: ["A", "B", "C", "D"] });
-      },
-    },
-    {
-      id: "evalScalingA",
-      mode: "eval-scaling",
-      title: "Grow the eval set",
-      summary: "Average measurement worlds at one size.",
-      goal: "We want to separate data scaling on the evaluation side from data scaling on the training side.",
-      how: "We hold train ABCD fixed, pick k=2, and average all eval worlds with two items.",
-      concept: "Evaluation scaling",
-      setup: () => {
-        setCount(4);
-        setMetric("jaccard");
-        setFocusSet(["A"]);
-        setK(2);
-        setShowNums(false);
-        setShowSingletonEvalCols?.(false);
-        setMode("eval-scaling");
-        setPoisonActive?.(false);
-        setGridView?.("real");
-        setPendingSelection({ row: ["A", "B", "C", "D"], col: ["A", "B"] });
-      },
-    },
-    {
-      id: "diagonalScaling",
-      mode: "diagonal-scaling",
-      title: "Grow train and eval together",
-      summary: "Average same-subset worlds.",
-      goal: "We want a coupled scaling view where the train and eval worlds expand together.",
-      how: "We select k=2 and average every diagonal cell f(S, S) where S has two items.",
-      concept: "Diagonal scaling",
-      setup: () => {
-        setCount(4);
-        setMetric("jaccard");
-        setFocusSet(["A"]);
-        setK(2);
-        setShowNums(false);
-        setShowSingletonEvalCols?.(false);
-        setMode("diagonal-scaling");
-        setPoisonActive?.(false);
-        setGridView?.("real");
-        setPendingSelection({ row: ["A", "B"], col: ["A", "B"] });
-      },
-    },
-    {
-      id: "budgetScan",
-      mode: "budget",
-      title: "Find the best k=2 subset",
-      summary: "Optimize within a data budget.",
-      goal: "We want to show how subset selection appears as a budgeted search over grid rows.",
-      how: "We hold eval ABCD fixed, limit train worlds to two items, and read the best-scoring row.",
-      concept: "Budgeted subset selection",
-      setup: () => {
-        setCount(4);
-        setMetric("jaccard");
-        setFocusSet(["A"]);
-        setK(2);
-        setShowNums(true);
-        setShowSingletonEvalCols?.(false);
-        setMode("budget");
-        setPoisonActive?.(false);
-        setGridView?.("real");
-        setPendingSelection({ row: ["A", "B"], col: ["A", "B", "C", "D"] });
       },
     },
     {

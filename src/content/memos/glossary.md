@@ -43,7 +43,7 @@ A small subset of training data that approximates training on the full dataset. 
 
 ### Contribution campaign
 
-Coordinated effort to add, label, or redirect data so model behavior shifts in a desired direction. It is a constructive counterpart to withholding: a move intended to create a more favorable data world. Example link: [Vincent and Hecht (2021)](https://doi.org/10.1145/3449177).
+Coordinated effort to add, label, or redirect data so model behavior shifts in a desired direction. It is the constructive counterpart to a data strike: a move toward more favorable rows rather than less favorable ones. Example link: [Vincent et al. (2019)](https://dl.acm.org/doi/10.1145/3308558.3313742).
 
 ### Curriculum learning
 
@@ -63,7 +63,7 @@ Plots from data cartography that place examples according to training dynamics l
 
 ### Data counterfactual
 
-A project-level umbrella term for "what if" questions about the data world around an AI system. What would happen if we trained on different data, evaluated on different data, or changed the rights and trust state around that data? The grid visualization is a teaching model for organizing those questions, not something we literally enumerate in real systems. This usage is inspired by the broader counterfactual tradition, but it is not meant as a claim that this phrase is already a standard textbook term in ML. Example links: the [main memo](/memo/data-counterfactuals), [When the Column Changes](/memo/evaluation-counterfactuals), and [Pearl (2009)](https://doi.org/10.1017/CBO9780511803161).
+A project-level umbrella term for "what if" questions about the data world around an AI system. What would happen if we trained on different data, evaluated on different data, or changed the rights and trust state around that data? The grid visualization is a teaching model for organizing those questions, not something we literally enumerate in real systems. This usage is inspired by the broader counterfactual tradition, but it is not meant as a claim that this phrase is already a standard textbook term in ML. Example links: the [main memo](/), [When the Column Changes](/memo/evaluation-counterfactuals), and [Pearl (2009)](https://doi.org/10.1017/CBO9780511803161).
 
 ### Data dividends
 
@@ -71,19 +71,19 @@ Proposals to share some of the economic value created by AI or other data-driven
 
 ### Data leverage
 
-The capacity to improve one's position by controlling data supply, access, use, or deletion. A technical dependence estimate is one input. Feasible control, operator substitutes and outside options, participation, coordination, timing, strategic response, and the distribution of gains determine whether that dependence becomes durable leverage. Example link: [Vincent et al. (2021)](https://www.microsoft.com/en-us/research/publication/data-leverage-a-framework-for-empowering-the-public-in-its-relationship-with-technology-companies/).
+The power that data creators have over AI systems by virtue of controlling training data. Performance drops from withholding or degrading data are one source of leverage, but coordination, substitutability, and bargaining position also matter. Example link: [Vincent et al. (2021)](https://www.microsoft.com/en-us/research/publication/data-leverage-a-framework-for-empowering-the-public-in-its-relationship-with-technology-companies/).
 
 ### Data poisoning
 
-Deliberately adding, changing, or corrupting training data to degrade overall performance or induce a targeted behavior under a specified attacker model. Example link: [Biggio et al. (2012)](https://icml.cc/2012/papers/880.pdf).
+Deliberately corrupting training data to cause targeted model failures. Expands the grid dramatically; every possible perturbation creates new rows with potentially different outcomes. Example link: [Biggio et al. (2012)](https://arxiv.org/abs/1206.6389).
 
 ### Data Shapley
 
-A method that treats data units as players, defines a characteristic function from task utility on data subsets, and allocates that utility using the Shapley value. The result depends on the player set, characteristic function, and approximation scheme. It is not automatically a market price, morally fair payment, or entitlement. Exact computation is generally combinatorial, so practical work often uses approximations. Example link: [Ghorbani and Zou (2019)](https://proceedings.mlr.press/v97/ghorbani19c.html).
+A method for assigning value to each training point based on its average marginal contribution across all possible subsets. Borrowed from cooperative game theory. Computationally expensive but theoretically principled. Example link: [Ghorbani and Zou (2019)](https://proceedings.mlr.press/v97/ghorbani19c.html).
 
 ### Data strike
 
-Coordinated withholding or redirection of data intended to change an operator's feasible choices or payoffs. A simulated removal can estimate technical dependence, but an effective strike also requires control, participation, coordination, limited substitutes, and a favorable strategic response. Example link: [Vincent et al. (2019)](https://dl.acm.org/doi/10.1145/3308558.3313742).
+Coordinated withholding of data by creators to reduce model performance and exert leverage over AI operators. A strategic move to a less favorable row in the grid. Example link: [Vincent et al. (2019)](https://dl.acm.org/doi/10.1145/3308558.3313742).
 
 ### Dataset distillation
 
@@ -103,7 +103,7 @@ The data used to measure model performance. In the grid, each column represents 
 
 ### Evaluation counterfactual
 
-A column-side data counterfactual in which the trained system stays fixed while evaluation evidence or the evaluation target changes. It may concern a same-target estimator, a new population or construct, or the value of information for a decision. These require different assumptions and should not be collapsed into one score. Example link: [When the Column Changes](/memo/evaluation-counterfactuals).
+A column-side data counterfactual. The training row stays fixed while the evaluation point or slice changes. The result should be read as a change in measurement, confidence, or decision quality, not automatically as a change in model capability. Example link: [When the Column Changes](/memo/evaluation-counterfactuals).
 
 ### Experimental design
 
@@ -119,15 +119,15 @@ The institutional facts that decide whether a data comparison should count: prov
 
 ### Influence function
 
-A technique for approximating how an infinitesimal reweighting of a training example affects a fitted model or prediction. Under regularity assumptions, it can approximate a small upweighting or leave-one-out change without full retraining. Example link: [Koh and Liang (2017)](https://proceedings.mlr.press/v70/koh17a.html).
+A technique for estimating how much a single training example affects a model's predictions, without retraining. Approximates what would happen if you removed or upweighted that point. Example link: [Koh and Liang (2017)](https://proceedings.mlr.press/v70/koh17a.html).
 
 ### Leave-one-out
 
-A comparison between a dataset and the matched dataset with one point omitted. In the grid, this means comparing two rows that differ by exactly one point while holding the evaluation target fixed. Example link: [Koh and Liang (2017)](https://proceedings.mlr.press/v70/koh17a.html).
+The simplest data counterfactual: compare performance with and without a single data point. In the grid, this means comparing two rows that differ by exactly one point. Example link: [Wang and Jia (2023)](https://proceedings.mlr.press/v206/wang23e.html).
 
 ### Machine unlearning
 
-Updating a trained model after a deletion request so that it matches or approximates an appropriate model trained without the deleted data, ideally at lower cost than full retraining. Exact, certified, and empirical formulations use different standards. Example links: [Guo et al. (2020)](https://proceedings.mlr.press/v119/guo20c.html) and [Bourtoule et al. (2021)](https://ieeexplore.ieee.org/document/9519428).
+Efficiently updating a model as if a data point was never in the training set, moving from one row to another without full retraining. Example link: [Bourtoule et al. (2021)](https://arxiv.org/abs/1912.03817).
 
 ### Membership inference
 
@@ -151,7 +151,7 @@ An empirical relationship describing how model performance changes with data siz
 
 ### Secure holdout
 
-Evaluation data kept independent of model training and tuning so that it can support a later estimate or decision. Protection reduces one contamination pathway, but usefulness also depends on sampling, labels, constructs, metrics, and the intended decision. Example links: [Deng et al. (2024)](https://aclanthology.org/2024.naacl-long.482/) and [When the Column Changes](/memo/evaluation-counterfactuals).
+Evaluation data protected from training access and contamination so that it can credibly measure model performance later. Its value can come from changing a model-selection or deployment decision, even when it never improves the model directly. Example link: [When the Column Changes](/memo/evaluation-counterfactuals).
 
 ### Training set
 

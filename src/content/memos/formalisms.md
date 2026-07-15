@@ -134,7 +134,7 @@ This is still a data counterfactual, but the comparison is averaged across many 
 - the unit of interest is usually aggregate utility rather than one prediction
 - the hard part is combinatorial coverage of many subsets rather than approximation of one local perturbation
 
-What makes Shapley-style valuation distinctive, though, is not only that it aggregates many marginal comparisons. It turns those comparisons into an allocation under a specified cooperative game and weighting rule. The familiar Shapley axioms characterize that allocation rule; they do not establish a morally fair payment, market price, or entitlement. The family resemblance lies in the underlying counterfactual worlds, while the Shapley move is the particular way those worlds are weighted and interpreted.
+What makes Shapley-style valuation distinctive, though, is not only that it aggregates many marginal comparisons. It also turns those comparisons into a value assignment under a specific weighting rule and an axiomatic picture of what a fair contribution accounting should look like. So the family resemblance lies in the underlying counterfactual worlds; the Shapley move is the particular way those worlds are weighted and interpreted.
 
 Other semivalues keep the same coalitional counterfactual worlds while changing the weighting rule. For the equal-weight Banzhaf semivalue, every coalition $S \subseteq N \setminus \{i\}$ gets the same weight:
 
@@ -147,31 +147,16 @@ $$
 
 An intuitive way to read this is: hold the evaluation target fixed, look at every possible background training world that does not yet contain point $i$, add $i$, and ask how much the score moves. Banzhaf says to average those swings uniformly across worlds. Shapley instead redistributes weight so that coalition size matters in a more structured way, and Beta Shapley keeps the same marginal comparisons while deliberately tilting weight toward smaller or larger coalitions. That is why this section is better read as an aggregation family than as one single equation.
 
-## 2.5 Evaluation-side comparisons and column moves
+## 2.5 Evaluation-side value and column moves
 
-The valuation section above is still row-centered: it asks how a training contribution changes utility under a fixed evaluation target. When an object enters the evaluation world, at least three different questions can follow. They should not be collapsed into one value.
-
-First, if the construct and target population stay fixed, adding an observation can change an estimator or its uncertainty:
+The valuation section above is still row-centered: it asks how a training contribution changes utility under a fixed evaluation target. A parallel evaluation-side value asks what happens when an object enters the evaluation world:
 
 $$
-\Delta_{\mathrm{est},i}
-= \widehat{\theta}(A(D_T); D_E \cup \{z_i\})
-- \widehat{\theta}(A(D_T); D_E)
+\eta_i(D_T, D_E)
+= U(A(D_T), D_E \cup \{z_i\}) - U(A(D_T), D_E)
 $$
 
-This raw difference is estimator or sample sensitivity. Its interpretation requires a sampling frame, dependence assumptions, a metric, and uncertainty analysis. It is not automatically model improvement or data value.
-
-Second, adding a subgroup, capability, stress condition, or new construct changes the target itself. A contrast between $\widehat{\theta}_{E'}$ and $\widehat{\theta}_{E}$ then describes performance on different targets; it is not simply a more precise estimate of the old one.
-
-Third, independent evidence can affect a decision. Given an action set $\mathcal{A}$ and loss $L$, a value-of-information analysis compares expected decision loss before and after observing the evidence:
-
-$$
-\operatorname{VOI}(z_i)
-= \min_{a \in \mathcal{A}} \mathbb{E}[L(a, \Theta) \mid D_E]
-- \mathbb{E}_{z_i}\!\left[\min_{a \in \mathcal{A}} \mathbb{E}[L(a, \Theta) \mid D_E, z_i]\right]
-$$
-
-That quantity is defined only relative to the stated decision, loss, prior information, and evidence model.
+This scalar should not automatically be interpreted as model improvement. It can mean that the measured score went up, went down, became more precise, changed a model-selection decision, or revealed that the original evaluation slice was incomplete.
 
 This is especially important when data objects have role-specific rights:
 
@@ -179,57 +164,23 @@ $$
 z_i \in \{\text{trainable}, \text{evaluable}, \text{both}, \text{reserved}, \text{unavailable}\}
 $$
 
-The same object can therefore produce different, generally incommensurable outputs under different roles:
+The same object may have different values under different roles:
 
 $$
 \begin{aligned}
-\Delta_T(z_i) &= \text{training-side effect under a specified protocol} \\
-\Delta_{\mathrm{est}}(z_i) &= \text{same-target estimator change} \\
-\operatorname{VOI}(z_i) &= \text{decision value under a stated loss} \\
-Q_G(z_i) &= \text{governance or trust evidence}
+S_T(z_i) &= \text{training-side value} \\
+S_E(z_i) &= \text{evaluation-side value} \\
+S_G(z_i) &= \text{governance or trust value}
 \end{aligned}
 $$
 
-The point of this notation is defensive. It prevents sample sensitivity, target change, decision value, or trust evidence from being smuggled back in as if each were another training-data attribution score. A combined application score would require explicit normalization and normative weights; no universal combination is implied here.
-
-## 2.75 Human-feedback value in post-training
-
-Reinforcement learning-based post-training adds a different pathway for data value. The data object may not be pretraining content at all. It may be a demonstration, preference comparison, critique, rubric, red-team transcript, refusal example, user rating, or deployment report. In a simplified RLHF-style pipeline, we might write:
+Any combined score should be explicit about its weights:
 
 $$
-\begin{aligned}
-M_0 &= \text{base model} \\
-H &= \text{human feedback data} \\
-R_H &= \operatorname{RewardModel}(M_0, H) \\
-\pi_H &= \operatorname{RLUpdate}(M_0, R_H)
-\end{aligned}
+S(z_i) = \lambda_T S_T(z_i) + \lambda_E S_E(z_i) + \lambda_G S_G(z_i)
 $$
 
-The natural counterfactual is then not merely a row move in the pretraining dataset:
-
-$$
-\Delta_H =
-\operatorname{Compare}\bigl(U(\pi_{H'}, E), U(\pi_H, E)\bigr)
-$$
-
-where $H'$ might remove, reweight, reserve, corrupt, or govern access to a source of human feedback. In papers such as [Christiano et al.](https://arxiv.org/abs/1706.03741), [Stiennon et al.](https://arxiv.org/abs/2009.01325), and [Ouyang et al.](https://arxiv.org/abs/2203.02155), human preference data help define or train the reward signal used for later policy optimization. For the data-counterfactual frame, the important point is that the value can flow through at least four objects:
-
-- the supervised or demonstration policy
-- the reward model or preference model
-- the RL-updated policy
-- the evaluation, red-team, or governance process that decides whether the update should count
-
-That makes the role-specific score even more important:
-
-$$
-S_H(h) =
-\lambda_{\mathrm{steer}} S_{\mathrm{steer}}(h)
-+ \lambda_{\mathrm{eval}} S_{\mathrm{eval}}(h)
-+ \lambda_{\mathrm{safety}} S_{\mathrm{safety}}(h)
-+ \lambda_{\mathrm{govern}} S_{\mathrm{govern}}(h)
-$$
-
-The same feedback item can be valuable because it improves helpfulness, because it reveals a safety failure, because it gives an evaluator a cleaner holdout, or because the group that can supply it has leverage over future access. So post-training human-feedback value is still a data counterfactual, but its comparison object is a staged pipeline rather than one static training row.
+The point of this notation is mostly defensive. It prevents a column-side or trust-side value from being smuggled back in as if it were just another training-data attribution score.
 
 ## 3. Reweighting and fairness-by-data repair
 
@@ -446,8 +397,6 @@ T_{\mathrm{strike},S}(D) &= D \setminus S \\
 \end{aligned}
 $$
 
-This estimates technical dependence under the chosen intervention. A strategic conclusion needs a longer chain: establish feasible control over the data, identify the operator's substitutes and outside options, model participation and coordination, specify the operator's response and the bargaining or equilibrium concept, and trace the resulting surplus. Failure at any link can break the inference from a measured performance effect to durable leverage.
-
 That looks narrow at first, but it is actually a reusable experimental substrate for several important families of questions.
 
 - singleton strike simulations recover leave-one-out style comparisons
@@ -465,7 +414,7 @@ So a strike simulator is not just one application sitting beside the other forma
 
 With enough strike-style simulations over the right subsets, you can estimate some of these concepts directly and stress-test others indirectly. Shapley values are the clearest example because they are built from marginal contributions across many subset worlds, though in practice this requires matched subset evaluations rather than only single removals from the full dataset. Unlearning baselines are another because the relevant reference world is often "train as if the removed data had never been present." Data scaling curves and datamodel-style surrogates are another because they are summaries over many retained worlds. But for differential privacy, active learning, distillation, poisoning, or order-sensitive training methods, the bottleneck is not only access to neighboring data worlds. It is also the policy, mechanism, schedule, or threat model layered on top of them.
 
-That is the broader motivation for the project. A data strike simulation is a social and strategic object in its own right, but it is also a bridge to attribution, valuation, privacy, unlearning, and robustness. It tells us whether the modeled withholding intervention changes a technical outcome and which other analyses those worlds can support; it does not by itself establish bargaining power.
+That is the broader motivation for the project. A data strike simulation is a social and strategic object in its own right, but it is also a bridge to attribution, valuation, privacy, unlearning, and robustness. It tells us not just whether withholding data matters, but which other formalisms that withholding can help us measure.
 
 ## A first simple unifying formalism
 

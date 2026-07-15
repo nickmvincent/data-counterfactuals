@@ -6,7 +6,6 @@ import {
   buildSubsetGrid,
   computeColumnSensitivity,
   computeEvalAdditionStats,
-  computeEvaluationConfidenceInterval,
   computeLooDelta,
   computeRowRemovalStats,
   computeScalingStats,
@@ -220,24 +219,6 @@ test("column sensitivity takes the max gap across the comparison row pair", () =
   assert.equal(sensitivity, expected);
 });
 
-test("evaluation confidence intervals stay bounded and shrink with more units", () => {
-  const small = computeEvaluationConfidenceInterval({
-    estimate: 0.75,
-    unitCount: 12,
-    confidenceLevel: 0.95,
-  });
-  const large = computeEvaluationConfidenceInterval({
-    estimate: 0.75,
-    unitCount: 120,
-    confidenceLevel: 0.95,
-  });
-
-  assert.equal(small.available, true);
-  assert.equal(large.available, true);
-  assert.ok(small.lower >= 0 && small.upper <= 1);
-  assert.ok(large.margin < small.margin);
-});
-
 test("real-data metric stays bounded and rewards fuller training coverage on the toy dataset", () => {
   const items = ["A", "B", "C", "D"];
   const { matrix, subsets } = buildSubsetGrid(items, "real");
@@ -320,6 +301,6 @@ test("concept presets can all execute without missing setters", () => {
 
   for (const preset of presets) preset.setup();
 
-  assert.equal(presets.length, 15);
+  assert.equal(presets.length, 11);
   assert.ok(calls.length > 0);
 });

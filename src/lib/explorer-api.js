@@ -4,7 +4,6 @@ import {
   buildSubsetGrid,
   computeColumnSensitivity,
   computeEvalAdditionStats,
-  computeEvaluationConfidenceInterval,
   computeRowRemovalStats,
   computeScalingStats,
   computeSemivalueStats,
@@ -15,19 +14,26 @@ import {
   labelSubset,
   selectAnalysisMatrix,
 } from "./counterfactual-math.js";
-import { graphLensIds } from "./concept-lens-specs.js";
-import { buildConceptPlan, gridConceptIds } from "./grid-concept-planner.js";
 
 const GRID_CONCEPT_MODES = [
   "explore",
-  ...gridConceptIds,
+  "loo",
+  "eval",
+  "group",
+  "shapley",
+  "banzhaf",
+  "beta",
+  "scaling",
+  "dp",
+  "unlearning",
+  "poison",
 ];
-const GRAPH_LENSES = graphLensIds;
+const GRAPH_LENSES = ["ablation", "strike", "shapley", "scaling"];
 const GRID_METRICS = ["jaccard", "inter", "entropy", "real", "covertype"];
 const GRAPH_METRICS = ["jaccard", "inter", "entropy", "covertype"];
 const RESPONSE_TYPES = ["matrix", "cell", "answer"];
 const SINGLE_FOCUS_GRID_MODES = new Set(["explore", "loo", "eval", "shapley", "banzhaf", "beta", "dp", "unlearning"]);
-const MULTI_FOCUS_GRID_MODES = new Set(["group", "interaction", "poison"]);
+const MULTI_FOCUS_GRID_MODES = new Set(["group", "poison"]);
 const RESERVED_REQUEST_KEYS = new Set(["explorer", "response", "state"]);
 
 export const apiExplorerExamples = {
@@ -55,8 +61,6 @@ export const apiExplorerExamples = {
     train: "ABC",
     eval: "ABC",
     epsilon: 1.5,
-    confidenceLevel: 0.95,
-    evaluationUnitCount: 24,
   },
   graphAnswer: {
     explorer: "graph",
@@ -86,7 +90,7 @@ export const apiExplorerFieldGroups = [
       },
       {
         name: "count",
-        type: "2-7 in the unified explorer",
+        type: "2-8 for grid, 2-7 for graph",
         description: "Chooses how many letters from A onward exist in the toy universe.",
       },
       {
@@ -98,11 +102,6 @@ export const apiExplorerFieldGroups = [
         name: "focusSet",
         type: 'subset label, array, or comma list',
         description: "Uses the same focus tokens the grid and graph explorers already expose.",
-      },
-      {
-        name: "confidenceLevel / evaluationUnitCount",
-        type: "0.8-0.99 / positive integer",
-        description: "Adds a Wilson-style confidence interval over the selected evaluation slice; Covertype derives counts from domain rows when no override is provided.",
       },
     ],
   },
@@ -162,12 +161,7 @@ export const apiExplorerFieldGroups = [
       {
         name: "k",
         type: "0-7",
-        description: "Selects the highlighted train or eval layer when lens is scaling or eval-scaling.",
-      },
-      {
-        name: "epsilon / poisonActive / gridView",
-        type: "number / boolean / \"real\" | \"operator\"",
-        description: "Controls the graph DP envelope and poisoning overlay.",
+        description: "Selects the highlighted scaling layer when lens is scaling.",
       },
     ],
   },
@@ -185,10 +179,6 @@ function roundValue(value, digits = 6) {
 
 function roundMatrix(matrix, digits = 6) {
   return matrix.map((row) => row.map((value) => roundValue(value, digits)));
-}
-
-function roundNullable(value, digits = 6) {
-  return value === null || value === undefined ? null : roundValue(value, digits);
 }
 
 function clampInteger(value, fallback, min, max) {
@@ -252,101 +242,6 @@ function normalizeTokenSet(value, universe, fallback = []) {
   return out.sort();
 }
 
-function completeFocusPair(focusSet, universe) {
-  const clean = [...new Set((focusSet || []).filter((token) => universe.includes(token)))].slice(0, 2);
-  if (clean.length >= 2) return clean;
-  const startIndex = clean.length ? universe.indexOf(clean[0]) : -1;
-  const ordered = [
-    ...universe.slice(Math.max(0, startIndex + 1)),
-    ...universe.slice(0, Math.max(0, startIndex + 1)),
-  ];
-  for (const token of ordered) {
-    if (!clean.includes(token)) clean.push(token);
-    if (clean.length >= 2) break;
-  }
-  return clean;
-}
-
-function averageNumbers(values) {
-  const finiteValues = values.filter((value) => Number.isFinite(value));
-  if (!finiteValues.length) return 0;
-  return finiteValues.reduce((sum, value) => sum + value, 0) / finiteValues.length;
-}
-
-function computeEvalScalingRows({ matrix, subsets, rowIndex, maxSize }) {
-  return Array.from({ length: maxSize + 1 }, (_, k) => {
-    const values = subsets
-      .map((subset, index) => (subset.length === k ? (matrix[rowIndex]?.[index] ?? 0) : null))
-      .filter((value) => value !== null);
-    return { k, avg: averageNumbers(values), n: values.length };
-  });
-}
-
-function computeInteractionSquare({ matrix, subsets, trainSet, evalIndex, focusPair }) {
-  const [left, right] = focusPair;
-  const backgroundSet = trainSet.filter((token) => !focusPair.includes(token));
-  const leftSet = left ? [...backgroundSet, left].sort() : backgroundSet;
-  const rightSet = right ? [...backgroundSet, right].sort() : backgroundSet;
-  const bothSet = focusPair.length === 2 ? [...backgroundSet, ...focusPair].sort() : trainSet;
-  const corners = [
-    { id: "both", coefficient: 1, set: bothSet },
-    { id: "left", coefficient: -1, set: leftSet },
-    { id: "right", coefficient: -1, set: rightSet },
-    { id: "background", coefficient: 1, set: backgroundSet },
-  ].map((corner) => {
-    const rowIndex = findSubsetIndex(subsets, corner.set);
-    return {
-      ...corner,
-      rowIndex,
-      value: rowIndex >= 0 ? (matrix[rowIndex]?.[evalIndex] ?? 0) : 0,
-    };
-  });
-  const available = focusPair.length === 2 && corners.every((corner) => corner.rowIndex >= 0);
-  const value = available
-    ? corners.reduce((sum, corner) => sum + corner.coefficient * corner.value, 0)
-    : 0;
-  return { available, value, corners, backgroundSet, leftSet, rightSet, bothSet };
-}
-
-function countEvaluationUnits({ metric, evalSet, subsetLegend, rawState }) {
-  const override = clampInteger(
-    rawState.evaluationUnitCount ?? rawState.evalUnitCount ?? rawState.evaluationCount,
-    0,
-    0,
-    Number.MAX_SAFE_INTEGER,
-  );
-  if (override > 0) return override;
-
-  if (metric === "covertype") {
-    const byToken = new Map((subsetLegend || []).map((entry) => [entry.token, entry.totalRows || 0]));
-    return evalSet.reduce((sum, token) => sum + (byToken.get(token) || 0), 0);
-  }
-
-  return evalSet.length;
-}
-
-function buildEvaluationSummary({ metric, selectedValue, evalSet, subsetLegend, rawState }) {
-  const confidenceLevel = clampNumber(rawState.confidenceLevel, 0.95, 0.8, 0.99);
-  const valueScale = metric === "inter" ? Math.max(1, evalSet.length) : 1;
-  const unitCount = countEvaluationUnits({ metric, evalSet, subsetLegend, rawState });
-  const interval = computeEvaluationConfidenceInterval({
-    estimate: selectedValue,
-    unitCount,
-    confidenceLevel,
-    valueScale,
-  });
-
-  return {
-    confidenceLevel,
-    unitCount,
-    valueScale,
-    interval,
-    note: interval.available
-      ? `Wilson interval over ${unitCount} evaluation unit${unitCount === 1 ? "" : "s"}.`
-      : "No confidence interval is available because the active evaluation slice has no units.",
-  };
-}
-
 function pickStateValue(state, ...keys) {
   for (const key of keys) {
     if (state[key] !== undefined) return state[key];
@@ -390,7 +285,7 @@ function mergeRequestState(request = {}) {
 
 function buildGridSnapshot(rawState = {}) {
   const metric = coerceEnum(rawState.metric, GRID_METRICS, "jaccard");
-  const countLimit = metric === "covertype" ? Math.min(7, covertypeDomainMaxCount) : 7;
+  const countLimit = metric === "covertype" ? Math.min(8, covertypeDomainMaxCount) : 8;
   const count = clampInteger(rawState.count, 4, 2, countLimit);
   const universe = alphabet.slice(0, count);
   const conceptMode = coerceEnum(rawState.conceptMode, GRID_CONCEPT_MODES, "explore");
@@ -449,7 +344,7 @@ function buildGridSnapshot(rawState = {}) {
 
   const betaAlpha = clampNumber(rawState.betaAlpha, 2, 0.01);
   const betaBeta = clampNumber(rawState.betaBeta, 2, 0.01);
-  const epsilon = clampNumber(rawState.epsilon, 1, 0.01);
+  const epsilon = clampNumber(rawState.epsilon, 1, 0);
   const auditTolerance = clampNumber(rawState.auditTolerance, 0.15, 0);
   const k = clampInteger(rawState.k, 2, 0, universe.length);
 
@@ -458,13 +353,6 @@ function buildGridSnapshot(rawState = {}) {
   const cleanValue = baseMatrix[rowIndex]?.[colIndex] ?? 0;
   const selectedValue = analysisMatrix[rowIndex]?.[colIndex] ?? 0;
   const operatorValue = editedMatrix[rowIndex]?.[colIndex] ?? cleanValue;
-  const evaluation = buildEvaluationSummary({
-    metric,
-    selectedValue,
-    evalSet,
-    subsetLegend,
-    rawState,
-  });
 
   const looStats = computeRowRemovalStats({
     matrix: baseMatrix,
@@ -583,31 +471,11 @@ function buildGridSnapshot(rawState = {}) {
       formula: `Avg_S f(S, ${labelSubset(evalSet)}) for |S| = ${k}`,
       detail: `${scalingBucket.n} rows contribute to this size bucket.`,
     };
-  } else if (["interaction", "eval-scaling", "diagonal-scaling", "budget"].includes(conceptMode)) {
-    const plan = buildConceptPlan({
-      conceptId: conceptMode,
-      matrix: baseMatrix,
-      subsets,
-      universe,
-      rowIndex,
-      colIndex,
-      focusSet: allowsMultiFocus ? groupSet : focusSet,
-      selectedCellIds: [],
-      k,
-      betaAlpha,
-      betaBeta,
-    });
-    answer = {
-      label: plan.shortLabel,
-      value: plan.value,
-      formula: plan.formula,
-      detail: plan.explanation,
-    };
   } else if (conceptMode === "dp") {
     answer = {
       label: "Suggested scale",
       value: dpSuggestedScale,
-      formula: `max_E |f(${labelSubset(trainSet)}, E) - f(${labelSubset(looStats.compareSet)}, E)| / epsilon = ${dpSensitivity} / ${epsilon}`,
+      formula: `sensitivity / epsilon = ${dpSensitivity} / ${epsilon}`,
       detail: `Local cell gap ${dpLocalGap.toFixed(4)}; row sensitivity ${dpSensitivity.toFixed(4)}.`,
     };
   } else if (conceptMode === "unlearning") {
@@ -621,7 +489,7 @@ function buildGridSnapshot(rawState = {}) {
     answer = {
       label: "Attack delta",
       value: attackDelta,
-      formula: `f_operator(${labelSubset(trainSet)}, ${labelSubset(evalSet)}) - f_clean(${labelSubset(trainSet)}, ${labelSubset(evalSet)})`,
+      formula: `f_attack(${labelSubset(trainSet)}, ${labelSubset(evalSet)}) - f_clean(${labelSubset(trainSet)}, ${labelSubset(evalSet)})`,
       detail: poisonActive ? "Operator view includes the toy corruption rule." : "Attack toggle is currently off.",
     };
   }
@@ -680,7 +548,6 @@ function buildGridSnapshot(rawState = {}) {
       operatorValue,
       value: selectedValue,
     },
-    evaluation,
     answer,
   };
 }
@@ -691,28 +558,15 @@ function buildGraphSnapshot(rawState = {}) {
   const count = clampInteger(rawState.count, 4, 2, countLimit);
   const universe = alphabet.slice(0, count);
   const lens = coerceEnum(rawState.lens, GRAPH_LENSES, "ablation");
-  const { matrix: baseMatrix, subsets } = buildSubsetGrid(universe, metric);
+  const { matrix, subsets } = buildSubsetGrid(universe, metric);
   const subsetLegend = metric === "covertype" ? getCovertypeDomains(universe) : [];
   const fullSetIndex = findSubsetIndex(subsets, universe);
   const defaultFocus = universe[Math.min(1, Math.max(0, universe.length - 1))] || universe[0] || "A";
   let focusSet = normalizeTokenSet(rawState.focusSet ?? rawState.focus, universe, [defaultFocus]);
   if (!focusSet.length && defaultFocus) focusSet = [defaultFocus];
-  if (lens === "interaction") focusSet = completeFocusPair(focusSet, universe);
-  if (!["strike", "interaction", "poison"].includes(lens) && focusSet.length > 1) focusSet = [focusSet[0]];
+  if (lens !== "strike" && focusSet.length > 1) focusSet = [focusSet[0]];
   const focusPrimary = focusSet[0] || defaultFocus;
-  const focusGroup = lens === "strike" || lens === "poison" ? focusSet : focusPrimary ? [focusPrimary] : [];
-  const poisonActive = lens === "poison" ? coerceBoolean(rawState.poisonActive ?? rawState.poison, true) : false;
-  const gridView = lens === "poison"
-    ? coerceEnum(rawState.gridView, ["real", "operator"], "operator")
-    : "real";
-  const editedMatrix = applyGridEdits(baseMatrix, subsets, {
-    focusSet: focusGroup,
-    poisonActive,
-    noiseLevel: 0,
-  });
-  const matrix = lens === "poison"
-    ? selectAnalysisMatrix({ baseMatrix, editedMatrix, gridView })
-    : baseMatrix;
+  const focusGroup = lens === "strike" ? focusSet : focusPrimary ? [focusPrimary] : [];
 
   const selectedIndex = subsetIndexFromValue(
     pickStateValue(rawState, "train", "selected", "selectedIndex", "row", "rowIndex"),
@@ -727,18 +581,10 @@ function buildGraphSnapshot(rawState = {}) {
     fullSetIndex >= 0 ? fullSetIndex : 0,
   );
   const k = clampInteger(rawState.k, 2, 0, universe.length);
-  const epsilon = clampNumber(rawState.epsilon, 1, 0.01, 20);
 
   const trainSet = subsets[selectedIndex] || [];
   const evalSet = subsets[evalIndex] || [];
   const currentValue = matrix[selectedIndex]?.[evalIndex] ?? 0;
-  const evaluation = buildEvaluationSummary({
-    metric,
-    selectedValue: currentValue,
-    evalSet,
-    subsetLegend,
-    rawState,
-  });
   const ablationStats = computeRowRemovalStats({
     matrix,
     subsets,
@@ -767,36 +613,6 @@ function buildGraphSnapshot(rawState = {}) {
     evalColumnIndex: evalIndex,
   });
   const scalingBucket = scalingRows.find((entry) => entry.k === k) || { avg: 0, n: 0 };
-  const interactionStats = computeInteractionSquare({
-    matrix,
-    subsets,
-    trainSet,
-    evalIndex,
-    focusPair: completeFocusPair(focusSet, universe),
-  });
-  const evalScalingRows = computeEvalScalingRows({
-    matrix,
-    subsets,
-    rowIndex: selectedIndex,
-    maxSize: universe.length,
-  });
-  const evalScalingBucket = evalScalingRows.find((entry) => entry.k === k) || { avg: 0, n: 0 };
-  const dpStats = computeRowRemovalStats({
-    matrix: baseMatrix,
-    subsets,
-    rowIndex: selectedIndex,
-    colIndex: evalIndex,
-    tokensToRemove: focusPrimary ? [focusPrimary] : [],
-  });
-  const dpSensitivity = computeColumnSensitivity({
-    matrix: baseMatrix,
-    rowIndex: selectedIndex,
-    compareRowIndex: dpStats.compareRowIndex,
-  });
-  const dpScale = dpSensitivity / epsilon;
-  const poisonCleanValue = baseMatrix[selectedIndex]?.[evalIndex] ?? 0;
-  const poisonOperatorValue = editedMatrix[selectedIndex]?.[evalIndex] ?? poisonCleanValue;
-  const poisonDelta = poisonOperatorValue - poisonCleanValue;
 
   let answer;
   if (lens === "ablation") {
@@ -815,15 +631,6 @@ function buildGraphSnapshot(rawState = {}) {
         ? `Strike path removes ${labelSubset(strikeStats.removedTokens)} one edge at a time.`
         : "None of the requested strike tokens are present in the selected train node.",
     };
-  } else if (lens === "interaction") {
-    answer = {
-      label: "Interaction",
-      value: interactionStats.value,
-      formula: `f(${labelSubset(interactionStats.bothSet)}, ${labelSubset(evalSet)}) - f(${labelSubset(interactionStats.leftSet)}, ${labelSubset(evalSet)}) - f(${labelSubset(interactionStats.rightSet)}, ${labelSubset(evalSet)}) + f(${labelSubset(interactionStats.backgroundSet)}, ${labelSubset(evalSet)})`,
-      detail: interactionStats.available
-        ? `Four train nodes form the pair square for ${labelSubset(completeFocusPair(focusSet, universe))}.`
-        : "Two focus tokens are required to form the interaction square.",
-    };
   } else if (lens === "shapley") {
     answer = {
       label: "Shapley phi",
@@ -831,35 +638,12 @@ function buildGraphSnapshot(rawState = {}) {
       formula: `phi(${focusPrimary}; ${labelSubset(evalSet)})`,
       detail: `${shapleyStats.cnt} one-step additions contribute to the sweep.`,
     };
-  } else if (lens === "scaling") {
+  } else {
     answer = {
       label: `Average at k=${k}`,
       value: scalingBucket.avg,
       formula: `Avg_S f(S, ${labelSubset(evalSet)}) for |S| = ${k}`,
       detail: `${scalingBucket.n} nodes are highlighted in this layer.`,
-    };
-  } else if (lens === "eval-scaling") {
-    answer = {
-      label: `Eval avg k=${k}`,
-      value: evalScalingBucket.avg,
-      formula: `Avg_E f(${labelSubset(trainSet)}, E) for |E| = ${k}`,
-      detail: `${evalScalingBucket.n} eval nodes contribute while train ${labelSubset(trainSet)} stays fixed.`,
-    };
-  } else if (lens === "dp") {
-    answer = {
-      label: "Scale",
-      value: dpScale,
-      formula: `max_E |f(${labelSubset(trainSet)}, E) - f(${labelSubset(dpStats.compareSet)}, E)| / epsilon`,
-      detail: `Row sensitivity ${dpSensitivity.toFixed(4)} at epsilon ${epsilon.toFixed(2)}; this is a toy DP scale proxy.`,
-    };
-  } else {
-    answer = {
-      label: "Attack delta",
-      value: poisonDelta,
-      formula: `f_operator(${labelSubset(trainSet)}, ${labelSubset(evalSet)}) - f_clean(${labelSubset(trainSet)}, ${labelSubset(evalSet)})`,
-      detail: poisonActive
-        ? `${gridView === "operator" ? "Operator" : "Clean"} view; ${focusGroup.length} target token${focusGroup.length === 1 ? "" : "s"} active.`
-        : "Attack toggle is currently off.",
     };
   }
 
@@ -874,9 +658,6 @@ function buildGraphSnapshot(rawState = {}) {
       focusSet,
       focusPrimary,
       k,
-      epsilon,
-      poisonActive,
-      gridView,
       train: {
         index: selectedIndex,
         set: trainSet,
@@ -888,10 +669,9 @@ function buildGraphSnapshot(rawState = {}) {
         label: labelSubset(evalSet),
       },
     },
-    matrixSource: lens === "poison" ? gridView : "graph",
+    matrixSource: "graph",
     subsetLegend,
-    fullMatrix: baseMatrix,
-    editedMatrix,
+    fullMatrix: matrix,
     responseMatrix: matrix,
     rowLabels: subsets.map((subset) => labelSubset(subset)),
     columnLabels: subsets.map((subset) => labelSubset(subset)),
@@ -902,34 +682,9 @@ function buildGraphSnapshot(rawState = {}) {
       evalSet,
       trainLabel: labelSubset(trainSet),
       evalLabel: labelSubset(evalSet),
-      cleanValue: poisonCleanValue,
-      operatorValue: poisonOperatorValue,
       value: currentValue,
     },
-    evaluation,
     answer,
-  };
-}
-
-function formatEvaluationForResponse(evaluation) {
-  if (!evaluation) return undefined;
-  const interval = evaluation.interval || {};
-  return {
-    confidenceLevel: evaluation.confidenceLevel,
-    unitCount: evaluation.unitCount,
-    valueScale: evaluation.valueScale,
-    note: evaluation.note,
-    interval: {
-      available: Boolean(interval.available),
-      method: interval.method,
-      estimate: roundNullable(interval.estimate),
-      lower: roundNullable(interval.lower),
-      upper: roundNullable(interval.upper),
-      margin: roundNullable(interval.margin),
-      rateEstimate: roundNullable(interval.rateEstimate),
-      rateLower: roundNullable(interval.rateLower),
-      rateUpper: roundNullable(interval.rateUpper),
-    },
   };
 }
 
@@ -950,7 +705,6 @@ function buildResponsePayload(snapshot, responseType) {
       cleanValue: snapshot.selectedCell.cleanValue !== undefined ? roundValue(snapshot.selectedCell.cleanValue) : undefined,
       operatorValue:
         snapshot.selectedCell.operatorValue !== undefined ? roundValue(snapshot.selectedCell.operatorValue) : undefined,
-      evaluation: formatEvaluationForResponse(snapshot.evaluation),
     };
   }
 
@@ -970,7 +724,6 @@ function buildResponsePayload(snapshot, responseType) {
         formula: snapshot.answer.formula,
         detail: snapshot.answer.detail,
       },
-      evaluation: formatEvaluationForResponse(snapshot.evaluation),
     };
   }
 
@@ -994,7 +747,6 @@ function buildResponsePayload(snapshot, responseType) {
       formula: snapshot.answer.formula,
       detail: snapshot.answer.detail,
     },
-    evaluation: formatEvaluationForResponse(snapshot.evaluation),
   };
 }
 

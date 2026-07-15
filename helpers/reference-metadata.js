@@ -113,29 +113,6 @@ function buildAuthorName(author) {
   return collapseWhitespace([author.given, author.family].filter(Boolean).join(" "));
 }
 
-function normalizeAuthorDisplayName(author) {
-  const text = collapseWhitespace(author);
-  if (!text.includes(",")) {
-    return text;
-  }
-
-  const parts = text.split(",").map((part) => collapseWhitespace(part)).filter(Boolean);
-  if (parts.length < 2) {
-    return text;
-  }
-
-  const [family, given, ...suffixes] = parts;
-  return collapseWhitespace([given, family, ...suffixes].join(" "));
-}
-
-function normalizeAuthorDisplayList(authors) {
-  if (!Array.isArray(authors)) {
-    return [];
-  }
-
-  return unique(authors.map((author) => normalizeAuthorDisplayName(author)).filter(Boolean));
-}
-
 function extractYearFromDateParts(dateParts) {
   if (!Array.isArray(dateParts) || !Array.isArray(dateParts[0])) {
     return undefined;
@@ -395,7 +372,7 @@ function maybeApplyField(reference, field, value, provenance, options = {}) {
 export function resolveReferenceMetadata(reference, layers = []) {
   const resolved = {
     ...reference,
-    authors: normalizeAuthorDisplayList(reference.authors),
+    authors: Array.isArray(reference.authors) ? [...reference.authors] : [],
     metadata_provenance: { ...(reference.metadata_provenance || {}) },
     metadata_sources: mergeMetadataSources(reference.metadata_sources),
   };
@@ -414,8 +391,5 @@ export function resolveReferenceMetadata(reference, layers = []) {
     }
   }
 
-  return {
-    ...resolved,
-    authors: normalizeAuthorDisplayList(resolved.authors),
-  };
+  return resolved;
 }

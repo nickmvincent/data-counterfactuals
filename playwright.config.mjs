@@ -13,8 +13,6 @@ const browserUse = existsSync(macChromePath)
       browserName: "chromium",
       channel: "chrome",
     };
-const devServerPort = process.env.PLAYWRIGHT_PORT || "4321";
-const devServerBaseUrl = `http://127.0.0.1:${devServerPort}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -27,7 +25,7 @@ export default defineConfig({
   reporter: "line",
   use: {
     ...browserUse,
-    baseURL: devServerBaseUrl,
+    baseURL: "http://127.0.0.1:4321",
     headless: true,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
@@ -37,8 +35,8 @@ export default defineConfig({
     },
   },
   webServer: {
-    command: `npm run dev -- --host 127.0.0.1 --port ${devServerPort}`,
-    url: `${devServerBaseUrl}/grid`,
+    command: "npm run dev -- --host 127.0.0.1 --port 4321",
+    url: "http://127.0.0.1:4321/grid",
     reuseExistingServer: !process.env.CI,
     stdout: "pipe",
     stderr: "pipe",

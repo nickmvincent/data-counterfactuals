@@ -7,13 +7,13 @@ visibility: public
 type: shared_memo
 ---
 
-Most data counterfactuals start as row moves. We hold the evaluation target fixed, change the training data, and ask how the trained outcome changes under a specified protocol:
+Most data counterfactuals start as row moves. We hold the evaluation target fixed, change the training data, and ask how the model changes:
 
 $$
 f(D_T, D_E) \rightarrow f(D_T \setminus z, D_E)
 $$
 
-That is the right first picture for influence, leave-one-out attribution, many data valuation methods, unlearning baselines, data-strike simulations, and data selection. But the grid has another axis. Columns are evaluation worlds. Evaluation datasets have to be constructed and documented, and their usefulness depends on what they represent and how they are used; see [Model Cards](https://doi.org/10.1145/3287560.3287596), [Datasheets for Datasets](https://doi.org/10.1145/3458723), and [HELM](https://arxiv.org/abs/2211.09110) for complementary documentation and evaluation frameworks.
+That is the right first picture for influence, leave-one-out attribution, many data valuation methods, unlearning baselines, data strikes, and data selection. But the grid has always had another axis. Columns are evaluation worlds. A trusted evaluation set is not just a passive measuring stick. It is a data product, a governance institution, and sometimes the scarce object in the market.
 
 The column-side question is:
 
@@ -21,13 +21,13 @@ $$
 f(D_T, D_E) \rightarrow f(D_T, D_E \cup z)
 $$
 
-Training counterfactuals ask how model behavior changes when the training world changes. An evaluation-world change can instead refine evidence about the same target, define a different target, or affect a decision. Those are different objects.
+Training counterfactuals ask how model behavior changes when the training world changes. Evaluation counterfactuals ask how our measurement, confidence, or decision changes when the evaluation world changes.
 
 ## Why the column is not free
 
 It is tempting to treat $D_E$ as a fixed background object. In a toy paper, that is often fine. In a foundation-model setting, it is a major assumption.
 
-Evaluation data have to be selected, labeled, governed, and interpreted. Exposure of benchmark data during training can compromise the resulting evaluation; this is the specific contamination problem studied, for example, by [Deng et al. (2024)](https://aclanthology.org/2024.naacl-long.482/). A label process can also be too weak for the intended construct or population. A protected evaluation can be useful because it remains independent of training, while an evaluator can matter because of the evidence they produce—not because the data directly improved an already-trained model.
+Evaluation data have to be selected, labeled, protected, governed, and interpreted. A holdout set can lose value if it is leaked into training. A benchmark can lose value if the label process is weak. A private eval can gain value precisely because it remains unavailable for training. And an evaluator can matter because the evaluation is independent, not because the data point directly improves a model.
 
 So the question is not only:
 
@@ -53,17 +53,29 @@ $$
 
 The value question changes with the rights state. A data object can be valuable because it helps training, because it sharpens a test, because it stays hidden, or because its provenance makes the whole measurement more credible.
 
-## Three evaluation questions, not one score
+## Three scores, not one score
 
-First, additional observations can sharpen evidence about the same construct and target population. The relevant outputs are an estimator and its uncertainty under a stated sampling model. A raw score difference after adding one observation is sample sensitivity, not automatically value.
+It helps to separate the scalar values before combining them:
 
-Second, an evaluation object can define a new subgroup, capability, stress condition, population, or construct. The target has changed. Performance on that target should not be described as a refinement of the old estimate.
+$$
+S_T(z) = \text{training-side value}
+$$
 
-Third, independent evidence can change model selection, deployment, or audit action. Its value of information depends on the decision rule, loss function, prior information, and evidence model.
+$$
+S_E(z) = \text{evaluation-side value}
+$$
 
-Training effects and governance evidence remain separate again. One concerns a fitted system under a training intervention; the other concerns provenance, independence, rights, or credibility. An application may build a combined score, but it must specify normalization and normative weights. No universal scalar follows from the grid.
+$$
+S_G(z) = \text{governance/trust value}
+$$
 
-The practical rule is simple: state whether the object changes a same-target estimate, changes the target, changes a decision, changes the trained system, or changes the credibility of the evidence.
+Then an application-specific score might combine them:
+
+$$
+S(z)=\lambda_T S_T(z)+\lambda_E S_E(z)+\lambda_G S_G(z)
+$$
+
+The warning is simple: not every scalar data value is a training-data attribution score. Some data change the model. Some data change the measurement. Some data change whether the measurement should be trusted.
 
 ## Secure holdouts as a small explorable
 
@@ -74,22 +86,22 @@ A minimal holdout story needs only four objects: A, B, C, and D.
 - D is leaked, so it cannot credibly enter eval.
 - A buyer chooses between two models based on the holdout.
 
-Now C can matter even if it never trains the model. If it changes which model gets selected or whether deployment is delayed, its value is decision-specific. If it only narrows uncertainty about the same target, it supplies same-target evidence. If it covers a new capability, it defines a new target. D can help training yet be unusable as independent evaluation evidence because the trust state is broken.
+Now C can be valuable even if it never trains the model. Its value comes from the decision it changes: which model gets selected, whether deployment is delayed, or whether a claim survives an independent check. D can look valuable as training data but worthless or harmful as eval data because the trust state is broken.
 
-That is why the grid explorer includes an **Eval value** mode. The label refers to an exploratory cell contrast: it keeps the row fixed and moves across columns. Interpreting that contrast still requires choosing among same-target estimation, target change, and decision value.
+That is why the grid explorer now includes an **Eval value** mode. It keeps the row fixed and moves across columns. This does not make evaluation value fully solved, but it gives the site a concrete starting point for teaching the distinction.
 
-## A project-level reading of Beta Shapley
+## Why Beta Shapley belongs here
 
-[Beta Shapley](https://proceedings.mlr.press/v151/kwon22a.html) generalizes Data Shapley by changing the weighting over coalitions. The following is a project-level interpretation of that weighting—not a result established by the paper:
+Beta Shapley can also be read through this lens. Instead of treating it as just another semivalue, we can ask:
 
 > Is this object valuable in a small-data counterfactual, even if its marginal contribution to a massive already-trained model is invisible?
 
-Smaller-coalition weighting can make contributions visible in worlds where less background data are present. Whether that is the right valuation for a market, course, or policy question is a separate normative and empirical choice.
+That interpretation matters for markets and course materials. It gives a clean bridge from trillion-token invisibility to low-cardinality dataset value: smaller coalitions can reveal value that disappears under the average effect of a huge corpus.
 
 ## Course-note version
 
 For teaching, the whole extension can be compressed into one question:
 
-> Is the object changing the trained system, refining evidence about the same target, defining a new target, changing a decision, or changing trust in the evidence?
+> Is the data object changing the model, changing the measurement, or changing trust in the measurement?
 
-The first answer points to row moves. The next three point to different column-side analyses. The last points to governance or institution moves. A lightweight course can reuse the same grid while keeping those interpretations separate.
+The first answer points to row moves. The second points to column moves. The third points to governance or institution moves. A lightweight course can reuse the same grid for all three instead of introducing a new formalism every week.
