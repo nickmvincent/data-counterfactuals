@@ -4,7 +4,7 @@ import path from 'node:path';
 const root = process.cwd();
 const configPath = path.resolve(root, 'semble.config.json');
 const defaultConfig = {
-  apiBase: 'https://api.semble.so',
+  pdsService: 'https://bsky.social',
   profileIdentifier: undefined,
   collectionAtUris: [],
   collectionNamePrefix: undefined,
@@ -22,7 +22,7 @@ function parseJson(filePath) {
 
 const fileConfig = existsSync(configPath) ? parseJson(configPath) : null;
 const mergedConfig = {
-  apiBase: process.env.SEMBLE_API_BASE || fileConfig?.apiBase || defaultConfig.apiBase,
+  pdsService: process.env.SEMBLE_PDS_SERVICE || fileConfig?.pdsService || defaultConfig.pdsService,
   profileIdentifier: process.env.SEMBLE_PROFILE_IDENTIFIER || fileConfig?.profileIdentifier || defaultConfig.profileIdentifier,
   collectionAtUris: process.env.SEMBLE_COLLECTION_AT_URIS
     ? process.env.SEMBLE_COLLECTION_AT_URIS.split(/[\n,]/).map((item) => item.trim()).filter(Boolean)
@@ -46,7 +46,7 @@ if (fileConfig?.__error) {
 console.log(`- Profile identifier: ${mergedConfig.profileIdentifier || '(none)'}`);
 console.log(`- Collection URIs: ${mergedConfig.collectionAtUris.length ? mergedConfig.collectionAtUris.join(', ') : '(none)'}`);
 console.log(`- Name prefix: ${mergedConfig.collectionNamePrefix || '(none)'}`);
-console.log(`- API base: ${mergedConfig.apiBase}`);
+console.log(`- PDS service: ${mergedConfig.pdsService}`);
 console.log(`- Cache policy: ${mergedConfig.cachePolicy}`);
 console.log(`- Cache path: ${cachePath}`);
 console.log(`- Cache exists: ${cacheExists ? 'yes' : 'no'}`);
@@ -58,6 +58,7 @@ if (cachePayload?.__error) {
   console.log(`- Cache collections: ${cachePayload.stats?.collections ?? '(unknown)'}`);
   console.log(`- Cache references: ${cachePayload.stats?.references ?? '(unknown)'}`);
   console.log(`- Cache source profile: ${cachePayload.source?.profileIdentifier || '(none)'}`);
+  console.log(`- Cache source PDS: ${cachePayload.source?.pdsService || '(unknown)'}`);
 }
 
 if (!mergedConfig.profileIdentifier && mergedConfig.collectionAtUris.length === 0) {

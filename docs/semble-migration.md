@@ -66,8 +66,8 @@ Optional filters:
 
 - `SEMBLE_COLLECTION_NAME_PREFIX`
   Only collections whose names start with this prefix are included. The prefix is stripped from the displayed title.
-- `SEMBLE_API_BASE`
-  Defaults to `https://api.semble.so`.
+- `SEMBLE_PDS_SERVICE`
+  Defaults to `https://bsky.social`. Public collections, cards, and collection links are read directly from the profile's AT Protocol repository.
 - `SEMBLE_CACHE_PATH`
   Defaults to `tmp/semble-cache.json`.
 - `SEMBLE_CACHE_POLICY`

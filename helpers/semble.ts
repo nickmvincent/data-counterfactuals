@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { AtpAgent } from '@atproto/api';
 
 import { fetchCitationMetadata } from './citation-metadata.js';
 import {
@@ -14,7 +15,7 @@ import {
 } from './reference-metadata.js';
 import { parseFrontmatter } from './markdown';
 
-const DEFAULT_SEMBLE_API_BASE = 'https://api.semble.so';
+const DEFAULT_SEMBLE_PDS_SERVICE = 'https://bsky.social';
 const DEFAULT_SEMBLE_CACHE_PATH = 'tmp/semble-cache.json';
 const DEFAULT_SEMBLE_CONFIG_FILE = 'semble.config.json';
 const PAGE_LIMIT = 100;
@@ -52,25 +53,19 @@ const CACHE_POLICIES = new Set<SembleCachePolicy>([
 ]);
 
 interface SembleConfig {
-  apiBase: string;
+  pdsService: string;
   profileIdentifier?: string;
   collectionAtUris: string[];
   collectionNamePrefix?: string;
 }
 
 interface SembleProjectConfig {
-  apiBase?: string;
+  pdsService?: string;
   profileIdentifier?: string;
   collectionAtUris: string[];
   collectionNamePrefix?: string;
   cachePath?: string;
   cachePolicy?: SembleCachePolicy;
-}
-
-interface SemblePagination {
-  totalPages?: number;
-  hasNextPage?: boolean;
-  nextPage?: number;
 }
 
 interface SembleCollectionSummary {
@@ -99,25 +94,9 @@ interface SembleUrlCard {
   cardContent?: SembleCardContent | null;
 }
 
-interface SembleCollectionPageItemWrapper {
-  urlCard?: SembleUrlCard | null;
-}
-
-type SembleCollectionPageItem = SembleUrlCard | SembleCollectionPageItemWrapper;
-
-interface SembleApiEnvelope<T> {
-  data?: T;
-}
-
-interface SembleUserCollectionsResponse {
-  collections?: SembleCollectionSummary[];
-  pagination?: SemblePagination;
-}
-
-interface SembleCollectionPageResponse {
-  collection?: SembleCollectionSummary;
-  urlCards?: SembleCollectionPageItem[];
-  pagination?: SemblePagination;
+interface SemblePdsRecord {
+  uri: string;
+  value: Record<string, unknown>;
 }
 
 export interface SembleMetadataFieldProvenance {
@@ -186,7 +165,7 @@ interface SerializedSembleDataset {
   generated_at: string;
   cache_key: string;
   source: {
-    apiBase: string;
+    pdsService: string;
     profileIdentifier?: string;
     collectionAtUris: string[];
     collectionNamePrefix?: string;
@@ -197,18 +176,6 @@ interface SerializedSembleDataset {
   };
   collections: SembleCollectionRecord[];
   references: SembleReference[];
-}
-
-class SembleHttpError extends Error {
-  status: number;
-  url: string;
-
-  constructor(status: number, url: string) {
-    super(`Semble API request failed (${status}) for ${url}`);
-    this.name = 'SembleHttpError';
-    this.status = status;
-    this.url = url;
-  }
 }
 
 let datasetCache:
@@ -237,6 +204,11 @@ function asOptionalString(value: unknown): string | undefined {
   if (typeof value !== 'string' && typeof value !== 'number') return undefined;
   const trimmed = String(value).trim();
   return trimmed ? trimmed : undefined;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  return value as Record<string, unknown>;
 }
 
 function normalizeStringArray(value: unknown): string[] {
@@ -295,7 +267,7 @@ function readSembleProjectConfig(): SembleProjectConfig | null {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const cachePolicyValue = asOptionalString(parsed.cachePolicy);
     projectConfigCache = {
-      apiBase: asOptionalString(parsed.apiBase),
+      pdsService: asOptionalString(parsed.pdsService),
       profileIdentifier: asOptionalString(parsed.profileIdentifier),
       collectionAtUris: normalizeStringArray(parsed.collectionAtUris),
       collectionNamePrefix: asOptionalString(parsed.collectionNamePrefix),
@@ -404,22 +376,6 @@ function extractFrontmatter(rawNote: string | undefined): { data: Record<string,
   return { data: {}, body: text };
 }
 
-function normalizeCollectionPageItem(item: SembleCollectionPageItem): SembleUrlCard | null {
-  if (!item || typeof item !== 'object') {
-    return null;
-  }
-
-  if ('urlCard' in item) {
-    return item.urlCard || null;
-  }
-
-  if ('url' in item || 'uri' in item || 'note' in item || 'cardContent' in item) {
-    return item;
-  }
-
-  return null;
-}
-
 function normalizeCollectionTitle(name: string | undefined, config: SembleConfig): string {
   const rawName = name?.trim() || 'Untitled collection';
   const prefix = config.collectionNamePrefix;
@@ -452,9 +408,9 @@ function getSembleConfig(): SembleConfig | null {
   }
 
   return {
-    apiBase: asOptionalString(process.env.SEMBLE_API_BASE)
-      || projectConfig?.apiBase
-      || DEFAULT_SEMBLE_API_BASE,
+    pdsService: asOptionalString(process.env.SEMBLE_PDS_SERVICE)
+      || projectConfig?.pdsService
+      || DEFAULT_SEMBLE_PDS_SERVICE,
     profileIdentifier,
     collectionAtUris,
     collectionNamePrefix:
@@ -514,7 +470,7 @@ function serializeSembleDataset(config: SembleConfig, dataset: SembleDataset): S
     generated_at: dataset.generatedAt,
     cache_key: buildCacheKey(config),
     source: {
-      apiBase: config.apiBase,
+      pdsService: config.pdsService,
       profileIdentifier: config.profileIdentifier,
       collectionAtUris: [...config.collectionAtUris],
       collectionNamePrefix: config.collectionNamePrefix,
@@ -605,124 +561,137 @@ async function writeSembleDatasetToCache(config: SembleConfig, dataset: SembleDa
   }
 }
 
-async function fetchSemble<T>(
-  config: SembleConfig,
-  path: string,
-  searchParams: Record<string, string | number | undefined> = {},
-): Promise<T> {
-  const url = new URL(path, config.apiBase);
+async function listPdsRecords(
+  agent: AtpAgent,
+  repo: string,
+  collection: string,
+): Promise<SemblePdsRecord[]> {
+  const records: SemblePdsRecord[] = [];
+  const seenCursors = new Set<string>();
+  let cursor: string | undefined;
 
-  for (const [key, value] of Object.entries(searchParams)) {
-    if (value === undefined || value === '') continue;
-    url.searchParams.set(key, String(value));
+  while (true) {
+    const response = await agent.com.atproto.repo.listRecords({
+      repo,
+      collection,
+      cursor,
+      limit: PAGE_LIMIT,
+    });
+
+    for (const record of response.data.records) {
+      const value = asRecord(record.value);
+      if (!value) continue;
+      records.push({ uri: record.uri, value });
+    }
+
+    const nextCursor = asOptionalString(response.data.cursor);
+    if (!nextCursor || seenCursors.has(nextCursor)) break;
+    seenCursors.add(nextCursor);
+    cursor = nextCursor;
   }
 
-  const response = await fetch(url, {
-    headers: {
-      Accept: 'application/json',
-    },
+  return records;
+}
+
+async function resolveProfileDid(agent: AtpAgent, profileIdentifier: string): Promise<string> {
+  if (profileIdentifier.startsWith('did:')) {
+    return profileIdentifier;
+  }
+
+  const response = await agent.com.atproto.identity.resolveHandle({
+    handle: profileIdentifier,
   });
-
-  if (!response.ok) {
-    throw new SembleHttpError(response.status, url.toString());
-  }
-
-  const json = (await response.json()) as T | SembleApiEnvelope<T>;
-  if (json && typeof json === 'object' && 'data' in json && json.data) {
-    return json.data;
-  }
-
-  return json as T;
+  return response.data.did;
 }
 
-function getNextPage(pagination: SemblePagination | undefined, page: number): number | null {
-  if (!pagination) return null;
+function normalizePdsCard(
+  record: SemblePdsRecord,
+  cardsByUri: Map<string, SemblePdsRecord>,
+  notesByParentUri: Map<string, SembleNoteCard>,
+): SembleUrlCard {
+  const parentUri = asOptionalString(asRecord(record.value.parentCard)?.uri);
+  const canonicalRecord = parentUri ? cardsByUri.get(parentUri) || record : record;
+  const content = asRecord(canonicalRecord.value.content);
+  const metadata = asRecord(content?.metadata);
+  const cardContent: SembleCardContent = {
+    title: asOptionalString(metadata?.title),
+    description: asOptionalString(metadata?.description),
+    author: asOptionalString(metadata?.author),
+  };
+  const hasCardContent = Object.values(cardContent).some(Boolean);
 
-  if (typeof pagination.nextPage === 'number') {
-    return pagination.nextPage;
-  }
-
-  if (pagination.hasNextPage) {
-    return page + 1;
-  }
-
-  if (typeof pagination.totalPages === 'number' && page < pagination.totalPages) {
-    return page + 1;
-  }
-
-  return null;
+  return {
+    uri: canonicalRecord.uri,
+    url: asOptionalString(canonicalRecord.value.url) || asOptionalString(content?.url),
+    note: notesByParentUri.get(canonicalRecord.uri) || null,
+    cardContent: hasCardContent ? cardContent : null,
+  };
 }
 
-async function listCollections(config: SembleConfig): Promise<SembleCollectionSummary[]> {
+async function loadPdsCollectionPages(
+  config: SembleConfig,
+): Promise<Array<{ collection: SembleCollectionSummary; cards: SembleUrlCard[] }>> {
   if (!config.profileIdentifier) {
+    if (config.collectionAtUris.length) {
+      throw new Error('SEMBLE_PROFILE_IDENTIFIER is required when reading public collections from a PDS.');
+    }
     return [];
   }
 
-  const results: SembleCollectionSummary[] = [];
-  let page = 1;
+  const agent = new AtpAgent({ service: config.pdsService });
+  const did = await resolveProfileDid(agent, config.profileIdentifier);
+  const [collectionRecords, cardRecords, linkRecords] = await Promise.all([
+    listPdsRecords(agent, did, 'network.cosmik.collection'),
+    listPdsRecords(agent, did, 'network.cosmik.card'),
+    listPdsRecords(agent, did, 'network.cosmik.collectionLink'),
+  ]);
+  const cardsByUri = new Map(cardRecords.map((record) => [record.uri, record]));
+  const notesByParentUri = new Map<string, SembleNoteCard>();
+  const cardUrisByCollectionUri = new Map<string, string[]>();
 
-  while (true) {
-    const data = await fetchSemble<SembleUserCollectionsResponse>(
-      config,
-      `/api/collections/user/${encodeURIComponent(config.profileIdentifier)}`,
-      { page, limit: PAGE_LIMIT },
-    );
-
-    const batch = Array.isArray(data.collections) ? data.collections : [];
-    results.push(...batch.filter((collection) => shouldIncludeCollection(collection, config)));
-
-    const nextPage = getNextPage(data.pagination, page);
-    if (!nextPage) break;
-    page = nextPage;
-  }
-
-  return results;
-}
-
-async function loadCollectionPage(
-  config: SembleConfig,
-  collectionSummary: SembleCollectionSummary,
-): Promise<{ collection: SembleCollectionSummary; cards: SembleUrlCard[] }> {
-  const cards: SembleUrlCard[] = [];
-  let page = 1;
-  let collection: SembleCollectionSummary | undefined;
-  const collectionIdentifier = collectionSummary.id || collectionSummary.uri;
-
-  if (!collectionIdentifier) {
-    throw new Error('Semble collection lookup requires an id or at:// URI.');
-  }
-
-  const collectionPath = collectionSummary.id
-    ? `/api/collections/${encodeURIComponent(collectionSummary.id)}`
-    : `/api/collections/at/${encodeURIComponent(collectionSummary.uri!)}`;
-
-  while (true) {
-    const data = await fetchSemble<SembleCollectionPageResponse>(
-      config,
-      collectionPath,
-      { page, limit: PAGE_LIMIT },
-    );
-
-    if (!collection && data.collection) {
-      collection = data.collection;
+  for (const record of cardRecords) {
+    const parentUri = asOptionalString(asRecord(record.value.parentCard)?.uri);
+    const text = asOptionalString(asRecord(record.value.content)?.text);
+    if (parentUri && text) {
+      notesByParentUri.set(parentUri, { uri: record.uri, text });
     }
-
-    const pageCards = Array.isArray(data.urlCards)
-      ? data.urlCards
-          .map((item) => normalizeCollectionPageItem(item) || undefined)
-          .filter((item): item is SembleUrlCard => Boolean(item))
-      : [];
-    cards.push(...pageCards);
-
-    const nextPage = getNextPage(data.pagination, page);
-    if (!nextPage) break;
-    page = nextPage;
   }
 
-  return {
-    collection: collection || collectionSummary,
-    cards,
-  };
+  for (const record of linkRecords) {
+    const collectionUri = asOptionalString(asRecord(record.value.collection)?.uri);
+    const cardUri = asOptionalString(asRecord(record.value.card)?.uri);
+    if (!collectionUri || !cardUri) continue;
+
+    const cardUris = cardUrisByCollectionUri.get(collectionUri) || [];
+    cardUris.push(cardUri);
+    cardUrisByCollectionUri.set(collectionUri, cardUris);
+  }
+
+  const collectionPages = collectionRecords
+    .map((record) => {
+      const collection: SembleCollectionSummary = {
+        uri: record.uri,
+        name: asOptionalString(record.value.name),
+        description: asOptionalString(record.value.description),
+        visibility: asOptionalString(record.value.accessType),
+      };
+      const cards = unique(cardUrisByCollectionUri.get(record.uri) || [])
+        .map((cardUri) => cardsByUri.get(cardUri))
+        .filter((card): card is SemblePdsRecord => Boolean(card))
+        .map((card) => normalizePdsCard(card, cardsByUri, notesByParentUri));
+
+      return { collection, cards };
+    })
+    .filter((page) => shouldIncludeCollection(page.collection, config));
+
+  const discoveredUris = new Set(collectionPages.map((page) => page.collection.uri).filter(Boolean));
+  for (const uri of config.collectionAtUris) {
+    if (!discoveredUris.has(uri)) {
+      console.warn(`[semble] Configured collection ${uri} was not found in ${config.profileIdentifier}.`);
+    }
+  }
+
+  return collectionPages;
 }
 
 function mergeReference(existing: SembleReference | undefined, incoming: SembleReference): SembleReference {
@@ -992,49 +961,7 @@ async function resolveReferenceAuthority(reference: SembleReference): Promise<Se
 
 async function buildSembleDataset(config: SembleConfig): Promise<SembleDataset> {
   const generatedAt = new Date().toISOString();
-  const explicitUris = config.collectionAtUris;
-  const discoveredCollections = await listCollections(config);
-  const discoveredCollectionsByUri = new Map(
-    discoveredCollections
-      .map((collection) => [asOptionalString(collection.uri), collection] as const)
-      .filter((entry): entry is [string, SembleCollectionSummary] => Boolean(entry[0])),
-  );
-
-  const collectionSummaries: SembleCollectionSummary[] = [];
-  const seenCollections = new Set<string>();
-  const addCollectionSummary = (collection: SembleCollectionSummary) => {
-    const key = collection.id ? `id:${collection.id}` : collection.uri ? `uri:${collection.uri}` : null;
-    if (!key || seenCollections.has(key)) return;
-    seenCollections.add(key);
-    collectionSummaries.push(collection);
-  };
-
-  for (const collectionAtUri of explicitUris) {
-    addCollectionSummary(discoveredCollectionsByUri.get(collectionAtUri) || { uri: collectionAtUri });
-  }
-
-  for (const collection of discoveredCollections) {
-    addCollectionSummary(collection);
-  }
-
-  const collectionPages = (
-    await Promise.all(
-      collectionSummaries.map(async (collectionSummary) => {
-        try {
-          return await loadCollectionPage(config, collectionSummary);
-        } catch (error) {
-          if (error instanceof SembleHttpError && error.status === 404) {
-            console.warn(
-              `[semble] Skipping missing collection ${collectionSummary.id || collectionSummary.uri}.`,
-            );
-            return null;
-          }
-
-          throw error;
-        }
-      }),
-    )
-  ).filter((page): page is { collection: SembleCollectionSummary; cards: SembleUrlCard[] } => Boolean(page));
+  const collectionPages = await loadPdsCollectionPages(config);
 
   const references = new Map<string, SembleReference>();
   const collections: SembleCollectionRecord[] = [];

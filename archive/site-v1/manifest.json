@@ -1,0 +1,48 @@
+{
+  "archive": "site-v1",
+  "created": "2026-07-16",
+  "purpose": "Verbatim preservation of Markdown removed from the public Astro runtime during the two-page site overhaul.",
+  "algorithm": "sha256",
+  "files": [
+    {
+      "path": "content/memos/data-counterfactuals.md",
+      "sha256": "ec96640633b0c8a91a13d142c9ab99239abebf0c710e1d4b00b015d9dae673c1"
+    },
+    {
+      "path": "content/memos/evaluation-counterfactuals.md",
+      "sha256": "41ae60fdb9f0f71bb1f858a3a882716810f98da1bedf5fbc75a1353c26ce7e6a"
+    },
+    {
+      "path": "content/memos/formalisms.md",
+      "sha256": "1afb0c067f95295d85578c7993426c407a3ee4e489f79d57da0ad9957907a7b8"
+    },
+    {
+      "path": "content/memos/glossary.md",
+      "sha256": "17265b4adfb2cd198ea569c6e1318da6e94701b3423658b17f551d15853e6239"
+    },
+    {
+      "path": "content/memos/loose-syllabus.md",
+      "sha256": "d6f201ba3ac8bdd6911f0a243152fd8d151ade4f5b20d7baff16f0c4f88c4d91"
+    },
+    {
+      "path": "content/pages/api-explorer.md",
+      "sha256": "e3ca561e10776aa17f7a277abe1835a38441b5c4b9a0897a3bd27720edd75901"
+    },
+    {
+      "path": "content/pages/collections.md",
+      "sha256": "ea061a45cbecb5c3f34e9c29874a938fa16f083cd38ad14c79df441d3a4385b7"
+    },
+    {
+      "path": "content/pages/discussions.md",
+      "sha256": "8ec114c3622268da8b3bc66ebb221478c9847f43f105fcd80ce0e373da63dd92"
+    },
+    {
+      "path": "content/pages/graph.md",
+      "sha256": "87bf697767c80a837aeda045f76cb6259eaea188b6b2ea6de5d48c1f8574bcbf"
+    },
+    {
+      "path": "content/pages/grid.md",
+      "sha256": "d1ddfdd40f74f12a596ba0f374020a61fb0badd0027fbff934ed50f6c0662f3a"
+    }
+  ]
+}

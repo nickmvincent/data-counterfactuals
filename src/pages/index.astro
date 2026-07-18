@@ -1,12 +1,310 @@
 ---
-import MemoPage from "../components/MemoPage.astro";
-import { getPublicMemoBySlug, LAUNCH_MEMO_SLUG } from "../lib/memos";
-
-const homeMemo = await getPublicMemoBySlug(LAUNCH_MEMO_SLUG);
-
-if (!homeMemo) {
-  throw new Error(`Missing homepage memo '${LAUNCH_MEMO_SLUG}'.`);
-}
+import DesktopLabLoader from "../components/DesktopLabLoader.jsx";
+import Site from "../layouts/Site.astro";
+import { SITE_LINKS } from "../lib/site-config.js";
 ---
 
-<MemoPage memo={homeMemo} isHome />
+<Site
+  title="Data Counterfactuals"
+  description="An interactive lab for comparing worlds where data, access, or evaluation changes."
+>
+  <div class="desktop-lab">
+    <DesktopLabLoader client:only="preact" />
+  </div>
+
+  <article class="mobile-summary">
+    <header>
+      <h1>What changes when data changes?</h1>
+      <span>
+        A data counterfactual compares an initial world with another world where
+        data, access, or evaluation differs.
+      </span>
+    </header>
+
+    <section aria-labelledby="mobile-comparison-title">
+      <h2 id="mobile-comparison-title">
+        How might we visualize the removal of some data from an AI training set?
+        A grid? A graph?
+      </h2>
+      <div class="mobile-worlds">
+        <div>
+          <small>Baseline</small>
+          <strong>train ABC</strong>
+          <span>eval ABC · score 1.00</span>
+        </div>
+        <b aria-hidden="true">→</b>
+        <div>
+          <small>Remove B</small>
+          <strong>train AC</strong>
+          <span>eval ABC · score 0.67</span>
+        </div>
+      </div>
+
+      <div class="mobile-visuals">
+        <figure>
+          <figcaption>Grid comparison</figcaption>
+          <div class="mini-grid" aria-hidden="true">
+            <span></span><span></span><span></span>
+            <span></span><i></i><span></span>
+            <span></span><span></span><b></b>
+          </div>
+          <p>
+            Compare the ABC/ABC cell with the AC/ABC cell while evaluation stays
+            fixed.
+          </p>
+        </figure>
+        <figure>
+          <figcaption>Graph comparison</figcaption>
+          <svg
+            viewBox="0 0 260 130"
+            role="img"
+            aria-label="A graph edge connects training world ABC to training world AC after B is removed."
+          >
+            <path d="M76 65 H184" />
+            <circle cx="70" cy="65" r="18" />
+            <circle cx="190" cy="65" r="18" class="changed" />
+            <text x="70" y="70">ABC</text>
+            <text x="190" y="70">AC</text>
+            <text x="130" y="51" class="edge-label">remove B</text>
+          </svg>
+          <p>
+            The same comparison is one deletion edge in the subset graph.
+          </p>
+        </figure>
+      </div>
+    </section>
+
+    <aside>
+      <strong>See full “visual” lab (desktop is best).</strong>
+      <p>
+        On desktop you can switch between views, try seven scenarios, edit worlds,
+        and share a configuration as JSON.
+      </p>
+      <div>
+        <a href={SITE_LINKS.reading}>Open the Reading Map →</a>
+        <a
+          href={SITE_LINKS.writing}
+          aria-label="Read more (external link)"
+        >Read more <span aria-hidden="true">· external ↗</span></a>
+      </div>
+    </aside>
+  </article>
+</Site>
+
+<style>
+  .mobile-summary {
+    display: none;
+  }
+
+  .lab-loader {
+    min-height: 70vh;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 1rem;
+    color: var(--faint);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .lab-loader span {
+    width: 26px;
+    aspect-ratio: 1;
+    border: 2px solid var(--line-strong);
+    border-top-color: var(--mint);
+    border-radius: 50%;
+    animation: calibrate 800ms linear infinite;
+  }
+
+  @keyframes calibrate {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  @media (max-width: 899px) {
+    .desktop-lab {
+      display: none;
+    }
+
+    .mobile-summary {
+      width: min(calc(100% - 28px), 700px);
+      display: block;
+      margin: 0 auto;
+      padding: 3.2rem 0 1rem;
+    }
+
+    .mobile-summary h1 {
+      margin: 0;
+      font-size: clamp(2.5rem, 8.5vw, 3.5rem);
+      font-weight: 530;
+      line-height: 0.92;
+      letter-spacing: -0.065em;
+    }
+
+    .mobile-summary header > span {
+      display: block;
+      margin-top: 1.2rem;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.65;
+    }
+
+    .mobile-summary section {
+      margin-top: 2.5rem;
+      padding: 1rem;
+      background: rgba(11, 28, 19, 0.58);
+      border: 1px solid var(--line-strong);
+      border-radius: 0.5rem;
+    }
+
+    .mobile-summary h2 {
+      margin: 0 0 1rem;
+      font-size: 1.15rem;
+    }
+
+    .mobile-worlds {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .mobile-worlds > div {
+      min-width: 0;
+      display: grid;
+      gap: 0.2rem;
+      padding: 0.8rem;
+      background: #08140e;
+      border: 1px solid var(--line);
+      border-radius: 0.35rem;
+    }
+
+    .mobile-worlds small,
+    .mobile-worlds span {
+      color: var(--faint);
+      font-size: 0.58rem;
+    }
+
+    .mobile-worlds strong {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.76rem;
+    }
+
+    .mobile-visuals {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem;
+      margin-top: 0.7rem;
+    }
+
+    .mobile-visuals figure {
+      min-width: 0;
+      margin: 0;
+      padding: 0.8rem;
+      background: #08140e;
+      border: 1px solid var(--line);
+      border-radius: 0.35rem;
+    }
+
+    .mobile-visuals figcaption {
+      color: var(--muted);
+      font-size: 0.65rem;
+      font-weight: 750;
+    }
+
+    .mobile-visuals figure > p {
+      margin: 0.7rem 0 0;
+      color: var(--faint);
+      font-size: 0.65rem;
+      line-height: 1.5;
+    }
+
+    .mini-grid {
+      width: min(110px, 100%);
+      aspect-ratio: 1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      margin: 1.1rem auto 0;
+    }
+
+    .mini-grid > * {
+      display: block;
+      background: #1f503b;
+      border-radius: 2px;
+    }
+
+    .mini-grid i {
+      background: #699c83;
+      box-shadow: 0 0 0 2px var(--coral);
+    }
+
+    .mini-grid b {
+      background: #91dbb7;
+      box-shadow: 0 0 0 2px var(--yellow);
+    }
+
+    .mobile-visuals svg {
+      width: 100%;
+      margin-top: 0.7rem;
+      overflow: visible;
+    }
+
+    .mobile-visuals svg path {
+      fill: none;
+      stroke: var(--coral);
+      stroke-width: 3;
+    }
+
+    .mobile-visuals svg circle {
+      fill: #315c48;
+      stroke: #b7d5ca;
+      stroke-width: 2;
+    }
+
+    .mobile-visuals svg circle.changed {
+      stroke: var(--coral);
+    }
+
+    .mobile-visuals svg text {
+      fill: var(--ink);
+      font: 700 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+      text-anchor: middle;
+    }
+
+    .mobile-visuals svg .edge-label {
+      fill: var(--muted);
+      font-size: 10px;
+    }
+
+    .mobile-summary aside {
+      margin-top: 1rem;
+      padding: 1.1rem;
+      background: rgba(142, 230, 189, 0.07);
+      border-left: 2px solid var(--mint);
+    }
+
+    .mobile-summary aside p {
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+
+    .mobile-summary aside div {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.75rem;
+      font-weight: 750;
+    }
+  }
+
+  @media (max-width: 500px) {
+    .mobile-visuals {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

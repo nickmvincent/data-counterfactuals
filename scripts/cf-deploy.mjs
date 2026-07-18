@@ -71,13 +71,84 @@ function runCommand(args, extraEnv = {}) {
   });
 }
 
+function runCommandCapture(args, extraEnv = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(npmCmd, args, {
+      cwd: root,
+      env: {
+        ...process.env,
+        ...extraEnv,
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
+    child.on('error', reject);
+    child.on('exit', (code, signal) => {
+      if (signal) {
+        reject(new Error(`Command exited via signal ${signal}: npm ${args.join(' ')}`));
+        return;
+      }
+
+      if (code === 0) {
+        resolve({ stdout, stderr });
+        return;
+      }
+
+      reject(new Error(stderr.trim() || `Command failed with exit code ${code ?? 'unknown'}: npm ${args.join(' ')}`));
+    });
+  });
+}
+
+async function verifyCloudflareIdentity(wranglerEnv) {
+  const expectedEmail = process.env.CLOUDFLARE_EXPECTED_EMAIL?.trim() || 'nickmvincent@gmail.com';
+  const { stdout } = await runCommandCapture(
+    ['exec', '--', 'wrangler', 'whoami', '--json'],
+    wranglerEnv,
+  );
+  let identity;
+
+  try {
+    identity = JSON.parse(stdout);
+  } catch {
+    throw new Error('Wrangler returned an unreadable response to `whoami --json`.');
+  }
+
+  const activeEmail = typeof identity?.email === 'string' ? identity.email.trim() : '';
+  if (!identity?.loggedIn || activeEmail.toLowerCase() !== expectedEmail.toLowerCase()) {
+    throw new Error(
+      `Refusing to deploy: this directory is authenticated as ${activeEmail || 'an unknown account'}, expected ${expectedEmail}.`,
+    );
+  }
+
+  return { activeEmail };
+}
+
 async function main() {
   const { projectName, outputDir } = await loadPagesConfig();
   const deployArgs = process.argv.slice(2);
   const outputPath = path.resolve(root, outputDir);
+  const authProfile = 'personal';
   const wranglerEnv = process.env.WRANGLER_LOG_PATH
     ? {}
     : { WRANGLER_LOG_PATH: path.resolve(root, '.wrangler', 'logs') };
+
+  if (deployArgs.some((arg) => arg === '--profile' || arg.startsWith('--profile='))) {
+    throw new Error('The deploy script pins Wrangler profile "personal"; do not pass --profile.');
+  }
+
+  console.log(`[cf:deploy] Verifying the directory-bound Cloudflare identity for profile "${authProfile}"...`);
+  const { activeEmail } = await verifyCloudflareIdentity(wranglerEnv);
+  console.log(`[cf:deploy] Verified Cloudflare identity ${activeEmail}.`);
 
   console.log('[cf:deploy] Refreshing Semble-backed content and building the Astro site...');
   await runCommand(['run', 'build:refresh']);
@@ -98,6 +169,8 @@ async function main() {
     outputDir,
     '--project-name',
     projectName,
+    '--profile',
+    authProfile,
     ...deployArgs,
   ], wranglerEnv);
 }

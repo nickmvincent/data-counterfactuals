@@ -1,0 +1,79 @@
+---
+import "../styles/site.css";
+import { SITE_LINKS } from "../lib/site-config.js";
+
+interface Props {
+  title?: string;
+  description?: string;
+  bodyClass?: string;
+}
+
+const {
+  title = "Data Counterfactuals",
+  description = "An interactive lab for comparing worlds where data, access, or evaluation changes.",
+  bodyClass = "",
+} = Astro.props;
+const pageTitle =
+  title === "Data Counterfactuals" ? title : `${title} · Data Counterfactuals`;
+const pathname = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#07110d" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og-card.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{pageTitle}</title>
+  </head>
+  <body class={bodyClass}>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="site-header">
+      <a class="site-brand" href={SITE_LINKS.lab} aria-label="Data Counterfactuals home">
+        <span class="brand-mark" aria-hidden="true">
+          <i></i><i></i><i></i><i></i>
+        </span>
+        <span>
+          <strong>Data</strong>
+          <strong>Counterfactuals</strong>
+        </span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href={SITE_LINKS.lab} aria-current={pathname === "/" ? "page" : undefined}>
+          Lab
+        </a>
+        <a
+          href={SITE_LINKS.reading}
+          aria-current={pathname === "/collections" ? "page" : undefined}
+        >
+          Reading
+        </a>
+        <a href={SITE_LINKS.writing}>Writing <span aria-hidden="true">↗</span></a>
+        <a href={SITE_LINKS.github}>GitHub <span aria-hidden="true">↗</span></a>
+      </nav>
+    </header>
+    <main id="main-content">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <p>
+        A public experimental visualization tool and non-exhaustive paper list
+        showing how cross-cutting data counterfactuals are.
+      </p>
+      <div>
+        <a href={SITE_LINKS.lab}>Lab</a>
+        <a href={SITE_LINKS.reading}>Reading Map</a>
+        <a href={SITE_LINKS.writing}>Writing ↗</a>
+        <a href={SITE_LINKS.semble}>Semble ↗</a>
+        <a href={SITE_LINKS.github}>Source ↗</a>
+      </div>
+    </footer>
+  </body>
+</html>

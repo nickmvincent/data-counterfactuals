@@ -13,6 +13,8 @@ const browserUse = existsSync(macChromePath)
       browserName: "chromium",
       channel: "chrome",
     };
+const port = process.env.PLAYWRIGHT_PORT || "4327";
+const baseURL = `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -25,8 +27,9 @@ export default defineConfig({
   reporter: "line",
   use: {
     ...browserUse,
-    baseURL: "http://127.0.0.1:4321",
+    baseURL,
     headless: true,
+    permissions: ["clipboard-read", "clipboard-write"],
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     viewport: {
@@ -35,8 +38,8 @@ export default defineConfig({
     },
   },
   webServer: {
-    command: "npm run dev -- --host 127.0.0.1 --port 4321",
-    url: "http://127.0.0.1:4321/grid",
+    command: `node scripts/semble-run.mjs dev cache-only -- --host 127.0.0.1 --port ${port}`,
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
     stdout: "pipe",
     stderr: "pipe",

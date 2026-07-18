@@ -1,19 +1,32 @@
 # Data Counterfactuals
 
-Data Counterfactuals is an interactive explainer, toy lab, and reading map for a simple question: what changes when the training data changes? The project is meant to make training-data questions easier to see and compare across areas like data valuation, privacy, poisoning, unlearning, and collective action.
+Data Counterfactuals is an interactive lab and reading map for a simple
+question: what changes when data, access, or evaluation changes? The project
+makes comparison worlds inspectable across areas like data valuation, privacy,
+poisoning, unlearning, and collective action.
 
 Standalone Astro + Preact repo for `datacounterfactuals.org`.
 
 ## What's here
 
-- Site source in `src/`
-- Authored page content in `src/content/pages/`
-- Memo content in `src/content/memos/`
+- `/` — the desktop Counterfactual Lab, plus a static narrow-screen summary
+- `/collections` — the Semble-backed Reading Map
+- Lab state, scenarios, metrics, and validation in `src/lib/lab-model.js`
+- Verbatim site-v1 Markdown in `archive/site-v1/content/`
+- Archive checksums in `archive/site-v1/manifest.json`
+- The implementation contract in `docs/site-overhaul-spec.md`
 - Semble migration notes in `docs/semble-migration.md`
+
+The public site intentionally has only two routes. Retired routes return 404
+without redirects. The archived Markdown is not part of the Astro runtime and
+is protected by a checksum test; future edited or merged essays can be
+published through the external digital garden without changing the originals.
+
+The external Writing link is configured once in `src/lib/site-config.js`.
 
 ## Semble-backed bibliography
 
-Semble is now the source of truth for reading-list membership and the manual note layer, while bibliographic identity fields are resolved at build time from DOI/page metadata when available.
+Semble is now the source of truth for reading-list membership and the manual note layer, while bibliographic identity fields are resolved at build time from DOI/page metadata when available. Public collections, cards, and collection links are read directly from the configured profile's AT Protocol repository.
 
 This repo now keeps the public default Semble source in `semble.config.json`, so local builds and agent runs do not need hand-written env vars just to know where the bibliography lives.
 
@@ -69,11 +82,25 @@ npm install
 npm run dev
 ```
 
+The full lab initializes at viewport widths of 900 CSS pixels or wider. Narrow
+screens receive a static, accessible explanation instead of the canvas
+renderer.
+
 ## Build
 
 ```bash
+npm test
+npm run check
+npm run lint
 npm run build
 npm run preview
+```
+
+For deterministic local or agent work using the checked Semble cache:
+
+```bash
+npm run build:offline
+npm run test:e2e
 ```
 
 ## Deploy
@@ -84,12 +111,12 @@ Cloudflare Pages is configured via `wrangler.toml`.
 npm run cf:deploy
 ```
 
-That command refreshes the live Semble cache, builds the Astro site, and deploys `dist` to the `datacounterfactuals` Pages project.
+That command first verifies that the directory-bound Wrangler identity is `nickmvincent@gmail.com`, then deploys through the pinned `personal` profile. Only after that check does it refresh the live Semble cache, build the Astro site, and deploy `dist` to the `datacounterfactuals` Pages project.
 
 If you want the raw deploy command, it is still:
 
 ```bash
-wrangler pages deploy dist --project-name datacounterfactuals
+wrangler pages deploy dist --project-name datacounterfactuals --profile personal
 ```
 
 If the Pages project does not exist yet:
